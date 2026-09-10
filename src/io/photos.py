@@ -49,10 +49,13 @@ def _grouper_dossier(dossier: Path) -> PhotosBouteille | None:
 
     contre = next((i for i in images if "contre" in i.stem.casefold()), None)
     restantes = [i for i in images if i != contre]
+
     if not restantes:
-        # Un dossier ne contenant qu'une contre-étiquette : elle sert d'étiquette,
-        # faute de mieux. Le modèle s'abstiendra sur ce qu'il n'y voit pas.
-        return PhotosBouteille(etiquette=contre)  # type: ignore[arg-type]
+        # Dossier ne contenant qu'une contre-étiquette : elle devient la vue
+        # principale, faute de mieux. Le modèle s'abstiendra sur ce qui ne s'y
+        # lit pas — c'est le comportement voulu, pas une dégradation à masquer.
+        assert contre is not None  # garanti : `images` n'est pas vide
+        return PhotosBouteille(etiquette=contre)
 
     return PhotosBouteille(
         etiquette=restantes[0], contre_etiquette=contre, autres=restantes[1:]

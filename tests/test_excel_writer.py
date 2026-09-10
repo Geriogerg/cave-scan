@@ -83,6 +83,35 @@ def test_abstentions_prennent_le_libelle_de_la_maison():
     assert valeur_cellule(bouteille, Colonne("A", "contenance_cl"), libelles) == "non lisible"
 
 
+def test_abstention_vide_laisse_la_case_vide():
+    """decisions.md 0037 : une colonne numérique doit rester triable."""
+    libelles = {"non_lisible": "non lisible", "numerique_absent": "non lisible"}
+    bouteille = Bouteille()
+
+    numerique = Colonne("Contenance", "contenance_cl", abstention_vide=True)
+    assert valeur_cellule(bouteille, numerique, libelles) == ""
+
+    texte = Colonne("Contenance", "contenance_cl")
+    assert valeur_cellule(bouteille, texte, libelles) == "non lisible"
+
+
+def test_colonnes_numeriques_de_l_exemple_restent_triables(feuille, config):
+    """Aucun texte dans Contenance / Degré : le tri Excel doit marcher."""
+    for entete in ("Contenance (cl)", "Degré (% vol.)"):
+        index = [c.entete for c in config.colonnes].index(entete) + 1
+        for ligne in range(2, feuille.max_row + 1):
+            valeur = feuille.cell(row=ligne, column=index).value
+            assert valeur is None or isinstance(valeur, (int, float)), (entete, ligne)
+
+
+def test_l_abstention_masquee_reste_signalee_ailleurs(feuille, config):
+    """Case vide, oui — information perdue, non : la ligne 3 est surlignée et
+    « À vérifier » nomme les champs concernés."""
+    index = [c.entete for c in config.colonnes].index("À vérifier") + 1
+    assert "contenance_cl" in feuille.cell(row=3, column=index).value
+    assert feuille.cell(row=3, column=1).fill.fill_type == "solid"
+
+
 def test_les_nombres_restent_des_nombres():
     bouteille = Bouteille(contenance_cl=150, degre=14.5)
     assert valeur_cellule(bouteille, Colonne("A", "contenance_cl"), {}) == 150

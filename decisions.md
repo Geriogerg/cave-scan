@@ -151,6 +151,53 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   pytest) — `requests`, `beautifulsoup4` et `rapidfuzz` servaient au scraping et
   au matching LWIN d'un périmètre antérieur, hors v0.
 
+## Robustesse (correctifs après revue du squelette)
+
+- 0032 — `plier()` canonicalise les valeurs de type NUMÉRIQUE (75.0 → « 75»,
+  12.50 → « 12.5 ») — openpyxl rend les entiers d'un .xlsx en float : sans ça,
+  TOUTES les contenances et TOUS les degrés du listing expert seraient sortis en
+  désaccord (accuracy 0.0), un faux signal massif. Ne s'applique JAMAIS aux
+  chaînes : une cuvée « 890 » ou « 007 » reste le texte qu'elle est — écarté :
+  parser aussi les chaînes numériques (aurait transformé « 007 » en « 7 »).
+
+- 0033 — Le rapport publie deux chiffres hors accuracy : répartition de
+  `couleur_source` et taux de relecture (`champs_a_verifier`) — « la couleur
+  est-elle lue ou déduite ? » et « quelle charge humaine ce pipeline crée-t-il ? »
+  sont des questions de décision que l'accuracy ne peut pas trancher, et les
+  données étaient collectées sans être jamais agrégées.
+
+- 0034 — `load_manual()` refuse un listing dont AUCUNE colonne ne correspond aux
+  champs canoniques, et `colonnes_toujours_vides()` signale les colonnes vides
+  partout — un en-tête mal mappé (« Producteur » vs `domaine`) produisait un
+  rapport « manuel_vide » partout : propre, crédible et entièrement faux. Pour un
+  outil de MESURE c'est la pire panne possible, elle ne se voit pas — écarté :
+  échouer aussi sur un mapping partiel (l'expert a le droit de ne pas tout
+  remplir), d'où l'avertissement plutôt que l'erreur dans ce cas.
+
+- 0035 — Politique d'erreur API en deux classes : panne PASSAGÈRE (429, 5xx,
+  réseau) → abstention tracée dans `notes`, la campagne continue ; panne
+  SYSTÉMATIQUE (401, 403, 404, 400) → remonte et arrête tout — répéter une clé
+  invalide 200 fois ne produirait que 200 lignes vides en facturant chaque
+  échec. La politique vit dans `vision_extract` pour que `run_v0` reste sans
+  dépendance au SDK — écarté : tout avaler (aurait masqué le risque 0019).
+
+- 0036 — Journal `.jsonl` écrit au fil de l'eau + `--reprendre` — une campagne de
+  200 bouteilles interrompue à la 180e perdait 180 appels API déjà payés ; le
+  journal est aussi la trace brute des réponses, indépendante de l'Excel —
+  écarté : n'écrire qu'à la fin.
+
+- 0037 — Option de config `abstention_vide` par colonne, activée sur les colonnes
+  numériques de l'exemple — « non lisible » dans une colonne de nombres casse le
+  tri et le filtre du commissaire-priseur. L'abstention reste visible par le
+  surlignage de la ligne et la colonne « À vérifier », donc rien n'est perdu
+  (compatible 0002) — écarté : masquer partout, ou n'offrir aucun réglage.
+  **À confirmer avec la maison.**
+
+- 0038 — `_entier()` arrondit au lieu de lever (« 75.5 » → 76) — `int("75.5")`
+  levait, si bien qu'un modèle ayant LU une contenance décimale s'abstenait
+  silencieusement ; le centilitre est l'unité utile, la demi-mesure n'a pas de
+  sens ici.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
@@ -162,3 +209,6 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - L'échelle de couleur doit-elle distinguer orange / vin doux naturel, ou
   rouge-blanc-rosé suffit-il ? → verrouille l'enum `Couleur` (0017, 0031).
   (L'effervescence, elle, est tranchée : champ propre, cf. 0031.)
+- Dans les colonnes numériques, la maison préfère-t-elle une case VIDE (triable)
+  ou « non lisible » écrit en toutes lettres (explicite) ? → `abstention_vide`
+  (0037). Provisoirement : case vide.

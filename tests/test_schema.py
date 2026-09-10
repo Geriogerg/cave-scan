@@ -88,6 +88,14 @@ def test_from_tool_input_retombe_sur_l_abstention():
     assert bouteille.champs_a_verifier == []
 
 
+def test_une_contenance_decimale_n_est_plus_perdue():
+    """`int("75.5")` levait : le modèle avait lu quelque chose, on l'ignorait."""
+    assert from_tool_input({"contenance_cl": "75.5"}).contenance_cl == 76
+    assert from_tool_input({"contenance_cl": 75.0}).contenance_cl == 75
+    assert from_tool_input({"contenance_cl": "75"}).contenance_cl == 75
+    assert from_tool_input({"contenance_cl": "trois quarts"}).contenance_cl is None
+
+
 def test_from_tool_input_lit_les_valeurs_normales():
     bouteille = from_tool_input(
         {

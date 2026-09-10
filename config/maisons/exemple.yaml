@@ -76,13 +76,19 @@ colonnes:
     champ: format
     largeur: 16
 
+  # `abstention_vide` : laisse la case vide au lieu d'écrire « non lisible ».
+  # Réservé aux colonnes NUMÉRIQUES — y mêler du texte casse le tri et le filtre.
+  # L'abstention reste visible par le surlignage de la ligne et la colonne
+  # « À vérifier ». À confirmer avec la maison (question ouverte).
   - entete: Contenance (cl)
     champ: contenance_cl
     largeur: 14
+    abstention_vide: true
 
   - entete: Degré (% vol.)
     champ: degre
     largeur: 13
+    abstention_vide: true
 
   - entete: Importateur
     champ: importateur

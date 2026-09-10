@@ -15,6 +15,7 @@ from src.compare.compare_listings import (
     comparer,
     formater_rapport,
     plier,
+    relever_signaux,
 )
 from src.extract.schema import Bouteille, Couleur, Effervescence, from_tool_input
 from src.io.manual_listing import load_manual
@@ -52,6 +53,43 @@ def test_pliage_ne_normalise_pas_les_conventions():
 
 def test_couleur_enum_se_plie_comme_du_texte():
     assert plier(Couleur.ROUGE) == plier("Rouge")
+
+
+# --- nombres venant d'un tableur (decisions.md 0032) --------------------
+
+
+def test_un_entier_et_son_float_se_plient_pareil():
+    """openpyxl rend les entiers d'un .xlsx en float : 75 doit valoir 75.0."""
+    assert plier(75) == plier(75.0) == "75"
+    assert plier(13.0) == plier(13) == "13"
+
+
+def test_les_decimales_significatives_survivent():
+    assert plier(13.5) == "13.5"
+    assert plier(12.50) == "12.5"
+    assert plier(13.5) != plier(13.0)
+
+
+def test_toutes_les_contenances_ne_sortent_plus_en_desaccord():
+    """Le bug : un listing expert lu depuis Excel donnait accuracy 0.0 partout."""
+    rapport = comparer(
+        [Bouteille(contenance_cl=75, degre=13.0)],
+        [{"contenance_cl": 75.0, "degre": 13.0}],
+    )
+    assert score(rapport, "contenance_cl").accuracy == 1.0
+    assert score(rapport, "degre").accuracy == 1.0
+    assert rapport.desaccords == []
+
+
+def test_les_chaines_numeriques_restent_du_texte():
+    """Une cuvée « 890 » ou « 007 » est un nom, pas un nombre."""
+    assert plier("007") == "007"
+    assert plier("007") != plier(7)
+    assert plier("890") == "890"
+
+
+def test_un_booleen_n_est_pas_un_nombre():
+    assert plier(True) == "true"
 
 
 # --- métriques par champ ------------------------------------------------
@@ -152,6 +190,38 @@ def test_rapport_formate_montre_scores_et_desaccords(rapport):
     assert "millesime" in texte
     assert "Désaccords à inspecter (3)" in texte
     assert "2004" in texte and "2001" in texte
+
+
+# --- signaux du modèle (decisions.md 0033) ------------------------------
+
+
+def test_couleur_source_est_agregee(rapport):
+    """« Sur combien de bouteilles la couleur est-elle déduite, pas lue ? »"""
+    signaux = rapport.signaux
+    assert signaux.couleur_source == {"observee": 5, "inferee": 1}
+    assert sum(signaux.couleur_source.values()) == rapport.n_lignes
+
+
+def test_charge_de_relecture_est_chiffree(rapport):
+    """« Combien de bouteilles un humain devra-t-il rouvrir ? »"""
+    signaux = rapport.signaux
+    assert signaux.lignes_a_relire == 2
+    assert signaux.taux_relecture == pytest.approx(2 / 6)
+    assert signaux.champs_a_verifier["millesime"] == 2
+    assert signaux.champs_a_verifier["degre"] == 1
+
+
+def test_les_signaux_apparaissent_dans_le_rapport(rapport):
+    texte = formater_rapport(rapport)
+    assert "Signaux du modèle" in texte
+    assert "inferee" in texte
+    assert "relecture" in texte
+
+
+def test_signaux_sur_liste_vide():
+    signaux = relever_signaux([])
+    assert signaux.taux_relecture is None
+    assert signaux.couleur_source == {}
 
 
 # --- garde-fous ---------------------------------------------------------

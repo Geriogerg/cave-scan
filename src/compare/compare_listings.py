@@ -19,8 +19,10 @@ Confondre abstention et désaccord donnerait un score faux et pousserait à
 from __future__ import annotations
 
 import unicodedata
+from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from src.extract.schema import CHAMPS_COMPARABLES, Bouteille, est_abstention
@@ -69,12 +71,57 @@ class Desaccord:
 
 
 @dataclass(frozen=True)
+class SignauxModele:
+    """Ce que le modèle dit de LUI-MÊME, sans référence à l'expert.
+
+    Ces chiffres ne se comparent à rien : ils répondent à deux questions de
+    décision que l'accuracy ne peut pas trancher (decisions.md 0033) —
+    « la couleur est-elle lue ou déduite ? » et « quelle charge de relecture
+    humaine ce pipeline génère-t-il ? ».
+    """
+
+    n_lignes: int
+    couleur_source: dict[str, int] = field(default_factory=dict)
+    lignes_a_relire: int = 0
+    champs_a_verifier: dict[str, int] = field(default_factory=dict)
+
+    @property
+    def taux_relecture(self) -> float | None:
+        if self.n_lignes == 0:
+            return None
+        return self.lignes_a_relire / self.n_lignes
+
+
+@dataclass(frozen=True)
 class RapportComparaison:
     """Résultat complet d'une comparaison."""
 
     n_lignes: int
     scores: list[ScoreChamp]
     desaccords: list[Desaccord]
+    signaux: SignauxModele
+
+
+def _canoniser_nombre(valeur: Any) -> str | None:
+    """Forme canonique d'une valeur NUMÉRIQUE, ou ``None`` si ce n'en est pas une.
+
+    Un tableur ne distingue pas 75 de 75.0 : openpyxl rend les entiers d'un
+    .xlsx en `float`, si bien que la contenance de l'expert arrive en `75.0`
+    face au `75` du modèle. Sans cette canonicalisation, TOUTES les contenances
+    et TOUS les degrés sortiraient en désaccord (decisions.md 0032).
+
+    Ne s'applique qu'aux vrais types numériques, jamais aux chaînes : une cuvée
+    nommée « 890 » ou « 007 » doit rester le texte qu'elle est.
+    """
+    if isinstance(valeur, bool) or not isinstance(valeur, (int, float, Decimal)):
+        return None
+    try:
+        nombre = Decimal(str(valeur))
+    except InvalidOperation:  # nan, inf
+        return None
+    if nombre == nombre.to_integral_value():
+        return str(int(nombre))
+    return format(nombre.normalize(), "f")
 
 
 def plier(valeur: Any) -> str:
@@ -88,6 +135,10 @@ def plier(valeur: Any) -> str:
     ces écarts VISIBLES dans le rapport pour qu'on écrive plus tard les bonnes
     règles en regardant les vrais cas (decisions.md 0007).
     """
+    canonique = _canoniser_nombre(valeur)
+    if canonique is not None:
+        return canonique
+
     texte = str(valeur).strip()
     decompose = unicodedata.normalize("NFKD", texte)
     sans_accents = "".join(c for c in decompose if not unicodedata.combining(c))
@@ -166,12 +217,58 @@ def comparer(
         )
 
     return RapportComparaison(
-        n_lignes=len(auto), scores=scores, desaccords=desaccords
+        n_lignes=len(auto),
+        scores=scores,
+        desaccords=desaccords,
+        signaux=relever_signaux(auto),
+    )
+
+
+def relever_signaux(auto: Sequence[Bouteille]) -> SignauxModele:
+    """Agrège ce que le modèle a déclaré sur son propre travail."""
+    return SignauxModele(
+        n_lignes=len(auto),
+        couleur_source=dict(
+            Counter(bouteille.couleur_source.value for bouteille in auto).most_common()
+        ),
+        lignes_a_relire=sum(1 for bouteille in auto if bouteille.champs_a_verifier),
+        champs_a_verifier=dict(
+            Counter(
+                champ for bouteille in auto for champ in bouteille.champs_a_verifier
+            ).most_common()
+        ),
     )
 
 
 def _pourcentage(valeur: float | None) -> str:
     return "  n/a" if valeur is None else f"{valeur * 100:5.1f}%"
+
+
+def _formater_signaux(signaux: SignauxModele) -> list[str]:
+    """Section « signaux du modèle » : deux chiffres de décision, hors accuracy."""
+    lignes = ["Signaux du modèle (sans référence à l'expert) :"]
+
+    if signaux.couleur_source:
+        detail = "  ".join(
+            f"{source} {nombre}/{signaux.n_lignes}"
+            for source, nombre in signaux.couleur_source.items()
+        )
+        lignes.append(f"  couleur   {detail}")
+        lignes.append(
+            "            « inferee » = déduite de l'appellation, pas lue sur la photo"
+        )
+
+    lignes.append(
+        f"  relecture {signaux.lignes_a_relire}/{signaux.n_lignes} bouteille(s) "
+        f"({_pourcentage(signaux.taux_relecture).strip()}) portent au moins un doute"
+    )
+    if signaux.champs_a_verifier:
+        detail = "  ".join(
+            f"{champ} {nombre}" for champ, nombre in signaux.champs_a_verifier.items()
+        )
+        lignes.append(f"            {detail}")
+
+    return lignes
 
 
 def formater_rapport(rapport: RapportComparaison) -> str:
@@ -202,6 +299,9 @@ def formater_rapport(rapport: RapportComparaison) -> str:
             "",
         ]
     )
+
+    lignes.extend(_formater_signaux(rapport.signaux))
+    lignes.append("")
 
     if not rapport.desaccords:
         lignes.append("Aucun désaccord.")

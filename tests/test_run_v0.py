@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -112,6 +114,91 @@ def test_dry_run_n_importe_pas_le_sdk_anthropic(tmp_path):
     sys.modules.pop("src.extract.vision_extract", None)
     run_v0.main(["--dry-run", "--sortie", str(tmp_path / "l.xlsx")])
     assert "src.extract.vision_extract" not in sys.modules
+
+
+# --- journal et reprise (decisions.md 0036) -----------------------------
+
+
+class ExtracteurQuiTombe:
+    """Extrait normalement puis échoue à la n-ième bouteille."""
+
+    def __init__(self, source: FixtureExtractor, tombe_a: int):
+        self.source = source
+        self.tombe_a = tombe_a
+        self.appels = 0
+
+    def extract(self, etiquette, contre_etiquette=None, autres=None):
+        self.appels += 1
+        if self.appels == self.tombe_a:
+            raise ConnectionError("réseau coupé")
+        return self.source.extract(etiquette, contre_etiquette, autres)
+
+
+def _photos(nombre):
+    return [
+        PhotosBouteille(etiquette=Path(f"(fixture)/b{i}/etiquette.jpg"))
+        for i in range(nombre)
+    ]
+
+
+def test_le_journal_est_ecrit_au_fil_de_l_eau(tmp_path):
+    journal = tmp_path / "extraction.jsonl"
+    extracteur = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+
+    run_v0.extraire(extracteur, _photos(6), journal)
+
+    lignes = journal.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lignes) == 6
+    assert json.loads(lignes[0])["domaine"] == "Domaine Rossignol-Trapet"
+
+
+def test_une_interruption_ne_perd_pas_les_appels_deja_payes(tmp_path):
+    """Le vrai enjeu : 180 appels API facturés ne doivent pas partir en fumée."""
+    journal = tmp_path / "extraction.jsonl"
+    source = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+
+    with pytest.raises(ConnectionError):
+        run_v0.extraire(ExtracteurQuiTombe(source, tombe_a=4), _photos(6), journal)
+
+    rescapees = run_v0.charger_journal(journal)
+    assert len(rescapees) == 3
+    assert rescapees[0].domaine == "Domaine Rossignol-Trapet"
+
+
+def test_reprendre_repart_du_journal(tmp_path, capsys):
+    journal = tmp_path / "extraction.jsonl"
+    source = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+
+    with pytest.raises(ConnectionError):
+        run_v0.extraire(ExtracteurQuiTombe(source, tombe_a=4), _photos(6), journal)
+
+    # Nouvel extracteur, positionné sur les 3 bouteilles restantes.
+    reste = FixtureExtractor(
+        json.loads((FIXTURES / "bouteilles_auto.json").read_text(encoding="utf-8"))[3:]
+    )
+    bouteilles = run_v0.extraire(reste, _photos(6), journal, reprendre=True)
+
+    assert "reprise : 3 bouteille(s)" in capsys.readouterr().out
+    assert len(bouteilles) == 6
+    assert bouteilles[0].domaine == "Domaine Rossignol-Trapet"
+    assert bouteilles[5].domaine == "Champagne Deutz"
+
+
+def test_sans_reprendre_le_journal_est_reinitialise(tmp_path):
+    journal = tmp_path / "extraction.jsonl"
+    journal.write_text('{"domaine": "vieille execution"}\n', encoding="utf-8")
+
+    extracteur = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+    bouteilles = run_v0.extraire(extracteur, _photos(6), journal)
+
+    assert len(bouteilles) == 6
+    assert "vieille execution" not in journal.read_text(encoding="utf-8")
+
+
+def test_dry_run_ecrit_aussi_un_journal(tmp_path):
+    sortie = tmp_path / "listing.xlsx"
+    run_v0.main(["--dry-run", "--sortie", str(sortie)])
+    assert sortie.with_suffix(".jsonl").exists()
 
 
 def test_mode_reel_exige_photos_et_manual(tmp_path):

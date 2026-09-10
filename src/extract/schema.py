@@ -347,8 +347,14 @@ def _enum[E: StrEnum](enum_cls: type[E], valeur: Any, defaut: E) -> E:
 
 
 def _entier(valeur: Any) -> int | None:
+    """Entier tolérant : « 75 », 75.0 et « 75.5 » donnent 75, 75 et 76.
+
+    `int("75.5")` lève : un modèle répondant une contenance décimale se serait
+    abstenu silencieusement alors qu'il avait lu quelque chose. On arrondit —
+    le centilitre est l'unité utile, la demi-mesure n'a pas de sens ici.
+    """
     try:
-        return int(valeur)  # type: ignore[arg-type]
+        return round(float(valeur))
     except (TypeError, ValueError):
         return None
 

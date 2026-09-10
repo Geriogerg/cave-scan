@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import anthropic
+import httpx2 as httpx
 import pytest
 
 from src.extract.base import Extractor
@@ -137,6 +139,66 @@ def test_refus_du_modele_est_trace_dans_les_notes():
     )
     bouteille = bouteille_depuis_reponse(reponse)
     assert "refus du modèle (cyber)" in bouteille.notes
+
+
+# --- politique d'erreur (decisions.md 0035) ------------------------------
+
+
+class ClientQuiEchoue:
+    """Client factice : lève l'erreur demandée au lieu d'appeler l'API."""
+
+    def __init__(self, erreur):
+        self.erreur = erreur
+        self.messages = self
+
+    def create(self, **_):
+        raise self.erreur
+
+
+def _erreur_api(classe, message, code):
+    """Construit une erreur du SDK sans passer par le réseau."""
+    reponse = httpx.Response(
+        code, request=httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    )
+    return classe(message, response=reponse, body=None)
+
+
+def test_panne_passagere_abstient_et_laisse_la_campagne_continuer(photos):
+    """Un 429 sur une bouteille ne doit pas coûter les 199 autres."""
+    etiquette, _, _ = photos
+    erreur = _erreur_api(anthropic.RateLimitError, "rate limited", 429)
+    extracteur = VisionExtractor(client=ClientQuiEchoue(erreur))
+
+    bouteille = extracteur.extract(etiquette)
+
+    assert bouteille.appellation == NON_LISIBLE
+    assert bouteille.champs_a_verifier == ["tous"]
+    assert "RateLimitError" in bouteille.notes
+
+
+def test_panne_systematique_arrete_tout(photos):
+    """Une clé invalide échouerait sur CHAQUE bouteille : inutile de payer 200 fois."""
+    etiquette, _, _ = photos
+    erreur = _erreur_api(anthropic.AuthenticationError, "bad key", 401)
+    extracteur = VisionExtractor(client=ClientQuiEchoue(erreur))
+
+    with pytest.raises(anthropic.AuthenticationError):
+        extracteur.extract(etiquette)
+
+
+def test_un_400_explique_le_risque_connu(photos):
+    """decisions.md 0019 : le 400 le plus probable a sa marche à suivre écrite."""
+    etiquette, _, _ = photos
+    erreur = _erreur_api(anthropic.BadRequestError, "thinking not supported", 400)
+    extracteur = VisionExtractor(client=ClientQuiEchoue(erreur))
+
+    with pytest.raises(RuntimeError) as capture:
+        extracteur.extract(etiquette)
+
+    message = str(capture.value)
+    assert "decisions.md 0019" in message
+    assert "tool_choice" in message
+    assert "NE PAS désactiver le thinking" in message
 
 
 # --- configuration -------------------------------------------------------

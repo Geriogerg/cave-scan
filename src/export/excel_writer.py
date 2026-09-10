@@ -39,6 +39,11 @@ class Colonne:
     entete: str
     champ: str | None = None
     largeur: int = 18
+    # Laisse la case VIDE plutôt que d'y écrire « non lisible ». Réservé aux
+    # colonnes numériques : y mêler du texte casse le tri et le filtre pour le
+    # commissaire-priseur. L'abstention reste visible par le surlignage de la
+    # ligne et la colonne « À vérifier » (decisions.md 0037).
+    abstention_vide: bool = False
 
 
 @dataclass(frozen=True)
@@ -83,6 +88,7 @@ def charger_config(chemin: str | Path) -> ConfigMaison:
                 entete=str(entree.get("entete", "")),
                 champ=champ,
                 largeur=int(entree.get("largeur", 18)),
+                abstention_vide=bool(entree.get("abstention_vide", False)),
             )
         )
 
@@ -120,10 +126,12 @@ def valeur_cellule(bouteille: Bouteille, colonne: Colonne, libelles: dict[str, s
         valeur = valeur.value
 
     if valeur is None:
+        if colonne.abstention_vide:
+            return ""
         return libelles.get("numerique_absent", libelles.get(NON_LISIBLE, NON_LISIBLE))
 
     if isinstance(valeur, str) and valeur in (NON_LISIBLE, NON_DETERMINABLE):
-        return libelles.get(valeur, valeur)
+        return "" if colonne.abstention_vide else libelles.get(valeur, valeur)
 
     return valeur
 

@@ -13,6 +13,7 @@ photos. C'est ce qui permet la comparaison ligne à ligne.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +39,9 @@ def load_manual(chemin: str | Path) -> list[dict[str, Any]]:
             raise ValueError(
                 f"{chemin} : une liste de lignes est attendue, reçu {type(brut).__name__}."
             )
-        return [_aligner(ligne) for ligne in brut]
+        lignes = [_aligner(ligne) for ligne in brut]
+        _verifier_correspondance(lignes, chemin)
+        return lignes
 
     # ==================================================================
     # À COMPLÉTER À L'ARRIVÉE DU FICHIER DE L'EXPERT
@@ -55,6 +58,47 @@ def load_manual(chemin: str | Path) -> list[dict[str, Any]]:
         f"Seul .json (fixtures) est lu en v0 ; la lecture du fichier réel de "
         f"l'expert reste à écrire dans {__file__}."
     )
+
+
+def _verifier_correspondance(lignes: list[dict[str, Any]], chemin: Path) -> None:
+    """Refuse un listing dont AUCUNE colonne ne correspond aux champs canoniques.
+
+    Mode de défaillance qu'on ferme ici : le fichier de l'expert nomme sa colonne
+    « Producteur » et pas « domaine ». `_aligner()` remplit alors des chaînes
+    vides sans broncher, et le rapport sort `manuel_vide` partout — propre,
+    crédible, et entièrement faux. Pour un outil de MESURE, c'est la pire panne
+    possible : elle ne se voit pas (decisions.md 0034).
+    """
+    if not lignes:
+        raise ValueError(f"{chemin} : listing manuel vide.")
+
+    renseignes = [
+        champ
+        for champ in CHAMPS_COMPARABLES
+        if any(str(ligne.get(champ, "")).strip() for ligne in lignes)
+    ]
+    if not renseignes:
+        raise ValueError(
+            f"{chemin} : aucune colonne ne correspond aux champs canoniques "
+            f"({', '.join(CHAMPS_COMPARABLES)}). Les en-têtes du fichier sont "
+            f"probablement différents — la correspondance est à écrire dans "
+            f"load_manual(), pas à subir : sans elle le rapport afficherait "
+            f"« manuel_vide » partout sans rien signaler."
+        )
+
+
+def colonnes_toujours_vides(lignes: Sequence[Mapping[str, Any]]) -> list[str]:
+    """Champs canoniques que l'expert n'a renseignés sur AUCUNE ligne.
+
+    Légitime (une colonne qu'il ne remplit jamais) ou symptôme d'un en-tête mal
+    mappé — impossible de trancher ici, donc on le signale sans le sanctionner.
+    `run_v0` l'affiche en tête de rapport.
+    """
+    return [
+        champ
+        for champ in CHAMPS_COMPARABLES
+        if not any(str(ligne.get(champ, "")).strip() for ligne in lignes)
+    ]
 
 
 def _aligner(ligne: Any) -> dict[str, Any]:
