@@ -244,6 +244,16 @@ def _pourcentage(valeur: float | None) -> str:
     return "  n/a" if valeur is None else f"{valeur * 100:5.1f}%"
 
 
+def formater_signaux(signaux: SignauxModele) -> str:
+    """Les signaux seuls, sans comparaison.
+
+    Utile avant l'arrivée du listing de l'expert : on ne peut alors rien
+    SCORER, mais on voit déjà ce que le modèle produit et ce qu'il refuse de
+    trancher — ce qui suffit à repérer un pipeline qui déraille.
+    """
+    return "\n".join(_formater_signaux(signaux))
+
+
 def _formater_signaux(signaux: SignauxModele) -> list[str]:
     """Section « signaux du modèle » : deux chiffres de décision, hors accuracy."""
     lignes = ["Signaux du modèle (sans référence à l'expert) :"]

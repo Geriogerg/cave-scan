@@ -20,7 +20,12 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from src.compare.compare_listings import comparer, formater_rapport
+from src.compare.compare_listings import (
+    comparer,
+    formater_rapport,
+    formater_signaux,
+    relever_signaux,
+)
 from src.export.excel_writer import charger_config, ecrire_excel
 from src.extract.base import Extractor
 from src.extract.fixture_extract import FixtureExtractor
@@ -109,7 +114,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Tourne hors ligne sur les fixtures : ni clé API, ni réseau, ni photos.",
     )
     analyseur.add_argument("--photos", type=Path, help="Dossier des photos.")
-    analyseur.add_argument("--manual", type=Path, help="Listing manuel de l'expert.")
+    analyseur.add_argument(
+        "--manual",
+        type=Path,
+        help="Listing manuel de l'expert. SANS lui : extraction et Excel "
+        "seulement, aucun score — c'est le mode d'attente avant que le fichier "
+        "de l'expert existe.",
+    )
+    analyseur.add_argument(
+        "--limite",
+        type=int,
+        help="N'extrait que les N premières bouteilles. À utiliser pour le "
+        "premier run payant : on vérifie sur 3 bouteilles avant d'en lancer 200.",
+    )
     analyseur.add_argument(
         "--maison",
         type=Path,
@@ -143,13 +160,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         chemin_manuel = FIXTURE_MANUEL
         print(f"DRY-RUN — fixtures {FIXTURE_AUTO.name} / {FIXTURE_MANUEL.name}, hors ligne.\n")
     else:
-        if not arguments.photos or not arguments.manual:
-            analyseur.error("--photos et --manual sont requis hors --dry-run.")
+        if not arguments.photos:
+            analyseur.error("--photos est requis hors --dry-run.")
         # Import tardif : le dry-run ne doit dépendre ni du SDK ni d'une clé API.
         from src.extract.vision_extract import VisionExtractor
 
         extracteur = VisionExtractor()
         photos = grouper_photos(arguments.photos)
+        if arguments.limite:
+            photos = photos[: arguments.limite]
         chemin_manuel = arguments.manual
         print(f"Modèle : {extracteur.modele} — {len(photos)} bouteille(s).\n")
 
@@ -160,6 +179,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     chemin_excel = ecrire_excel(bouteilles, config, arguments.sortie)
     print(f"\nListing automatique écrit : {chemin_excel}")
     print(f"Journal d'extraction       : {journal}")
+
+    if chemin_manuel is None:
+        print(
+            "\nAucun listing manuel fourni : PAS DE SCORE.\n"
+            "Le livrable de la v0 est la comparaison à l'expert ; sans son "
+            "fichier,\nce run montre seulement ce que le modèle produit.\n"
+        )
+        print(formater_signaux(relever_signaux(bouteilles)))
+        return 0
 
     manuel = load_manual(chemin_manuel)
 

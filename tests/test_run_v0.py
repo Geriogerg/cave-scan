@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 import run_v0
+from src.compare.compare_listings import formater_signaux, relever_signaux
 from src.extract.base import Extractor
 from src.extract.fixture_extract import FixtureExtractor
 from src.extract.schema import Bouteille, Couleur, Format
@@ -201,6 +202,19 @@ def test_dry_run_ecrit_aussi_un_journal(tmp_path):
     assert sortie.with_suffix(".jsonl").exists()
 
 
-def test_mode_reel_exige_photos_et_manual(tmp_path):
+def test_mode_reel_exige_des_photos(tmp_path):
+    """--manual, lui, est facultatif : son fichier n'existe pas encore."""
     with pytest.raises(SystemExit):
         run_v0.main(["--sortie", str(tmp_path / "l.xlsx")])
+
+
+def test_les_signaux_se_lisent_sans_listing_expert():
+    """Le mode d'attente : pas de score, mais on voit ce que le modèle produit."""
+    auto = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+    bouteilles = [auto.extract("p.jpg") for _ in range(len(auto))]
+
+    texte = formater_signaux(relever_signaux(bouteilles))
+
+    assert "observee 5/6" in texte
+    assert "inferee 1/6" in texte
+    assert "relecture 2/6" in texte
