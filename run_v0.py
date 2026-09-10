@@ -43,6 +43,29 @@ FIXTURE_AUTO = FIXTURES / "bouteilles_auto.json"
 FIXTURE_MANUEL = FIXTURES / "manuel.json"
 
 
+def _charger_env() -> None:
+    """Charge `.env` s'il existe, pour que `.env.example` dise la vérité.
+
+    Le SDK ne lit que les variables d'environnement : sans ceci, un `.env`
+    rempli consciencieusement n'aurait servi à rien, et l'erreur aurait été
+    un « clé absente » incompréhensible.
+    """
+    fichier = RACINE / ".env"
+    if not fichier.exists():
+        return
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        print(
+            f"⚠  {fichier} existe mais python-dotenv n'est pas installé : "
+            f"il ne sera pas lu.\n   `pip install python-dotenv`, ou exportez "
+            f"ANTHROPIC_API_KEY dans l'environnement.",
+            file=sys.stderr,
+        )
+        return
+    load_dotenv(fichier)
+
+
 def charger_journal(journal: Path) -> list[Bouteille]:
     """Relit les bouteilles déjà extraites lors d'un run interrompu."""
     if not journal.exists():
@@ -153,6 +176,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     # Le rapport contient des accents ; la console Windows est en cp1252 par défaut.
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+    _charger_env()
 
     if arguments.dry_run:
         extracteur: Extractor = FixtureExtractor.depuis_json(FIXTURE_AUTO)
