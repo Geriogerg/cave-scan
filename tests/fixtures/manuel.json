@@ -1,0 +1,67 @@
+[
+  {
+    "appellation": "GEVREY-CHAMBERTIN 1ER CRU",
+    "domaine": "Domaine Rossignol-Trapet",
+    "cuvee": "Les Cazetiers",
+    "couleur": "Rouge",
+    "millesime": "2018",
+    "region": "Bourgogne",
+    "pays": "France",
+    "format": "",
+    "contenance_cl": 75,
+    "degre": 13.0,
+    "importateur": ""
+  },
+  {
+    "appellation": "Margaux",
+    "domaine": "Château Margaux",
+    "cuvee": "",
+    "couleur": "rouge",
+    "millesime": "2015",
+    "region": "Bordeaux",
+    "pays": "France",
+    "format": "bouteille",
+    "contenance_cl": 75,
+    "degre": 13.0,
+    "importateur": ""
+  },
+  {
+    "appellation": "Chablis Grand Cru",
+    "domaine": "Domaine William Fèvre",
+    "cuvee": "Bougros",
+    "couleur": "blanc",
+    "millesime": "2019",
+    "region": "Bourgogne",
+    "pays": "France",
+    "format": "bouteille",
+    "contenance_cl": 75,
+    "degre": 12.5,
+    "importateur": ""
+  },
+  {
+    "appellation": "Rioja Gran Reserva",
+    "domaine": "La Rioja Alta",
+    "cuvee": "890",
+    "couleur": "rouge",
+    "millesime": "2001",
+    "region": "Rioja",
+    "pays": "Espagne",
+    "format": "bouteille",
+    "contenance_cl": 75,
+    "degre": 14.0,
+    "importateur": "Vins Dupuy"
+  },
+  {
+    "appellation": "Châteauneuf-du-Pape",
+    "domaine": "Vieux Télégraphe",
+    "cuvee": "La Crau",
+    "couleur": "rouge",
+    "millesime": "2016",
+    "region": "Vallée du Rhône",
+    "pays": "France",
+    "format": "magnum",
+    "contenance_cl": 150,
+    "degre": 14.5,
+    "importateur": ""
+  }
+]
