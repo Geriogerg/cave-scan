@@ -43,7 +43,7 @@ def test_config_exemple_se_charge(config):
     assert config.maison == "Maison Exemple"
     assert config.police == "Arial"
     assert config.figer_entetes is True
-    assert len(config.colonnes) == 16
+    assert len(config.colonnes) == 17
 
 
 def test_config_refuse_un_champ_inconnu(tmp_path):

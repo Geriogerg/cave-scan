@@ -45,6 +45,22 @@ class CouleurSource(StrEnum):
     NON_LISIBLE = NON_LISIBLE
 
 
+class Effervescence(StrEnum):
+    """Vin tranquille ou effervescent. Enum fermé, INDÉPENDANT de la couleur.
+
+    Deux dimensions distinctes : un effervescent peut être blanc, rosé ou rouge.
+    Les fusionner dans `couleur` obligerait à choisir et perdrait l'information
+    (decisions.md 0031).
+
+    La catégorie précise (champagne, crémant, mousseux...) n'est pas un enum ici :
+    c'est une appellation, elle se lit et se range dans `appellation`.
+    """
+
+    TRANQUILLE = "tranquille"
+    EFFERVESCENT = "effervescent"
+    NON_DETERMINABLE = NON_DETERMINABLE
+
+
 class Format(StrEnum):
     """Format de la bouteille. Enum fermé.
 
@@ -81,6 +97,7 @@ class Bouteille:
     cuvee: str = NON_LISIBLE
     couleur: Couleur = Couleur.NON_DETERMINABLE
     couleur_source: CouleurSource = CouleurSource.NON_LISIBLE
+    effervescence: Effervescence = Effervescence.NON_DETERMINABLE
     millesime: str = NON_LISIBLE
     region: str = NON_LISIBLE
     pays: str = NON_LISIBLE
@@ -116,6 +133,7 @@ CHAMPS_COMPARABLES: tuple[str, ...] = (
     "domaine",
     "cuvee",
     "couleur",
+    "effervescence",
     "millesime",
     "region",
     "pays",
@@ -193,6 +211,18 @@ def tool_schema() -> dict[str, Any]:
                         "est lue ou visible sur les photos, « inferee » si elle "
                         "est déduite de l'appellation ou du producteur, "
                         f"« {NON_LISIBLE} » si la couleur n'a pas pu être déterminée."
+                    ),
+                },
+                "effervescence": {
+                    "type": "string",
+                    "enum": [e.value for e in Effervescence],
+                    "description": (
+                        "Vin effervescent ou tranquille, uniquement si ce qui est "
+                        "visible l'établit : bouchon large maintenu par un muselet "
+                        "métallique, mention d'effervescence sur l'étiquette, ou "
+                        "appellation qui ne produit que de l'effervescent. Sinon "
+                        f"« {NON_DETERMINABLE} ». Indépendant de la couleur : un "
+                        "effervescent peut être blanc, rosé ou rouge."
                     ),
                 },
                 "millesime": {
@@ -284,6 +314,9 @@ def from_tool_input(charge: dict[str, Any]) -> Bouteille:
         couleur=_enum(Couleur, charge.get("couleur"), Couleur.NON_DETERMINABLE),
         couleur_source=_enum(
             CouleurSource, charge.get("couleur_source"), CouleurSource.NON_LISIBLE
+        ),
+        effervescence=_enum(
+            Effervescence, charge.get("effervescence"), Effervescence.NON_DETERMINABLE
         ),
         millesime=_texte(charge.get("millesime")),
         region=_texte(charge.get("region")),

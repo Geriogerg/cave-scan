@@ -77,8 +77,8 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - 0017 — Enum `Couleur` = rouge | blanc | rose | non_determinable — les trois
   couleurs incontestables d'un catalogue ; « effervescent » est un type, pas une
   couleur (un champagne est blanc ou rosé) — écarté : ajouter orange/effervescent
-  sans avoir vu de vrai catalogue. **À confirmer avec l'expert** (voir questions
-  ouvertes).
+  sans avoir vu de vrai catalogue. **Complété par 0031** (effervescence sortie en
+  champ propre). La question « orange / vin doux » reste ouverte.
 
 - 0018 — Modèle par défaut `claude-opus-5`, surchargeable par `CAVE_SCAN_MODEL` —
   le plancher doit être mesuré avec un modèle générique de haut de gamme, sinon
@@ -136,6 +136,17 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - 0029 — `sys.stdout` forcé en UTF-8 dans `run_v0` — la console Windows est en
   cp1252 et mutilait les accents du rapport, qui est le livrable.
 
+- 0031 — Effervescence = champ propre `effervescence` (tranquille | effervescent |
+  non_determinable), orthogonal à `couleur` — un effervescent peut être blanc,
+  rosé ou rouge : fusionner les deux dimensions dans `couleur` aurait forcé un
+  champagne rosé à choisir entre « rose » et « effervescent », donc à perdre une
+  information lisible. La catégorie précise (champagne, crémant, mousseux) n'est
+  PAS un enum : c'est une appellation, elle se lit et se range dans `appellation`,
+  sinon on demande au modèle de classer, donc de deviner (contre 0002/0003) —
+  écarté : `effervescent` ajouté à `Couleur`, et enum détaillé par catégorie.
+  Seul changement de contrat `Bouteille` depuis le squelette, validé avec le
+  propriétaire du projet (CLAUDE.md l'exige).
+
 - 0030 — `requirements.txt` recentré sur la v0 (anthropic, openpyxl, pyyaml,
   pytest) — `requests`, `beautifulsoup4` et `rapidfuzz` servaient au scraping et
   au matching LWIN d'un périmètre antérieur, hors v0.
@@ -148,7 +159,6 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - Format réel du listing manuel (fichier, en-têtes exacts) → verrouille la config
   et load_manual().
 - Photos ordonnées comme le listing ? Vues de bouteille entière dispo (format) ?
-- L'échelle de couleur (rouge/blanc/rosé) suffit-elle, ou le catalogue distingue
-  aussi orange, vin doux, effervescent ? → verrouille l'enum `Couleur` (0017).
-- Arborescence réelle des photos : un sous-dossier par bouteille ? → confirme ou
-  corrige `src/io/photos.py` (0027).
+- L'échelle de couleur doit-elle distinguer orange / vin doux naturel, ou
+  rouge-blanc-rosé suffit-il ? → verrouille l'enum `Couleur` (0017, 0031).
+  (L'effervescence, elle, est tranchée : champ propre, cf. 0031.)

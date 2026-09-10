@@ -56,6 +56,10 @@ colonnes:
     champ: couleur_source
     largeur: 15
 
+  - entete: Effervescence
+    champ: effervescence
+    largeur: 14
+
   - entete: Millésime
     champ: millesime
     largeur: 11

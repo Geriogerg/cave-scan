@@ -16,7 +16,7 @@ from src.compare.compare_listings import (
     formater_rapport,
     plier,
 )
-from src.extract.schema import Bouteille, Couleur, from_tool_input
+from src.extract.schema import Bouteille, Couleur, Effervescence, from_tool_input
 from src.io.manual_listing import load_manual
 from tests.conftest import FIXTURES
 
@@ -58,12 +58,12 @@ def test_couleur_enum_se_plie_comme_du_texte():
 
 
 def test_toutes_les_lignes_sont_comparees(rapport):
-    assert rapport.n_lignes == 5
+    assert rapport.n_lignes == 6
 
 
 def test_ecart_de_casse_ou_accent_ne_compte_pas_comme_erreur(rapport):
-    """Ligne 0 en capitales, ligne 2 sans accent : ce sont des accords."""
-    assert score(rapport, "appellation").exact == 5
+    """Ligne 0 en capitales, ligne 2 sans accent, ligne 5 « rosé » : des accords."""
+    assert score(rapport, "appellation").exact == 6
     assert score(rapport, "appellation").accuracy == 1.0
     assert score(rapport, "region").accuracy == 1.0
     assert score(rapport, "pays").accuracy == 1.0
@@ -85,17 +85,17 @@ def test_format_abstient_massivement_sans_bouteille_entiere(rapport):
     """CLAUDE.md : format non_determinable presque partout est normal, pas un bug."""
     format_ = score(rapport, "format")
     assert format_.manuel_vide == 1
-    assert format_.abstention == 3
+    assert format_.abstention == 4
     assert format_.desaccord == 0
     assert format_.exact == 1  # le magnum, lisible
     assert format_.accuracy == 1.0
-    assert format_.taux_abstention == 0.75
+    assert format_.taux_abstention == 0.8
 
 
 def test_manuel_vide_n_est_pas_evaluable(rapport):
     """L'expert n'a renseigné l'importateur que sur une ligne."""
     importateur = score(rapport, "importateur")
-    assert importateur.manuel_vide == 4
+    assert importateur.manuel_vide == 5
     assert importateur.evaluables == 1
     assert importateur.exact == 1
     assert importateur.accuracy == 1.0
@@ -105,8 +105,24 @@ def test_ecart_de_convention_apparait_en_desaccord(rapport):
     """« Domaine du Vieux Télégraphe » vs « Vieux Télégraphe » : à voir, pas à masquer."""
     domaine = score(rapport, "domaine")
     assert domaine.desaccord == 1
-    assert domaine.exact == 4
-    assert domaine.accuracy == 0.8
+    assert domaine.exact == 5
+    assert domaine.accuracy == pytest.approx(5 / 6)
+
+
+def test_effervescence_est_independante_de_la_couleur(rapport):
+    """Ligne 5 : un effervescent rosé garde SES DEUX dimensions (0031).
+
+    C'est tout l'intérêt du champ séparé — dans un enum `couleur` fusionné,
+    cette bouteille aurait dû choisir entre « rose » et « effervescent ».
+    """
+    effervescence = score(rapport, "effervescence")
+    assert effervescence.exact == 6
+    assert effervescence.accuracy == 1.0
+    assert effervescence.abstention == 0
+
+    auto = charger_auto()[5]
+    assert auto.couleur is Couleur.ROSE
+    assert auto.effervescence is Effervescence.EFFERVESCENT
 
 
 def test_abstention_numerique_est_une_abstention(rapport):

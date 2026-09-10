@@ -26,7 +26,7 @@ def test_fixture_extractor_respecte_le_protocol():
 
 def test_fixture_extractor_rejoue_dans_l_ordre():
     extracteur = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
-    assert len(extracteur) == 5
+    assert len(extracteur) == 6
     premiere = extracteur.extract("photo.jpg")
     deuxieme = extracteur.extract("photo.jpg")
     assert premiere.domaine == "Domaine Rossignol-Trapet"
@@ -102,7 +102,7 @@ def test_dry_run_produit_excel_et_rapport(tmp_path, capsys):
     assert code == 0
     assert sortie.exists() and sortie.stat().st_size > 0
     assert "DRY-RUN" in sortie_texte
-    assert "Comparaison auto vs manuel — 5 bouteille(s)" in sortie_texte
+    assert "Comparaison auto vs manuel — 6 bouteille(s)" in sortie_texte
     assert "accuracy" in sortie_texte
     assert "Désaccords à inspecter (3)" in sortie_texte
 

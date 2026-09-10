@@ -10,6 +10,7 @@ from src.extract.schema import (
     Bouteille,
     Couleur,
     CouleurSource,
+    Effervescence,
     Format,
     est_abstention,
     from_tool_input,
@@ -47,7 +48,25 @@ def test_est_abstention_reconnait_les_trois_conventions():
 def test_enums_fermes_offrent_une_sortie_d_abstention():
     assert Couleur.NON_DETERMINABLE.value == NON_DETERMINABLE
     assert Format.NON_DETERMINABLE.value == NON_DETERMINABLE
+    assert Effervescence.NON_DETERMINABLE.value == NON_DETERMINABLE
     assert CouleurSource.NON_LISIBLE.value == NON_LISIBLE
+
+
+def test_effervescence_et_couleur_sont_deux_dimensions():
+    """decisions.md 0031 : un effervescent peut être blanc, rosé ou rouge."""
+    assert "effervescent" not in [c.value for c in Couleur]
+    assert "rose" not in [e.value for e in Effervescence]
+
+    # Le cas qui justifie la séparation : les deux tiennent ensemble.
+    petillant_rose = Bouteille(
+        couleur=Couleur.ROSE, effervescence=Effervescence.EFFERVESCENT
+    )
+    assert petillant_rose.couleur is Couleur.ROSE
+    assert petillant_rose.effervescence is Effervescence.EFFERVESCENT
+
+
+def test_effervescence_par_defaut_est_non_determinable():
+    assert Bouteille().effervescence is Effervescence.NON_DETERMINABLE
 
 
 def test_from_tool_input_retombe_sur_l_abstention():
@@ -104,6 +123,7 @@ def test_tool_schema_ferme_les_enums():
     assert proprietes["couleur"]["enum"] == [c.value for c in Couleur]
     assert proprietes["format"]["enum"] == [f.value for f in Format]
     assert proprietes["couleur_source"]["enum"] == [c.value for c in CouleurSource]
+    assert proprietes["effervescence"]["enum"] == [e.value for e in Effervescence]
 
 
 def test_tool_schema_autorise_null_sur_les_numeriques():
