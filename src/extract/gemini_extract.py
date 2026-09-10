@@ -1,0 +1,214 @@
+"""Extraction par Gemini (Google), en sortie JSON contrainte par schéma.
+
+Backend GRATUIT du projet. Il implémente le même `Protocol Extractor` et reçoit
+les mêmes consignes que l'extracteur Anthropic (`src/extract/consignes.py`) :
+seul le fournisseur change, pas ce qu'on demande au modèle.
+
+Deux différences de fond avec le backend payant, à connaître avant de lire un
+score produit ici (decisions.md 0040) :
+
+- Le palier gratuit est **Flash uniquement**. Le chiffre qui décidera de la
+  suite du projet mérite d'être rejoué sur un modèle de tête : un plancher
+  mesuré avec un petit modèle sous-estime ce que la technologie sait faire.
+- Google peut exploiter les entrées et sorties du palier gratuit. Pour des
+  photos de bouteilles confiées par une maison de vente, c'est un point à
+  trancher avec elle avant tout usage réel.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import time
+from collections.abc import Sequence
+from typing import Any
+
+from google import genai
+from google.genai import errors, types
+
+from src.extract.base import CheminPhoto
+from src.extract.consignes import (
+    INSTRUCTION_FINALE,
+    LIBELLE_AUTRE,
+    LIBELLE_CONTRE_ETIQUETTE,
+    LIBELLE_ETIQUETTE,
+    SYSTEM_PROMPT,
+    lire_photo,
+)
+from src.extract.schema import Bouteille, from_tool_input, tool_schema
+
+# Modèle Flash : le palier gratuit ne donne accès qu'à cette famille.
+MODELE_DEFAUT = "gemini-3.6-flash"
+VARIABLE_MODELE = "CAVE_SCAN_GEMINI_MODEL"
+
+# Codes qui se reproduiront à l'identique sur chaque bouteille (clé invalide,
+# modèle inexistant, requête malformée) : inutile de les répéter 200 fois.
+CODES_SYSTEMATIQUES = {400, 401, 403, 404}
+
+# Le palier gratuit tourne autour de 15 requêtes/minute. Un 429 n'y est donc
+# PAS un incident, c'est le régime nominal : on espace les appels et on
+# réessaie, au lieu de transformer la moitié d'une campagne en abstentions.
+PAUSE_ENTRE_APPELS_S = 4.5
+TENTATIVES_MAX = 4
+
+
+class GeminiExtractor:
+    """Implémente `Extractor` via l'API Gemini, en JSON contraint par schéma."""
+
+    def __init__(
+        self,
+        client: Any | None = None,
+        modele: str | None = None,
+        pause_s: float = PAUSE_ENTRE_APPELS_S,
+        tentatives_max: int = TENTATIVES_MAX,
+    ) -> None:
+        # Le client résout sa clé seul : GEMINI_API_KEY, sinon GOOGLE_API_KEY.
+        self.client = client or genai.Client()
+        self.modele = modele or os.environ.get(VARIABLE_MODELE) or MODELE_DEFAUT
+        self.pause_s = pause_s
+        self.tentatives_max = tentatives_max
+        self._config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            # Sortie contrainte par LE schéma du projet, pas par un schéma
+            # recopié : `schema.py` reste la source unique (decisions.md 0001).
+            response_mime_type="application/json",
+            response_json_schema=tool_schema()["input_schema"],
+        )
+        self._dernier_appel = 0.0
+
+    def extract(
+        self,
+        etiquette: CheminPhoto,
+        contre_etiquette: CheminPhoto | None = None,
+        autres: Sequence[CheminPhoto] | None = None,
+    ) -> Bouteille:
+        """Une bouteille, un appel. Même politique d'erreur que le backend payant.
+
+        Panne PASSAGÈRE → abstention tracée, la campagne continue.
+        Panne SYSTÉMATIQUE → remonte et arrête tout (decisions.md 0035).
+        """
+        contenu = construire_contenu(etiquette, contre_etiquette, autres)
+        try:
+            reponse = self._appeler(contenu)
+        except errors.APIError as erreur:
+            if _est_systematique(erreur):
+                raise
+            return Bouteille(
+                champs_a_verifier=["tous"],
+                notes=f"Extraction échouée ({type(erreur).__name__}) : {erreur}",
+            )
+        return bouteille_depuis_reponse(reponse)
+
+    def _appeler(self, contenu: list[Any]) -> Any:
+        """Appelle le modèle en respectant le quota, avec reprise sur 429."""
+        for tentative in range(1, self.tentatives_max + 1):
+            self._respecter_le_quota()
+            try:
+                return self.client.models.generate_content(
+                    model=self.modele, contents=contenu, config=self._config
+                )
+            except errors.APIError as erreur:
+                dernier = tentative == self.tentatives_max
+                if _est_systematique(erreur) or not _merite_reprise(erreur) or dernier:
+                    raise
+                # Attente croissante : 5 s, 10 s, 20 s.
+                time.sleep(self.pause_s * (2**tentative))
+        raise AssertionError("inatteignable")  # pragma: no cover
+
+    def _respecter_le_quota(self) -> None:
+        """Espace les appels pour rester sous la limite du palier gratuit."""
+        if self.pause_s <= 0:
+            return
+        attente = self.pause_s - (time.monotonic() - self._dernier_appel)
+        if attente > 0:
+            time.sleep(attente)
+        self._dernier_appel = time.monotonic()
+
+
+def _code(erreur: errors.APIError) -> int | None:
+    return getattr(erreur, "code", None)
+
+
+def _est_systematique(erreur: errors.APIError) -> bool:
+    return _code(erreur) in CODES_SYSTEMATIQUES
+
+
+def _merite_reprise(erreur: errors.APIError) -> bool:
+    """429 (quota) et 5xx (panne serveur) valent une nouvelle tentative."""
+    code = _code(erreur)
+    return code == 429 or isinstance(erreur, errors.ServerError)
+
+
+def construire_contenu(
+    etiquette: CheminPhoto,
+    contre_etiquette: CheminPhoto | None = None,
+    autres: Sequence[CheminPhoto] | None = None,
+) -> list[Any]:
+    """Assemble le message : toutes les vues d'UNE bouteille, ensemble.
+
+    Même ordre et mêmes libellés de rôle que le backend Anthropic — la
+    comparabilité des deux backends en dépend.
+    """
+    octets, type_mime = lire_photo(etiquette)
+    contenu: list[Any] = [
+        LIBELLE_ETIQUETTE,
+        types.Part.from_bytes(data=octets, mime_type=type_mime),
+    ]
+
+    if contre_etiquette is not None:
+        octets, type_mime = lire_photo(contre_etiquette)
+        contenu.append(LIBELLE_CONTRE_ETIQUETTE)
+        contenu.append(types.Part.from_bytes(data=octets, mime_type=type_mime))
+
+    for index, autre in enumerate(autres or [], start=1):
+        octets, type_mime = lire_photo(autre)
+        contenu.append(LIBELLE_AUTRE.format(index=index))
+        contenu.append(types.Part.from_bytes(data=octets, mime_type=type_mime))
+
+    contenu.append(INSTRUCTION_FINALE)
+    return contenu
+
+
+def bouteille_depuis_reponse(reponse: Any) -> Bouteille:
+    """Lit le JSON contraint, en s'abstenant si le modèle n'a rien rendu.
+
+    Une réponse bloquée ou vide ne doit pas casser une campagne : on renvoie
+    une bouteille entièrement en abstention, motif dans `notes`.
+    """
+    texte = getattr(reponse, "text", None)
+    if not texte:
+        return Bouteille(
+            champs_a_verifier=["tous"],
+            notes=f"Extraction sans résultat : {_motif_vide(reponse)}.",
+        )
+
+    try:
+        charge = json.loads(texte)
+    except json.JSONDecodeError as erreur:
+        return Bouteille(
+            champs_a_verifier=["tous"],
+            notes=f"Réponse non lisible en JSON malgré le schéma imposé : {erreur}.",
+        )
+
+    if not isinstance(charge, dict):
+        return Bouteille(
+            champs_a_verifier=["tous"],
+            notes=f"Réponse JSON inattendue : {type(charge).__name__} au lieu d'un objet.",
+        )
+
+    return from_tool_input(charge)
+
+
+def _motif_vide(reponse: Any) -> str:
+    """Pourquoi la réponse est vide — bloquée, tronquée, ou simplement muette."""
+    retour = getattr(reponse, "prompt_feedback", None)
+    if getattr(retour, "block_reason", None):
+        return f"requête bloquée ({retour.block_reason})"
+
+    candidats = getattr(reponse, "candidates", None) or []
+    if candidats:
+        raison = getattr(candidats[0], "finish_reason", None)
+        if raison:
+            return f"génération interrompue ({raison})"
+
+    return "réponse vide"

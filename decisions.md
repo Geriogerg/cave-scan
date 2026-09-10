@@ -198,6 +198,35 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   silencieusement ; le centilitre est l'unité utile, la demi-mesure n'a pas de
   sens ici.
 
+## Backend gratuit
+
+- 0039 — Les consignes d'extraction (system prompt, libellés de rôle des photos,
+  instruction finale) vivent dans `src/extract/consignes.py`, partagées par TOUS
+  les extracteurs — si deux backends recevaient des prompts différents, leurs
+  scores ne seraient plus comparables et la v0 ne mesurerait plus rien. Un test
+  vérifie l'identité des consignes entre backends — écarté : dupliquer le prompt
+  par fournisseur.
+
+- 0040 — 2e extracteur : Gemini (`--backend gemini`, défaut), palier GRATUIT —
+  contrainte budgétaire du projet ; c'est le 2e cas d'usage qui justifiait
+  d'emblée le Protocol `Extractor` (0014), et aucun autre module n'a bougé.
+  Sortie contrainte par `response_json_schema`, alimenté par le `tool_schema()`
+  existant : `schema.py` reste la source unique (0001 respecté, pas d'OCR, pas
+  de parsing de texte libre).
+  **Deux réserves à porter dans toute lecture d'un score produit par ce
+  backend** : (a) le palier gratuit est *Flash uniquement*, donc le chiffre qui
+  décidera de la suite du projet doit être rejoué sur un modèle de tête —
+  un plancher mesuré avec un petit modèle sous-estime la technologie et
+  pourrait faire conclure à tort qu'il faut entraîner un modèle maison ;
+  (b) Google peut exploiter les entrées/sorties du palier gratuit, ce qui est à
+  trancher avec la maison avant d'y envoyer les photos de ses lots.
+
+- 0041 — Sur Gemini, un 429 est le RÉGIME NOMINAL, pas un incident (~15
+  requêtes/minute en gratuit) : appels espacés de 4,5 s et jusqu'à 4 tentatives
+  avec attente croissante avant de renoncer — sans cela, la moitié d'une
+  campagne serait sortie en abstention et le score aurait été faux. La
+  distinction passager/systématique de 0035 est conservée à l'identique.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
@@ -209,6 +238,9 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - L'échelle de couleur doit-elle distinguer orange / vin doux naturel, ou
   rouge-blanc-rosé suffit-il ? → verrouille l'enum `Couleur` (0017, 0031).
   (L'effervescence, elle, est tranchée : champ propre, cf. 0031.)
+- La maison accepte-t-elle que les photos de ses lots transitent par un palier
+  gratuit dont le fournisseur peut exploiter les données (0040) ? Si non :
+  backend payant, ou modèle local.
 - Dans les colonnes numériques, la maison préfère-t-elle une case VIDE (triable)
   ou « non lisible » écrit en toutes lettres (explicite) ? → `abstention_vide`
   (0037). Provisoirement : case vide.

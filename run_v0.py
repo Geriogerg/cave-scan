@@ -138,6 +138,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     analyseur.add_argument("--photos", type=Path, help="Dossier des photos.")
     analyseur.add_argument(
+        "--backend",
+        choices=("gemini", "anthropic"),
+        default="gemini",
+        help="Fournisseur du modèle vision. « gemini » (défaut) a un palier "
+        "GRATUIT, mais Flash uniquement : bon pour valider le pipeline. Le "
+        "chiffre qui décide de la suite mérite d'être rejoué sur "
+        "« anthropic » (payant, ~0,06 €/bouteille) — cf. decisions.md 0040.",
+    )
+    analyseur.add_argument(
         "--manual",
         type=Path,
         help="Listing manuel de l'expert. SANS lui : extraction et Excel "
@@ -187,10 +196,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         if not arguments.photos:
             analyseur.error("--photos est requis hors --dry-run.")
-        # Import tardif : le dry-run ne doit dépendre ni du SDK ni d'une clé API.
-        from src.extract.vision_extract import VisionExtractor
+        # Imports tardifs : le dry-run ne doit dépendre d'aucun SDK ni clé API,
+        # et le backend gratuit ne doit pas exiger le SDK payant (ni l'inverse).
+        if arguments.backend == "gemini":
+            from src.extract.gemini_extract import GeminiExtractor
 
-        extracteur = VisionExtractor()
+            extracteur: Extractor = GeminiExtractor()
+        else:
+            from src.extract.vision_extract import VisionExtractor
+
+            extracteur = VisionExtractor()
+
         photos = grouper_photos(arguments.photos)
         if arguments.limite:
             photos = photos[: arguments.limite]
