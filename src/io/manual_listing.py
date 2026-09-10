@@ -1,10 +1,15 @@
 """Chargement du listing manuel de l'expert — la référence de la comparaison.
 
-STUB ASSUMÉ : tant que le vrai fichier de l'expert n'est pas arrivé, seul le
-format de fixtures JSON est lu. Le point d'extension est balisé ci-dessous.
+Lit un .xlsx (le format attendu du fichier de l'expert) ou un .json (fixtures).
 
-Reste une simple fonction tant qu'il n'y a qu'un format à lire : pas
-d'abstraction de formats, pas de registre de loaders (decisions.md 0013, YAGNI).
+Ce qui reste ouvert : la correspondance entre les en-têtes RÉELS de la maison
+et nos champs canoniques. Seuls nos propres en-têtes d'export sont connus, ce
+qui suffit à se comparer à soi-même en attendant. Inventer les siens serait
+deviner (decisions.md 0007) ; à défaut de correspondance, le chargement échoue
+bruyamment plutôt que de rendre un rapport vide et crédible (0034).
+
+Reste une simple fonction : pas d'abstraction de formats, pas de registre de
+loaders tant que deux `if` suffisent (decisions.md 0013, YAGNI).
 
 Hypothèse v0 (decisions.md 0010) : les lignes sortent dans le MÊME ORDRE que les
 photos. C'est ce qui permet la comparaison ligne à ligne.
@@ -13,6 +18,7 @@ photos. C'est ce qui permet la comparaison ligne à ligne.
 from __future__ import annotations
 
 import json
+import unicodedata
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -43,21 +49,80 @@ def load_manual(chemin: str | Path) -> list[dict[str, Any]]:
         _verifier_correspondance(lignes, chemin)
         return lignes
 
-    # ==================================================================
-    # À COMPLÉTER À L'ARRIVÉE DU FICHIER DE L'EXPERT
-    # ------------------------------------------------------------------
-    # Le vrai listing sera vraisemblablement un .xlsx (ou .csv). Il faudra ici :
-    #   1. lire les lignes du fichier ;
-    #   2. mapper ses en-têtes RÉELS vers les champs canoniques de `Bouteille` ;
-    #   3. passer chaque ligne dans `_aligner()`.
-    # Ne pas inventer la correspondance d'en-têtes à l'avance : elle se lit sur
-    # le vrai fichier (question ouverte de decisions.md).
-    # ==================================================================
+    if suffixe == ".xlsx":
+        lignes = [_aligner(ligne) for ligne in _lire_xlsx(chemin)]
+        _verifier_correspondance(lignes, chemin)
+        return lignes
+
     raise NotImplementedError(
         f"Format de listing manuel non pris en charge : {suffixe or '(sans extension)'}. "
-        f"Seul .json (fixtures) est lu en v0 ; la lecture du fichier réel de "
-        f"l'expert reste à écrire dans {__file__}."
+        f"Formats lus : .xlsx et .json. Pour un autre format, ajouter sa "
+        f"lecture dans {__file__}."
     )
+
+
+def _normaliser_entete(entete: Any) -> str:
+    """Réduit un en-tête à sa forme comparable : sans casse, accents ni ponctuation.
+
+    « Millésime » et « millesime » désignent la même colonne ; « Degré (% vol.) »
+    demande en plus un alias, cf. `ENTETES_CONNUES`.
+    """
+    texte = unicodedata.normalize("NFKD", str(entete or ""))
+    sans_accents = "".join(c for c in texte if not unicodedata.combining(c))
+    return "".join(c for c in sans_accents.casefold() if c.isalnum())
+
+
+# En-têtes que NOUS produisons (config/maisons/exemple.yaml) et qui ne se
+# devinent pas par simple normalisation. Permet de relire un fichier sorti de
+# l'outil — utile pour se comparer à soi-même en attendant l'expert.
+#
+# Les en-têtes RÉELS de la maison ne sont PAS ici : ils ne sont pas connus, et
+# les inventer serait deviner (decisions.md 0007). Ils s'ajouteront à cette
+# table en regardant son fichier ; d'ici là, `_verifier_correspondance()`
+# refuse bruyamment un fichier dont rien ne correspond (0034).
+ENTETES_CONNUES = {
+    "domaineproducteur": "domaine",
+    "degrevol": "degre",
+    "couleursource": "couleur_source",
+    "averifier": "champs_a_verifier",
+}
+
+
+def _lire_xlsx(chemin: Path) -> list[dict[str, Any]]:
+    """Lit la 1re feuille : 1re ligne = en-têtes, le reste = les bouteilles.
+
+    Les colonnes non reconnues sont ignorées (lot, estimation...), les valeurs
+    numériques restent numériques — c'est `plier()` qui règle 75 face à 75.0
+    (decisions.md 0032).
+    """
+    from openpyxl import load_workbook
+
+    feuille = load_workbook(chemin, data_only=True).worksheets[0]
+    rangees = feuille.iter_rows(values_only=True)
+
+    entetes_brutes = next(rangees, None)
+    if entetes_brutes is None:
+        raise ValueError(f"{chemin} : feuille vide, aucun en-tête.")
+
+    champs_normalises = {_normaliser_entete(c): c for c in CHAMPS_COMPARABLES}
+    colonnes: dict[int, str] = {}
+    for index, entete in enumerate(entetes_brutes):
+        cle = _normaliser_entete(entete)
+        champ = champs_normalises.get(cle) or ENTETES_CONNUES.get(cle)
+        if champ in CHAMPS_COMPARABLES:
+            colonnes[index] = champ
+
+    lignes: list[dict[str, Any]] = []
+    for rangee in rangees:
+        if all(cellule is None or str(cellule).strip() == "" for cellule in rangee):
+            continue  # ligne vide : séparateur ou fin de tableau
+        lignes.append(
+            {
+                champ: rangee[index] if index < len(rangee) else ""
+                for index, champ in colonnes.items()
+            }
+        )
+    return lignes
 
 
 def _verifier_correspondance(lignes: list[dict[str, Any]], chemin: Path) -> None:

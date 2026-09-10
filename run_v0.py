@@ -154,6 +154,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         "de l'expert existe.",
     )
     analyseur.add_argument(
+        "--auto",
+        type=Path,
+        help="Rejoue un journal .jsonl déjà produit au lieu de ré-extraire. "
+        "Permet de refaire le score autant de fois qu'on veut — après "
+        "correction du listing expert, par exemple — sans rappeler le modèle.",
+    )
+    analyseur.add_argument(
         "--limite",
         type=int,
         help="N'extrait que les N premières bouteilles. À utiliser pour le "
@@ -188,6 +195,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     _charger_env()
 
+    # Rejeu : ni modèle, ni photos, ni clé — juste re-scorer.
+    if arguments.auto:
+        bouteilles = charger_journal(arguments.auto)
+        if not bouteilles:
+            analyseur.error(f"Journal vide ou introuvable : {arguments.auto}")
+        print(f"Rejeu de {arguments.auto} — {len(bouteilles)} bouteille(s).")
+        return _restituer(bouteilles, arguments, journal=None)
+
     if arguments.dry_run:
         extracteur: Extractor = FixtureExtractor.depuis_json(FIXTURE_AUTO)
         photos = _photos_factices(len(extracteur))
@@ -215,11 +230,21 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     print("Extraction :")
     bouteilles = extraire(extracteur, photos, journal, arguments.reprendre)
+    arguments.manual = chemin_manuel
+    return _restituer(bouteilles, arguments, journal)
+
+
+def _restituer(
+    bouteilles: list[Bouteille], arguments: argparse.Namespace, journal: Path | None
+) -> int:
+    """Excel + rapport. Commun à l'extraction et au rejeu d'un journal."""
+    chemin_manuel = arguments.manual
 
     config = charger_config(arguments.maison)
     chemin_excel = ecrire_excel(bouteilles, config, arguments.sortie)
     print(f"\nListing automatique écrit : {chemin_excel}")
-    print(f"Journal d'extraction       : {journal}")
+    if journal is not None:
+        print(f"Journal d'extraction       : {journal}")
 
     if chemin_manuel is None:
         print(

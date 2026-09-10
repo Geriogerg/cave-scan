@@ -9,9 +9,11 @@ from __future__ import annotations
 import json
 
 import pytest
+from openpyxl import Workbook
 
 from src.compare.compare_listings import comparer
-from src.extract.schema import CHAMPS_COMPARABLES, Bouteille
+from src.export.excel_writer import charger_config, ecrire_excel
+from src.extract.schema import CHAMPS_COMPARABLES, Bouteille, from_tool_input
 from src.io.manual_listing import (
     _aligner,
     colonnes_toujours_vides,
@@ -101,11 +103,91 @@ def test_une_colonne_vide_partout_ne_fausse_pas_l_accuracy():
 # --- formats non pris en charge -----------------------------------------
 
 
-def test_xlsx_renvoie_vers_le_todo(tmp_path):
-    faux = tmp_path / "listing.xlsx"
-    faux.write_bytes(b"pas un vrai xlsx")
-    with pytest.raises(NotImplementedError, match="reste à écrire"):
+def test_csv_pas_encore_pris_en_charge(tmp_path):
+    faux = tmp_path / "listing.csv"
+    faux.write_text("domaine\nX\n", encoding="utf-8")
+    with pytest.raises(NotImplementedError, match="Formats lus"):
         load_manual(faux)
+
+
+# --- lecture .xlsx ------------------------------------------------------
+
+
+def ecrire_xlsx(tmp_path, entetes, lignes, nom="listing.xlsx"):
+    classeur = Workbook()
+    feuille = classeur.active
+    feuille.append(entetes)
+    for ligne in lignes:
+        feuille.append(ligne)
+    chemin = tmp_path / nom
+    classeur.save(chemin)
+    return chemin
+
+
+def test_lecture_d_un_xlsx(tmp_path):
+    chemin = ecrire_xlsx(
+        tmp_path,
+        ["Domaine / Producteur", "Appellation", "Millésime", "Contenance (cl)"],
+        [["Domaine Rossignol-Trapet", "Gevrey-Chambertin", "2018", 75]],
+    )
+    lignes = load_manual(chemin)
+
+    assert len(lignes) == 1
+    assert lignes[0]["domaine"] == "Domaine Rossignol-Trapet"
+    assert lignes[0]["millesime"] == "2018"
+    assert lignes[0]["contenance_cl"] == 75
+
+
+def test_les_accents_et_la_casse_des_entetes_sont_absorbes(tmp_path):
+    chemin = ecrire_xlsx(tmp_path, ["MILLÉSIME", "appellation"], [["2018", "Pommard"]])
+    lignes = load_manual(chemin)
+    assert lignes[0]["millesime"] == "2018"
+    assert lignes[0]["appellation"] == "Pommard"
+
+
+def test_les_colonnes_maison_sont_ignorees(tmp_path):
+    """Lot et Estimation ne nous concernent pas."""
+    chemin = ecrire_xlsx(
+        tmp_path, ["Lot", "Domaine", "Estimation"], [[42, "Domaine X", "800-1000"]]
+    )
+    assert load_manual(chemin)[0]["domaine"] == "Domaine X"
+
+
+def test_les_lignes_vides_sont_sautees(tmp_path):
+    chemin = ecrire_xlsx(
+        tmp_path, ["Domaine"], [["Domaine X"], [None], ["Domaine Y"], [""]]
+    )
+    assert len(load_manual(chemin)) == 2
+
+
+def test_un_xlsx_aux_entetes_inconnus_leve_une_erreur(tmp_path):
+    chemin = ecrire_xlsx(tmp_path, ["Producteur", "Cru"], [["Domaine X", "Pommard"]])
+    with pytest.raises(ValueError, match="aucune colonne ne correspond"):
+        load_manual(chemin)
+
+
+def test_aller_retour_excel_le_fichier_produit_se_relit(tmp_path):
+    """Le test que l'utilisateur peut faire seul : exporter, éditer, comparer.
+
+    Sans cet aller-retour, impossible de se comparer à soi-même avant que le
+    fichier de l'expert existe.
+    """
+    charges = json.loads(
+        (FIXTURES / "bouteilles_auto.json").read_text(encoding="utf-8")
+    )
+    bouteilles = [from_tool_input(charge) for charge in charges]
+    config = charger_config(FIXTURES.parent.parent / "config" / "maisons" / "exemple.yaml")
+    chemin = ecrire_excel(bouteilles, config, tmp_path / "auto.xlsx")
+
+    relu = load_manual(chemin)
+
+    assert len(relu) == len(bouteilles)
+    assert relu[0]["domaine"] == "Domaine Rossignol-Trapet"
+    assert relu[0]["contenance_cl"] == 75
+
+    # Et comparé à lui-même : zéro désaccord.
+    rapport = comparer(bouteilles, relu)
+    assert rapport.desaccords == []
 
 
 def test_fichier_absent(tmp_path):
