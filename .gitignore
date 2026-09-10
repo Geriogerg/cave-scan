@@ -1,8 +1,10 @@
 .env
-data/cache/
-data/reference/
-data/failures/
-data/samples/
+.venv/
 __pycache__/
 *.pyc
-.venv/
+
+# Sorties produites par run_v0.py (listings, rapports)
+out/
+
+# Photos et listings réels : jamais versionnés
+data/
