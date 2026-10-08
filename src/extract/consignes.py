@@ -2,7 +2,7 @@
 
 Tout ce qui est ici est partagé par tous les extracteurs. C'est volontaire :
 si deux backends recevaient des consignes différentes, leurs scores ne
-seraient plus comparables et la v0 ne mesurerait plus rien (decisions.md 0039).
+seraient plus comparables et la v0 ne mesurerait plus rien (decisions.md 0049).
 
 Ce module ne connaît aucun SDK. Chaque extracteur l'habille dans son propre
 format de message.

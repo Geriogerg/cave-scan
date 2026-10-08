@@ -5,7 +5,7 @@ les mêmes consignes que l'extracteur Anthropic (`src/extract/consignes.py`) :
 seul le fournisseur change, pas ce qu'on demande au modèle.
 
 Deux différences de fond avec le backend payant, à connaître avant de lire un
-score produit ici (decisions.md 0040) :
+score produit ici (decisions.md 0050) :
 
 - Le palier gratuit est **Flash uniquement**. Le chiffre qui décidera de la
   suite du projet mérite d'être rejoué sur un modèle de tête : un plancher
@@ -85,7 +85,7 @@ class GeminiExtractor:
         """Une bouteille, un appel. Même politique d'erreur que le backend payant.
 
         Panne PASSAGÈRE → abstention tracée, la campagne continue.
-        Panne SYSTÉMATIQUE → remonte et arrête tout (decisions.md 0035).
+        Panne SYSTÉMATIQUE → remonte et arrête tout (decisions.md 0045).
         """
         contenu = construire_contenu(etiquette, contre_etiquette, autres)
         try:

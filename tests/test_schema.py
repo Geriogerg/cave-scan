@@ -53,7 +53,7 @@ def test_enums_fermes_offrent_une_sortie_d_abstention():
 
 
 def test_effervescence_et_couleur_sont_deux_dimensions():
-    """decisions.md 0031 : un effervescent peut être blanc, rosé ou rouge."""
+    """decisions.md 0041 : un effervescent peut être blanc, rosé ou rouge."""
     assert "effervescent" not in [c.value for c in Couleur]
     assert "rose" not in [e.value for e in Effervescence]
 

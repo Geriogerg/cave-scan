@@ -62,7 +62,7 @@ def _reponse(charge: dict):
     return SimpleNamespace(text=json.dumps(charge), candidates=[], prompt_feedback=None)
 
 
-# --- consignes partagées (decisions.md 0039) ----------------------------
+# --- consignes partagées (decisions.md 0049) ----------------------------
 
 
 def test_les_deux_backends_partagent_les_memes_consignes():

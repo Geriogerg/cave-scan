@@ -86,7 +86,7 @@ def extraire(
     """Extrait puis normalise, bouteille par bouteille, dans l'ordre.
 
     Chaque bouteille est écrite dans le journal DÈS qu'elle est extraite
-    (decisions.md 0036) : une campagne de 200 bouteilles interrompue à la 180e
+    (decisions.md 0046) : une campagne de 200 bouteilles interrompue à la 180e
     ne doit pas perdre 180 appels API déjà payés. `reprendre` repart de là où
     le journal s'arrête.
     """
@@ -144,7 +144,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Fournisseur du modèle vision. « gemini » (défaut) a un palier "
         "GRATUIT, mais Flash uniquement : bon pour valider le pipeline. Le "
         "chiffre qui décide de la suite mérite d'être rejoué sur "
-        "« anthropic » (payant, ~0,06 €/bouteille) — cf. decisions.md 0040.",
+        "« anthropic » (payant, ~0,06 €/bouteille) — cf. decisions.md 0050.",
     )
     analyseur.add_argument(
         "--manual",

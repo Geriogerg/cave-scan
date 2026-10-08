@@ -117,7 +117,7 @@ def test_dry_run_n_importe_pas_le_sdk_anthropic(tmp_path):
     assert "src.extract.vision_extract" not in sys.modules
 
 
-# --- journal et reprise (decisions.md 0036) -----------------------------
+# --- journal et reprise (decisions.md 0046) -----------------------------
 
 
 class ExtracteurQuiTombe:

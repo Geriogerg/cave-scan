@@ -6,7 +6,7 @@ Ce qui reste ouvert : la correspondance entre les en-têtes RÉELS de la maison
 et nos champs canoniques. Seuls nos propres en-têtes d'export sont connus, ce
 qui suffit à se comparer à soi-même en attendant. Inventer les siens serait
 deviner (decisions.md 0007) ; à défaut de correspondance, le chargement échoue
-bruyamment plutôt que de rendre un rapport vide et crédible (0034).
+bruyamment plutôt que de rendre un rapport vide et crédible (0044).
 
 Reste une simple fonction : pas d'abstraction de formats, pas de registre de
 loaders tant que deux `if` suffisent (decisions.md 0013, YAGNI).
@@ -79,7 +79,7 @@ def _normaliser_entete(entete: Any) -> str:
 # Les en-têtes RÉELS de la maison ne sont PAS ici : ils ne sont pas connus, et
 # les inventer serait deviner (decisions.md 0007). Ils s'ajouteront à cette
 # table en regardant son fichier ; d'ici là, `_verifier_correspondance()`
-# refuse bruyamment un fichier dont rien ne correspond (0034).
+# refuse bruyamment un fichier dont rien ne correspond (0044).
 ENTETES_CONNUES = {
     "domaineproducteur": "domaine",
     "degrevol": "degre",
@@ -93,7 +93,7 @@ def _lire_xlsx(chemin: Path) -> list[dict[str, Any]]:
 
     Les colonnes non reconnues sont ignorées (lot, estimation...), les valeurs
     numériques restent numériques — c'est `plier()` qui règle 75 face à 75.0
-    (decisions.md 0032).
+    (decisions.md 0042).
     """
     from openpyxl import load_workbook
 
@@ -132,7 +132,7 @@ def _verifier_correspondance(lignes: list[dict[str, Any]], chemin: Path) -> None
     « Producteur » et pas « domaine ». `_aligner()` remplit alors des chaînes
     vides sans broncher, et le rapport sort `manuel_vide` partout — propre,
     crédible, et entièrement faux. Pour un outil de MESURE, c'est la pire panne
-    possible : elle ne se voit pas (decisions.md 0034).
+    possible : elle ne se voit pas (decisions.md 0044).
     """
     if not lignes:
         raise ValueError(f"{chemin} : listing manuel vide.")

@@ -141,7 +141,7 @@ def test_refus_du_modele_est_trace_dans_les_notes():
     assert "refus du modèle (cyber)" in bouteille.notes
 
 
-# --- politique d'erreur (decisions.md 0035) ------------------------------
+# --- politique d'erreur (decisions.md 0045) ------------------------------
 
 
 class ClientQuiEchoue:
@@ -187,7 +187,7 @@ def test_panne_systematique_arrete_tout(photos):
 
 
 def test_un_400_explique_le_risque_connu(photos):
-    """decisions.md 0019 : le 400 le plus probable a sa marche à suivre écrite."""
+    """decisions.md 0029 : le 400 le plus probable a sa marche à suivre écrite."""
     etiquette, _, _ = photos
     erreur = _erreur_api(anthropic.BadRequestError, "thinking not supported", 400)
     extracteur = VisionExtractor(client=ClientQuiEchoue(erreur))
@@ -196,7 +196,7 @@ def test_un_400_explique_le_risque_connu(photos):
         extracteur.extract(etiquette)
 
     message = str(capture.value)
-    assert "decisions.md 0019" in message
+    assert "decisions.md 0029" in message
     assert "tool_choice" in message
     assert "NE PAS désactiver le thinking" in message
 

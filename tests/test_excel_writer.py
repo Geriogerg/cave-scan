@@ -84,7 +84,7 @@ def test_abstentions_prennent_le_libelle_de_la_maison():
 
 
 def test_abstention_vide_laisse_la_case_vide():
-    """decisions.md 0037 : une colonne numérique doit rester triable."""
+    """decisions.md 0047 : une colonne numérique doit rester triable."""
     libelles = {"non_lisible": "non lisible", "numerique_absent": "non lisible"}
     bouteille = Bouteille()
 

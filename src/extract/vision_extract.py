@@ -32,7 +32,7 @@ MODELE_DEFAUT = "claude-opus-5"
 VARIABLE_MODELE = "CAVE_SCAN_MODEL"
 
 # Pannes qui se répéteront à l'identique sur chaque bouteille : les avaler
-# produirait 200 lignes vides en facturant 200 appels (decisions.md 0035).
+# produirait 200 lignes vides en facturant 200 appels (decisions.md 0045).
 ERREURS_SYSTEMATIQUES = (
     anthropic.AuthenticationError,
     anthropic.PermissionDeniedError,
@@ -41,14 +41,14 @@ ERREURS_SYSTEMATIQUES = (
 )
 
 # Le risque connu de la v0 : la combinaison thinking adaptatif + tool_choice
-# forcé n'a jamais pu être testée contre l'API réelle (decisions.md 0019).
+# forcé n'a jamais pu être testée contre l'API réelle (decisions.md 0029).
 # Un 400 opaque au premier vrai run coûterait une demi-journée : on écrit
 # directement la marche à suivre dans le message.
 INDICE_400 = """L'API a refusé la requête (400) avec le modèle {modele}.
 
   {erreur}
 
-Piste n°1 (decisions.md 0019) : la combinaison « thinking adaptatif +
+Piste n°1 (decisions.md 0029) : la combinaison « thinking adaptatif +
 tool_choice forcé » n'a jamais pu être vérifiée contre l'API réelle. Si le
 message ci-dessus met en cause `thinking` ou `tool_choice`, la correction est
 de passer tool_choice à {{"type": "auto"}} en nommant l'outil dans le prompt.
@@ -143,7 +143,7 @@ class VisionExtractor:
     ) -> Bouteille:
         """Une bouteille, un appel. Toutes les vues partent dans le même message.
 
-        Politique d'erreur (decisions.md 0035) : une panne PASSAGÈRE sur une
+        Politique d'erreur (decisions.md 0045) : une panne PASSAGÈRE sur une
         bouteille produit une abstention tracée et la campagne continue ; une
         panne SYSTÉMATIQUE (clé invalide, modèle inconnu, requête malformée)
         remonte et arrête tout — la répéter 200 fois ne ferait que produire

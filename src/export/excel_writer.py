@@ -42,7 +42,7 @@ class Colonne:
     # Laisse la case VIDE plutôt que d'y écrire « non lisible ». Réservé aux
     # colonnes numériques : y mêler du texte casse le tri et le filtre pour le
     # commissaire-priseur. L'abstention reste visible par le surlignage de la
-    # ligne et la colonne « À vérifier » (decisions.md 0037).
+    # ligne et la colonne « À vérifier » (decisions.md 0047).
     abstention_vide: bool = False
 
 

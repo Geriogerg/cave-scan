@@ -50,7 +50,7 @@ class Effervescence(StrEnum):
 
     Deux dimensions distinctes : un effervescent peut être blanc, rosé ou rouge.
     Les fusionner dans `couleur` obligerait à choisir et perdrait l'information
-    (decisions.md 0031).
+    (decisions.md 0041).
 
     La catégorie précise (champagne, crémant, mousseux...) n'est pas un enum ici :
     c'est une appellation, elle se lit et se range dans `appellation`.

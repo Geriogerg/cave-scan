@@ -75,7 +75,7 @@ class SignauxModele:
     """Ce que le modèle dit de LUI-MÊME, sans référence à l'expert.
 
     Ces chiffres ne se comparent à rien : ils répondent à deux questions de
-    décision que l'accuracy ne peut pas trancher (decisions.md 0033) —
+    décision que l'accuracy ne peut pas trancher (decisions.md 0043) —
     « la couleur est-elle lue ou déduite ? » et « quelle charge de relecture
     humaine ce pipeline génère-t-il ? ».
     """
@@ -108,7 +108,7 @@ def _canoniser_nombre(valeur: Any) -> str | None:
     Un tableur ne distingue pas 75 de 75.0 : openpyxl rend les entiers d'un
     .xlsx en `float`, si bien que la contenance de l'expert arrive en `75.0`
     face au `75` du modèle. Sans cette canonicalisation, TOUTES les contenances
-    et TOUS les degrés sortiraient en désaccord (decisions.md 0032).
+    et TOUS les degrés sortiraient en désaccord (decisions.md 0042).
 
     Ne s'applique qu'aux vrais types numériques, jamais aux chaînes : une cuvée
     nommée « 890 » ou « 007 » doit rester le texte qu'elle est.

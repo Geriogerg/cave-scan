@@ -55,7 +55,7 @@ def test_couleur_enum_se_plie_comme_du_texte():
     assert plier(Couleur.ROUGE) == plier("Rouge")
 
 
-# --- nombres venant d'un tableur (decisions.md 0032) --------------------
+# --- nombres venant d'un tableur (decisions.md 0042) --------------------
 
 
 def test_un_entier_et_son_float_se_plient_pareil():
@@ -148,7 +148,7 @@ def test_ecart_de_convention_apparait_en_desaccord(rapport):
 
 
 def test_effervescence_est_independante_de_la_couleur(rapport):
-    """Ligne 5 : un effervescent rosé garde SES DEUX dimensions (0031).
+    """Ligne 5 : un effervescent rosé garde SES DEUX dimensions (0041).
 
     C'est tout l'intérêt du champ séparé — dans un enum `couleur` fusionné,
     cette bouteille aurait dû choisir entre « rose » et « effervescent ».
@@ -192,7 +192,7 @@ def test_rapport_formate_montre_scores_et_desaccords(rapport):
     assert "2004" in texte and "2001" in texte
 
 
-# --- signaux du modèle (decisions.md 0033) ------------------------------
+# --- signaux du modèle (decisions.md 0043) ------------------------------
 
 
 def test_couleur_source_est_agregee(rapport):
