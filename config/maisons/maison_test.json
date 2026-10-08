@@ -1,0 +1,210 @@
+{
+  "_fictif": "Config de TEST inventée, à remplacer par la nomenclature réelle de la maison pilote.",
+  "_format": {
+    "version": "Entier, incrémenté à chaque modification du fichier. Copié dans chaque export.",
+    "regroupement_export": "Liste de 'cle' de colonnes. Les bouteilles identiques sur toutes ces clés sont fusionnées en une ligne, quantités additionnées.",
+    "valeurs": "Chaque valeur a un 'code' stable (stocké, comparé, jamais modifié) et un 'libelle' affiché à l'export (modifiable librement). La description guide le modèle.",
+    "regle": "Texte optionnel, consigne supplémentaire injectée dans le schéma envoyé au modèle pour cette colonne.",
+    "source": "modele = lu sur la photo ; modele_best_effort = proposé par le modèle et toujours à vérifier ; expert = saisi par l'expert, jamais envoyé au modèle ; systeme = calculé par l'outil, jamais envoyé au modèle."
+  },
+  "maison": "Maison Test",
+  "version": 1,
+  "langue": "fr",
+  "regroupement_export": [
+    "domaine",
+    "appellation",
+    "cuvee",
+    "millesime",
+    "format",
+    "etat_etiquette"
+  ],
+  "colonnes": [
+    {
+      "cle": "id",
+      "nom": "N°",
+      "type": "texte",
+      "source": "systeme",
+      "description": "Identifiant stable de la bouteille, généré par l'outil."
+    },
+    {
+      "cle": "quantite",
+      "nom": "Qté",
+      "type": "nombre",
+      "source": "expert",
+      "description": "Nombre de bouteilles identiques et de même état. Saisi par l'expert, 1 par défaut."
+    },
+    {
+      "cle": "domaine",
+      "nom": "Domaine / Château",
+      "type": "texte",
+      "source": "modele",
+      "canonique": true,
+      "description": "Producteur tel qu'écrit sur l'étiquette (Domaine, Château, Maison...)."
+    },
+    {
+      "cle": "appellation",
+      "nom": "Appellation",
+      "type": "texte",
+      "source": "modele",
+      "canonique": true,
+      "description": "Appellation d'origine, avec la mention Grand Cru / 1er Cru si présente."
+    },
+    {
+      "cle": "cuvee",
+      "nom": "Cuvée / Climat",
+      "type": "texte",
+      "source": "modele",
+      "description": "Nom de cuvée ou de climat s'il est distinct de l'appellation. Vide sinon."
+    },
+    {
+      "cle": "millesime",
+      "nom": "Millésime",
+      "type": "texte",
+      "source": "modele",
+      "canonique": true,
+      "description": "Année sur 4 chiffres, ou NM si non millésimé. Uniquement si lue sur l'étiquette ou la contre-étiquette, jamais déduite."
+    },
+    {
+      "cle": "couleur",
+      "nom": "Couleur",
+      "type": "liste",
+      "source": "modele",
+      "valeurs": [
+        {
+          "code": "rouge",
+          "libelle": "Rouge",
+          "description": "Vin rouge tranquille."
+        },
+        {
+          "code": "blanc",
+          "libelle": "Blanc",
+          "description": "Vin blanc tranquille, sec ou liquoreux."
+        },
+        {
+          "code": "rose",
+          "libelle": "Rosé",
+          "description": "Vin rosé tranquille."
+        },
+        {
+          "code": "champagne",
+          "libelle": "Champagne",
+          "description": "Appellation Champagne uniquement."
+        },
+        {
+          "code": "effervescent",
+          "libelle": "Effervescent",
+          "description": "Autre vin effervescent (crémant, mousseux...)."
+        },
+        {
+          "code": "autre",
+          "libelle": "Autre",
+          "description": "Vin doux naturel, vin muté, spiritueux ou cas non couvert."
+        }
+      ]
+    },
+    {
+      "cle": "format",
+      "nom": "Format",
+      "type": "liste",
+      "source": "modele_best_effort",
+      "canonique": true,
+      "valeurs": [
+        {
+          "code": "demi_bouteille",
+          "libelle": "Demi-bouteille",
+          "description": "37,5 cl."
+        },
+        {
+          "code": "bouteille",
+          "libelle": "Bouteille",
+          "description": "75 cl."
+        },
+        {
+          "code": "magnum",
+          "libelle": "Magnum",
+          "description": "1,5 L."
+        },
+        {
+          "code": "double_magnum",
+          "libelle": "Double magnum",
+          "description": "3 L."
+        },
+        {
+          "code": "jeroboam",
+          "libelle": "Jéroboam",
+          "description": "3 L en Champagne / Bourgogne, 5 L à Bordeaux."
+        },
+        {
+          "code": "imperiale",
+          "libelle": "Impériale",
+          "description": "6 L."
+        },
+        {
+          "code": "autre",
+          "libelle": "Autre",
+          "description": "Tout autre format."
+        }
+      ],
+      "regle": "Seulement si la contenance est imprimée ou si la photo montre clairement la bouteille entière. Sinon non déterminable."
+    },
+    {
+      "cle": "etat_etiquette",
+      "nom": "État étiquette",
+      "type": "liste",
+      "source": "modele_best_effort",
+      "valeurs": [
+        {
+          "code": "parfait",
+          "libelle": "Parfait",
+          "description": "Aucune marque visible."
+        },
+        {
+          "code": "legerement_marquee",
+          "libelle": "Légèrement marquée",
+          "description": "Petite griffure, froissure ou tache discrète."
+        },
+        {
+          "code": "tachee",
+          "libelle": "Tachée",
+          "description": "Taches ou traces d'humidité visibles, texte entièrement lisible."
+        },
+        {
+          "code": "abimee",
+          "libelle": "Abîmée",
+          "description": "Déchirure, manque ou décoloration importante, texte partiellement lisible."
+        },
+        {
+          "code": "tres_abimee",
+          "libelle": "Très abîmée",
+          "description": "Étiquette en grande partie détruite ou illisible."
+        },
+        {
+          "code": "absente",
+          "libelle": "Absente",
+          "description": "Pas d'étiquette principale."
+        }
+      ]
+    },
+    {
+      "cle": "description_etat",
+      "nom": "Description de l'état",
+      "type": "texte",
+      "source": "modele_best_effort",
+      "description": "Une phrase courte et factuelle sur ce qui est visible (étiquette, capsule, niveau si visible). Ne rien affirmer de non visible. Style catalogue : « Étiquette légèrement tachée, capsule intacte. »"
+    },
+    {
+      "cle": "estimation",
+      "nom": "Estimation (€)",
+      "type": "texte",
+      "source": "expert",
+      "description": "Saisie par l'expert. Jamais remplie par le modèle."
+    },
+    {
+      "cle": "a_verifier",
+      "nom": "À vérifier",
+      "type": "texte",
+      "source": "systeme",
+      "description": "Champs incertains signalés par le modèle, pour la relecture."
+    }
+  ]
+}

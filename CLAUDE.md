@@ -1,4 +1,4 @@
-# CLAUDE.md — Contexte v0
+# CLAUDE.md — Contexte (v0 → version pilote)
 
 > Lu à chaque session. Fait autorité. En cas de doute métier, ce fichier tranche ;
 > s'il est muet, demande — n'invente pas. Décisions techniques → `decisions.md`.
@@ -7,16 +7,26 @@
 
 ## Ce qu'on construit (v0, rien d'autre)
 
-À partir des photos d'une bouteille (étiquette(obligatoire) et/ou contre-étiquette), extraire les
+À partir des photos d'une bouteille (étiquette + contre-étiquette), extraire les
 champs de catalogage, exporter un Excel au format d'une maison, et COMPARER ce
 listing automatique au listing manuel de l'expert, champ par champ.
 
-**Le livrable de la v0 est le tableau de scores par champ.** Pas un produit, pas
-une interface, pas d'estimation, pas de notation d'état.
+**Le livrable de la v0 est le tableau de scores par champ.** On le fait évoluer
+vers une version pilote (voir decisions.md, section « Produit pilote »). Toujours
+pas d'interface tant qu'une session ne la demande pas, et jamais d'estimation par
+le modèle.
 
 Champs à extraire : appellation, domaine/producteur, cuvée, couleur,
-couleur_source, millésime, région, pays, format, contenance_cl, degré,
-importateur, champs_a_verifier, notes.
+couleur_source, effervescence, millésime, région, pays, format, contenance_cl,
+degré, importateur, champs_a_verifier, notes.
+
+Champs pilote ajoutés :
+- `id` (système, stable) et `quantite` (expert, 1 par défaut) ;
+- `etat_etiquette` et `description_etat` : **source `modele_best_effort`**. Le
+  modèle propose une valeur à partir de ce qui est VISIBLE, et ces champs sont
+  TOUJOURS ajoutés à `champs_a_verifier`. Il ne décrit jamais ce qu'il ne voit
+  pas (bouchon, niveau sans rétroéclairage) : dans le doute, non déterminable.
+- Niveau, capsule, bouchon : hors pilote.
 
 ## Le pipeline
 
@@ -39,6 +49,11 @@ la plomberie sans les vraies photos.
   observee | inferee | non_lisible, pour distinguer lu et déduit.
 - Le modèle liste ses incertitudes dans `champs_a_verifier` (file de relecture).
 - **Colonne estimation : existe mais reste VIDE.** Le modèle ne produit aucun prix.
+- **Colonnes de source `expert` ou `systeme` : jamais envoyées au modèle.**
+- **À l'export**, `non_lisible` et `non_determinable` s'affichent en case vide
+  et la ligne est surlignée.
+- **Pas de few-shot en v0** : on mesure le zero-shot. Des exemples dans le prompt
+  rendraient le score du plancher ininterprétable.
 - **Normalisation = identité en v0** (pass-through + TODO). On écrira les règles
   en regardant les VRAIS écarts, pas à l'avance : les conventions dépendent de la
   maison, les inventer serait deviner.
@@ -64,8 +79,10 @@ Objectif : pouvoir remplacer une brique sans casser le reste. Il vient d'abord d
   l'extracteur, dont le 2e cas est déjà acté (voir decisions.md).
 - **Extracteur** : Protocol `Extractor` (`extract(...) -> Bouteille`).
   `run_v0` et les tests dépendent du Protocol, pas de l'implémentation VLM.
-- **Format par maison** : piloté par DONNÉES (config YAML), jamais une sous-classe
-  par maison. Une nouvelle maison = un fichier de config.
+- **Format par maison** : piloté par DONNÉES (config JSON dans `config/maisons/`,
+  voir decisions.md, section « Produit pilote »), jamais une sous-classe par
+  maison. Une nouvelle maison =
+  un fichier de config.
 - **Normalisation** : liste de fonctions pures `Bouteille -> Bouteille` composées
   en pipeline (vide en v0), pas une fabrique de stratégies.
 - **Chargeur de listing manuel** : simple `load_manual(path)`, pas d'abstraction

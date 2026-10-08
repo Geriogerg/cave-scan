@@ -8,3 +8,8 @@ out/
 
 # Photos et listings réels : jamais versionnés
 data/
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.heif
