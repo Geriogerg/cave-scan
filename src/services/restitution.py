@@ -13,7 +13,12 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.compare.compare_listings import RapportComparaison, comparer
+from src.compare.compare_listings import (
+    RapportComparaison,
+    SignauxModele,
+    comparer,
+    relever_signaux,
+)
 from src.donnees.modeles import STATUTS_BOUTEILLE, Correction, Extraction, FicheBouteille
 from src.export.excel_writer import ecrire_excel
 from src.io.manual_listing import colonnes_toujours_vides, load_manual
@@ -50,6 +55,15 @@ def comparer_au_listing(
         rapport=comparer(auto, manuel, systematiques=systematiques),
         colonnes_toujours_vides=colonnes_toujours_vides(manuel),
     )
+
+
+def signaux_du_modele(session: Session, inventaire_id: int) -> SignauxModele:
+    """Ce que le modèle dit de son propre travail, sans référence à l'expert —
+    lisible avant que son listing existe."""
+    inventaire = charger_inventaire(session, inventaire_id)
+    config = config_figee(inventaire)
+    auto = [valeurs_modele(session, bouteille.id) for bouteille in inventaire.bouteilles]
+    return relever_signaux(auto, [colonne.cle for colonne in config.colonnes_best_effort])
 
 
 @dataclass(frozen=True)

@@ -15,7 +15,6 @@ from src.extract.schema import (
     CouleurSource,
     Effervescence,
     Format,
-    bouteille_depuis_dict,
     est_abstention,
     from_tool_input,
     tool_schema,
@@ -162,25 +161,11 @@ def test_le_modele_ne_peut_pas_poser_id_quantite_ni_estimation():
     assert bouteille.valeurs_maison == {}
 
 
-def test_le_journal_se_relit_sans_rien_perdre():
-    """Un code propre à une maison ne doit pas être rabattu sur l'enum v0."""
-    origine = Bouteille(
-        id="B-0001",
-        couleur="code_de_maison",
-        format=Format.MAGNUM,
-        quantite=5,
-        valeurs_maison={"etat_etiquette": "un_code", "description_etat": "Un texte."},
-        champs_a_verifier=["format"],
-    )
-    relue = bouteille_depuis_dict(origine.as_dict())
-    assert relue == origine
-    assert relue.format is Format.MAGNUM  # un code v0 redevient le membre d'enum
-
-
-def test_quantite_invalide_au_journal_retombe_sur_un():
-    assert bouteille_depuis_dict({"quantite": 0}).quantite == 1
-    assert bouteille_depuis_dict({"quantite": "trois"}).quantite == 1
-    assert bouteille_depuis_dict({"quantite": "4"}).quantite == 4
+# « Le journal se relit sans rien perdre » et « quantité invalide au journal » :
+# le journal a disparu avec la base (decisions.md 0079). Leurs successeurs :
+# tests/test_relecture.py (un code de la maison n'est jamais perdu à la relecture
+# depuis la base) et la quantité validée par `corriger` (test_relecture.py) et
+# par la base elle-même (test_base.py).
 
 
 def test_tool_schema_ferme_les_enums():

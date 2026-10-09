@@ -624,6 +624,60 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   inventaires et la relecture, les ranger dans l'un des deux aurait créé une
   dépendance circulaire.
 
+- 0100 — `inventaire.py` a aussi une commande `fiche ID BOUTEILLE` : valeur lue
+  par le modèle, valeur courante, historique des corrections, extractions (et
+  celle qui fait foi). C'est elle qui permet de constater qu'une correction n'a
+  pas touché l'extraction d'origine (validation finale du guide, point 3). Une
+  bouteille se désigne par sa position ou son identifiant B-… ; `--base`
+  s'accepte avant comme après la commande ; `--auteur` est obligatoire.
+
+- 0101 — Garde-fou des tests : une fixture automatique retire les clés d'API de
+  l'environnement et neutralise la lecture de `.env` — aucun test ne peut
+  appeler un vrai modèle, même par accident (le `.env` contient une vraie clé ;
+  un appel réel accidentel a eu lieu en session 1). Les tests de la ligne de
+  commande branchent leurs extracteurs à la place de `run_v0._extracteur`.
+
+- 0102 — `.env` est lu par les DEUX lignes de commande, via
+  `src/config/environnement.py` : il porte aussi la base et le stockage, et un
+  `.env` lu par un seul script ferait travailler `run_v0.py` et `inventaire.py`
+  sur deux bases différentes sans le dire. Une variable déjà définie dans
+  l'environnement l'emporte.
+
+- 0103 — La normalisation (identité, 0007) s'applique à la LECTURE des valeurs
+  du modèle (`valeurs_modele`), jamais à la réponse brute stockée : ses règles
+  futures vaudront aussi pour les inventaires déjà extraits, et la comparaison
+  mesure, comme en session 1, la sortie normalisée. Sans ce branchement, la
+  suppression de `run_v0.extraire` l'aurait déconnectée du pipeline.
+
+- 0104 — `--dry-run --base FICHIER` garde l'inventaire de démonstration dans
+  cette base, pour essayer `inventaire.py` sans clé ; ses photos vont alors dans
+  le stockage configuré, pour que la base ne pointe jamais vers des fichiers
+  effacés. Sans `--base`, tout reste temporaire (0085).
+
+- 0105 — Ligne de commande : `--photos`, `--inventaire ID` et `--dry-run` sont
+  exclusifs ; sur une reprise, `--maison`, `--limite` et `--nom` sont ignorés
+  avec un avertissement (config figée, 0073). Tout arrêt survenu après la
+  création de l'inventaire — panne systématique, Ctrl-C, clé absente, Excel
+  ouvert — affiche la commande de reprise `--inventaire ID`, code de sortie 2 ;
+  le listing manuel est vérifié AVANT tout appel au modèle.
+
+- 0106 — `session_de_base()` : la ligne de commande ouvre la base par un
+  gestionnaire de contexte qui migre, puis ferme le moteur en sortant (sous
+  Windows, un fichier SQLite encore ouvert ne peut être ni déplacé ni supprimé —
+  le dossier temporaire du dry-run).
+
+- 0107 — Tests du journal adaptés (liste approuvée), chacun gardant son exigence,
+  vérifiée en base : écrit au fil de l'eau -> chaque extraction en base dès son
+  retour ; interruption -> aucun appel payé perdu (Ctrl-C et panne
+  systématique) ; reprise du journal -> `--inventaire ID` ; journal réinitialisé
+  -> nouvel inventaire, l'ancien intact ; dry-run journalisé -> dry-run hors de
+  la base de l'utilisateur ; identifiant au journal -> identifiant en base et à
+  l'export ; doublons -> refusés par `creer_inventaire` avant tout client ;
+  dossier modifié refusé -> la reprise ne relit jamais le dossier d'origine ;
+  quantité au journal -> `inventaire.py corriger`. `bouteille_depuis_dict`
+  disparaît ; son test devient « un code de la maison n'est jamais perdu à la
+  relecture depuis la base ».
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

@@ -16,8 +16,10 @@ import json
 import pytest
 from openpyxl import load_workbook
 from sqlalchemy import create_engine, func, select
+from sqlalchemy.orm import Session
 
 from src.config.maison import charger_config
+from src.donnees.base import creer_moteur
 from src.donnees.modeles import Correction, Extraction
 from src.export.excel_writer import ecrire_excel
 from src.extract.fixture_extract import FixtureExtractor
@@ -308,3 +310,32 @@ def test_les_corrections_survivent_a_une_relance(session, inventaire_id, stockag
     extraire_bouteille(session, cible.id, ExtracteurScenario(), stockage, forcer=True)
     assert valeurs_courantes(session, cible.id).millesime == "1999"
     assert session.scalar(select(func.count()).select_from(Extraction).where(Extraction.bouteille_id == cible.id)) == 2
+
+
+# --- relecture depuis la base : rien ne se perd (remplace les tests du journal) -------------
+
+
+def test_un_code_propre_a_la_maison_n_est_jamais_perdu_a_la_relecture(
+    session, nom_maison, dossier_photos, stockage
+):
+    """Successeur de « le journal se relit sans rien perdre » : relue depuis la
+    base, par une AUTRE connexion, la sortie du modèle garde les codes de la
+    maison — « champagne » n'est pas une couleur v0, il ne doit pas être rabattu
+    sur l'enum v0 — et une correction vers un autre code de la maison aussi."""
+    cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Cave", stockage)
+    cible = bouteille(session, cree.inventaire_id)
+    charge = {"couleur": "champagne", "etat_etiquette": "legerement_marquee", "domaine": "Maison X"}
+    extraire_bouteille(session, cible.id, FixtureExtractor([charge], charger_config(CONFIG_TEST)), stockage)
+    corriger(session, cible.id, "etat_etiquette", "tachee", "expert")
+
+    autre_moteur = creer_moteur(str(session.get_bind().url))
+    with Session(autre_moteur) as autre:
+        modele = valeurs_modele(autre, cible.id)
+        courantes = valeurs_courantes(autre, cible.id)
+    autre_moteur.dispose()
+
+    assert modele.couleur == "champagne"
+    assert modele.valeurs_maison["etat_etiquette"] == "legerement_marquee"
+    assert courantes.couleur == "champagne"
+    assert courantes.valeurs_maison["etat_etiquette"] == "tachee"
+    assert courantes.quantite == 1 and courantes.id == cible.identifiant

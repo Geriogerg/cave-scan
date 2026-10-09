@@ -13,6 +13,8 @@ Où vivent la base et les photos stockées : variables d'environnement
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -83,3 +85,20 @@ def ouvrir_base(valeur: str | Path | None = None) -> sessionmaker[Session]:
     url = url_de_base(valeur)
     migrer(url)
     return sessionmaker(creer_moteur(url), expire_on_commit=False)
+
+
+@contextmanager
+def session_de_base(valeur: str | Path | None = None) -> Iterator[Session]:
+    """Une session sur la base migrée, et la base FERMÉE en sortant.
+
+    Fermer compte : sous Windows, un fichier SQLite encore ouvert ne peut être
+    ni déplacé ni supprimé (le dossier temporaire du dry-run, par exemple).
+    """
+    url = url_de_base(valeur)
+    migrer(url)
+    moteur = creer_moteur(url)
+    try:
+        with Session(moteur, expire_on_commit=False) as session:
+            yield session
+    finally:
+        moteur.dispose()

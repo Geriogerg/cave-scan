@@ -499,33 +499,6 @@ def _valeur_de_colonne(colonne: Colonne, brute: Any) -> Any:
     return _texte(brute)
 
 
-def bouteille_depuis_dict(donnees: dict[str, Any]) -> Bouteille:
-    """Relit une `Bouteille` sérialisée par `as_dict()` — le journal d'extraction.
-
-    Source de CONFIANCE (produite par l'outil lui-même), à l'inverse de
-    `from_tool_input` : les champs posés par l'outil et l'expert sont relus, et
-    un code de liste propre à une maison est conservé tel quel au lieu d'être
-    rabattu sur l'enum v0 — le rejeu d'un journal ne doit rien perdre.
-    """
-    bouteille = from_tool_input(donnees)
-    for champ, enum_cls in (("couleur", Couleur), ("effervescence", Effervescence), ("format", Format)):
-        brut = donnees.get(champ)
-        if isinstance(brut, str) and brut.strip():
-            code = brut.strip()
-            connus = {membre.value for membre in enum_cls}
-            setattr(bouteille, champ, enum_cls(code) if code in connus else code)
-    bouteille.id = str(donnees.get("id") or "")
-    bouteille.quantite = _quantite(donnees.get("quantite"))
-    bouteille.valeurs_maison = dict(donnees.get("valeurs_maison") or {})
-    return bouteille
-
-
-def _quantite(valeur: Any) -> int:
-    """Quantité saisie par l'expert : un entier ≥ 1, sinon la valeur par défaut."""
-    quantite = _entier(valeur)
-    return quantite if quantite is not None and quantite >= 1 else 1
-
-
 def _texte(valeur: Any) -> str:
     if valeur is None:
         return NON_LISIBLE

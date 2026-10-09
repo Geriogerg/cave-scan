@@ -28,6 +28,7 @@ from src.extract.schema import (
     Effervescence,
     Format,
 )
+from src.normalize.normalize import normalize
 from src.services.extraction import (
     charger_bouteille,
     derniere_extraction_reussie,
@@ -102,6 +103,10 @@ def _valeurs_du_modele(bouteille: FicheBouteille) -> Bouteille:
             valeurs = Bouteille(
                 champs_a_verifier=["tous"], notes=f"Réponse du modèle illisible : {erreur}."
             )
+    # La normalisation (identité en v0, decisions.md 0007) s'applique à la
+    # LECTURE : la réponse brute reste intacte, ses règles futures vaudront
+    # aussi pour les inventaires déjà extraits.
+    valeurs = normalize(valeurs)
     valeurs.id = bouteille.identifiant
     valeurs.quantite = bouteille.quantite
     return valeurs

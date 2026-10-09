@@ -1,21 +1,38 @@
-"""Le pipeline doit tourner de bout en bout sans clé API ni réseau (0012)."""
+"""Le pipeline doit tourner de bout en bout sans clé API ni réseau (0012).
+
+Session 2 : la ligne de commande passe par les services et la base. Les tests
+du journal ont été adaptés un à un (decisions.md 0079, 0084, 0085) : chacun
+garde l'exigence qu'il protégeait — ne jamais perdre un appel payé, reprendre
+sans rien refaire, ne jamais décaler une bouteille — vérifiée sur la base.
+"""
 
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import sys
 from pathlib import Path
 
 import pytest
+from openpyxl import load_workbook
+from sqlalchemy import create_engine
 
+import inventaire
 import run_v0
 from src.compare.compare_listings import formater_signaux, relever_signaux
+from src.config.maison import charger_config
+from src.donnees.base import dossier_stockage, session_de_base, url_de_base
+from src.donnees.stockage import chemin_stocke
 from src.extract.base import Extractor
-from src.extract.fixture_extract import FixtureExtractor
+from src.extract.fixture_extract import FixtureExtractor, generer_photos_fictives
 from src.extract.schema import Bouteille, Couleur, Format
-from src.io.photos import PhotosBouteille, grouper_photos
+from src.io.photos import PhotosBouteille, apparier_photos, grouper_photos
 from src.normalize.normalize import REGLES, normalize
-from tests.conftest import FIXTURES, RACINE
+from src.services.inventaires import charger_inventaire, lister_inventaires
+from src.services.relecture import valeurs_modele
+from src.services.restitution import lister_bouteilles
+from tests.conftest import CONFIG_TEST, FIXTURES, RACINE
 
 
 # --- la couture Extractor -----------------------------------------------
@@ -93,89 +110,178 @@ def test_dry_run_n_importe_pas_le_sdk_anthropic(tmp_path):
     assert "src.extract.vision_extract" not in sys.modules
 
 
-# --- journal et reprise (decisions.md 0046) -----------------------------
+# --- outillage : la ligne de commande sans jamais appeler un vrai modèle -------------
 
 
-class ExtracteurQuiTombe:
-    """Extrait normalement puis échoue à la n-ième bouteille."""
+def fixtures(depuis: int = 0) -> FixtureExtractor:
+    """Les réponses enregistrées, à partir de la bouteille n° `depuis` + 1."""
+    charges = json.loads((FIXTURES / "bouteilles_auto.json").read_text(encoding="utf-8"))
+    return FixtureExtractor(charges[depuis:], charger_config(CONFIG_TEST))
 
-    def __init__(self, source: FixtureExtractor, tombe_a: int):
-        self.source = source
+
+class ExtracteurQuiTombe(FixtureExtractor):
+    """Rejoue les fixtures, puis tombe à la n-ième bouteille : interruption
+    (Ctrl-C, coupure) ou panne systématique (clé refusée…)."""
+
+    def __init__(self, tombe_a: int, panne: BaseException | None = None):
+        source = fixtures()
+        super().__init__(source._charges, source.config)
         self.tombe_a = tombe_a
+        self.panne = panne if panne is not None else KeyboardInterrupt()
         self.appels = 0
 
-    def extract(self, etiquette, contre_etiquette=None, autres=None):
+    def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
         self.appels += 1
         if self.appels == self.tombe_a:
-            raise ConnectionError("réseau coupé")
-        return self.source.extract(etiquette, contre_etiquette, autres)
+            raise self.panne
+        return super().extraire_brut(etiquette, contre_etiquette, autres)
 
 
-def _photos(nombre):
-    return [
-        PhotosBouteille(etiquette=Path(f"(fixture)/b{i}/etiquette.jpg"))
-        for i in range(nombre)
-    ]
+def brancher(monkeypatch, *extracteurs) -> None:
+    """Les extracteurs que run_v0 utilisera, un par lancement, dans l'ordre."""
+    file = list(extracteurs)
+    monkeypatch.setattr(run_v0, "_extracteur", lambda backend, config, inventaire_id: file.pop(0))
 
 
-def test_le_journal_est_ecrit_au_fil_de_l_eau(tmp_path):
-    journal = tmp_path / "extraction.jsonl"
-    extracteur = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
-
-    run_v0.extraire(extracteur, _photos(6), journal)
-
-    lignes = journal.read_text(encoding="utf-8").strip().splitlines()
-    assert len(lignes) == 6
-    assert json.loads(lignes[0])["domaine"] == "Domaine Rossignol-Trapet"
+def lancer(*arguments) -> int:
+    return run_v0.main([str(argument) for argument in arguments])
 
 
-def test_une_interruption_ne_perd_pas_les_appels_deja_payes(tmp_path):
+def requete(base: Path, sql: str) -> list[tuple]:
+    """Lu en SQL brut par une AUTRE connexion que celle de la ligne de commande."""
+    moteur = create_engine(url_de_base(base))
+    with moteur.connect() as connexion:
+        lignes = [tuple(ligne) for ligne in connexion.exec_driver_sql(sql)]
+    moteur.dispose()
+    return lignes
+
+
+def statuts(base: Path) -> list[str]:
+    return [statut for (statut,) in requete(base, "SELECT statut FROM bouteille ORDER BY position")]
+
+
+def colonne_excel(chemin: Path, cle: str) -> list:
+    config = charger_config(CONFIG_TEST)
+    index = [colonne.cle for colonne in config.colonnes].index(cle) + 1
+    feuille = load_workbook(chemin).active
+    return [feuille.cell(row=rang, column=index).value for rang in range(2, feuille.max_row + 1)]
+
+
+# --- chaque appel payé est en base dès son retour (remplace le journal, 0079) -------------
+
+
+def test_chaque_extraction_est_en_base_des_son_retour(tmp_path, dossier_photos, monkeypatch):
+    """Successeur de « le journal est écrit au fil de l'eau » : quand le modèle est
+    appelé pour la bouteille n, les n-1 réponses précédentes sont déjà en base —
+    vues depuis une autre connexion."""
+    base = tmp_path / "cave.db"
+    deja_en_base = []
+
+    class Espion(FixtureExtractor):
+        def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
+            deja_en_base.append(requete(base, "SELECT count(*) FROM extraction")[0][0])
+            return super().extraire_brut(etiquette, contre_etiquette, autres)
+
+    source = fixtures()
+    brancher(monkeypatch, Espion(source._charges, source.config))
+
+    assert lancer("--photos", dossier_photos, "--base", base, "--sortie", tmp_path / "l.xlsx") == 0
+    assert deja_en_base == [0, 1, 2, 3, 4, 5]
+
+
+@pytest.mark.parametrize(
+    "panne, statut_de_la_quatrieme",
+    [
+        pytest.param(KeyboardInterrupt(), "en_cours", id="interruption"),
+        pytest.param(PermissionError("clé API invalide"), "erreur", id="panne-systematique"),
+    ],
+)
+def test_une_interruption_ne_perd_pas_les_appels_deja_payes(
+    tmp_path, dossier_photos, monkeypatch, capsys, panne, statut_de_la_quatrieme
+):
     """Le vrai enjeu : 180 appels API facturés ne doivent pas partir en fumée."""
-    journal = tmp_path / "extraction.jsonl"
-    source = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+    base = tmp_path / "cave.db"
+    brancher(monkeypatch, ExtracteurQuiTombe(tombe_a=4, panne=panne))
 
-    with pytest.raises(ConnectionError):
-        run_v0.extraire(ExtracteurQuiTombe(source, tombe_a=4), _photos(6), journal)
+    code = lancer("--photos", dossier_photos, "--base", base, "--sortie", tmp_path / "l.xlsx")
 
-    rescapees = run_v0.charger_journal(journal)
-    assert len(rescapees) == 3
-    assert rescapees[0].domaine == "Domaine Rossignol-Trapet"
+    assert code == 2
+    assert "python run_v0.py --inventaire 1" in capsys.readouterr().err
+    assert statuts(base) == ["extraite"] * 3 + [statut_de_la_quatrieme, "a_extraire", "a_extraire"]
+    with session_de_base(base) as session:
+        premiere = lister_bouteilles(session, 1)[0]
+        assert valeurs_modele(session, premiere.id).domaine == "Domaine Rossignol-Trapet"
 
 
-def test_reprendre_repart_du_journal(tmp_path, capsys):
-    journal = tmp_path / "extraction.jsonl"
-    source = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+def test_inventaire_id_reprend_la_ou_l_extraction_s_est_arretee(
+    tmp_path, dossier_photos, monkeypatch, capsys
+):
+    """Successeur de « reprendre repart du journal » : seules les bouteilles
+    restantes sont extraites, dans l'ordre — un extracteur de 3 fixtures
+    s'épuiserait (et l'inventaire s'arrêterait) au moindre appel de trop."""
+    base, sortie = tmp_path / "cave.db", tmp_path / "listing.xlsx"
+    brancher(monkeypatch, ExtracteurQuiTombe(tombe_a=4), fixtures(depuis=3))
+    assert lancer("--photos", dossier_photos, "--base", base, "--sortie", sortie) == 2
+    capsys.readouterr()
 
-    with pytest.raises(ConnectionError):
-        run_v0.extraire(ExtracteurQuiTombe(source, tombe_a=4), _photos(6), journal)
+    code = lancer("--inventaire", 1, "--base", base, "--sortie", sortie)
 
-    # Nouvel extracteur, positionné sur les 3 bouteilles restantes.
-    reste = FixtureExtractor(
-        json.loads((FIXTURES / "bouteilles_auto.json").read_text(encoding="utf-8"))[3:]
+    texte = capsys.readouterr().out
+    assert code == 0
+    assert "3 bouteille(s) à extraire" in texte
+    assert "3 extraite(s), 0 en erreur, 3 déjà faite(s)" in texte
+    assert statuts(base) == ["extraite"] * 6
+    domaines = colonne_excel(sortie, "domaine")
+    assert domaines[0] == "Domaine Rossignol-Trapet"
+    assert domaines[-1] == "Champagne Deutz"
+
+    # Tout est extrait : réexporter et rescorer sans créer de client (successeur de --auto).
+    assert lancer("--inventaire", 1, "--base", base, "--sortie", sortie) == 0
+    assert "aucun appel au modèle" in capsys.readouterr().out
+
+
+def test_un_nouveau_lancement_repart_de_zero_sans_toucher_l_ancien(
+    tmp_path, dossier_photos, monkeypatch
+):
+    """Successeur de « sans reprendre, le journal est réinitialisé » : relancer sur
+    les mêmes photos crée un NOUVEL inventaire, et l'ancien reste intact."""
+    base = tmp_path / "cave.db"
+    brancher(monkeypatch, fixtures(), fixtures())
+    assert lancer("--photos", dossier_photos, "--base", base, "--sortie", tmp_path / "l.xlsx") == 0
+    premieres = requete(base, "SELECT * FROM extraction ORDER BY id")
+
+    assert lancer("--photos", dossier_photos, "--base", base, "--sortie", tmp_path / "l.xlsx") == 0
+
+    assert requete(base, "SELECT * FROM extraction ORDER BY id")[: len(premieres)] == premieres
+    par_inventaire = requete(
+        base,
+        "SELECT b.inventaire_id, count(e.id) FROM bouteille b JOIN extraction e "
+        "ON e.bouteille_id = b.id GROUP BY b.inventaire_id ORDER BY b.inventaire_id",
     )
-    bouteilles = run_v0.extraire(reste, _photos(6), journal, reprendre=True)
-
-    assert "reprise : 3 bouteille(s)" in capsys.readouterr().out
-    assert len(bouteilles) == 6
-    assert bouteilles[0].domaine == "Domaine Rossignol-Trapet"
-    assert bouteilles[5].domaine == "Champagne Deutz"
+    assert par_inventaire == [(1, 6), (2, 6)]
 
 
-def test_sans_reprendre_le_journal_est_reinitialise(tmp_path):
-    journal = tmp_path / "extraction.jsonl"
-    journal.write_text('{"domaine": "vieille execution"}\n', encoding="utf-8")
+def test_le_dry_run_n_ecrit_jamais_dans_la_base_de_l_utilisateur(tmp_path):
+    """Successeur de « le dry-run écrit aussi un journal » : base et stockage du
+    dry-run sont temporaires (decisions.md 0085)."""
+    base_utilisateur = Path(os.environ["CAVE_SCAN_DB"])
+    stockage_utilisateur = Path(os.environ["CAVE_SCAN_STOCKAGE"])
 
-    extracteur = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
-    bouteilles = run_v0.extraire(extracteur, _photos(6), journal)
+    assert lancer("--dry-run", "--sortie", tmp_path / "l.xlsx") == 0
 
-    assert len(bouteilles) == 6
-    assert "vieille execution" not in journal.read_text(encoding="utf-8")
+    assert not base_utilisateur.exists()
+    assert not stockage_utilisateur.exists()
 
 
-def test_dry_run_ecrit_aussi_un_journal(tmp_path):
-    sortie = tmp_path / "listing.xlsx"
-    run_v0.main(["--dry-run", "--sortie", str(sortie)])
-    assert sortie.with_suffix(".jsonl").exists()
+def test_le_dry_run_avec_base_garde_l_inventaire_de_demonstration(tmp_path):
+    """Pour essayer inventaire.py sans clé ; ses photos restent lisibles."""
+    base = tmp_path / "demo.db"
+    assert lancer("--dry-run", "--base", base, "--sortie", tmp_path / "l.xlsx") == 0
+
+    with session_de_base(base) as session:
+        demo = charger_inventaire(session, 1)
+        assert [b.statut for b in demo.bouteilles] == ["extraite"] * 6
+        assert all(chemin_stocke(dossier_stockage(), photo.chemin).is_file() for photo in demo.photos)
 
 
 def test_mode_reel_exige_des_photos(tmp_path):
@@ -212,56 +318,66 @@ def test_identifiant_stable_et_insensible_au_renommage(tmp_path):
     assert PhotosBouteille(etiquette=renommee, contre_etiquette=contre).identifiant != premier
 
 
-def test_chaque_bouteille_recoit_l_identifiant_de_ses_photos(tmp_path):
-    journal = tmp_path / "extraction.jsonl"
-    photos = _photos(6)
-    extracteur = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+def test_chaque_bouteille_recoit_l_identifiant_de_ses_photos(tmp_path, dossier_photos, monkeypatch):
+    """En base et à l'export, posé par l'outil, jamais par le modèle."""
+    base, sortie = tmp_path / "cave.db", tmp_path / "listing.xlsx"
+    attendus = [vues.identifiant for vues in apparier_photos(dossier_photos).bouteilles]
+    brancher(monkeypatch, fixtures())
 
-    bouteilles = run_v0.extraire(extracteur, photos, journal)
+    assert lancer("--photos", dossier_photos, "--base", base, "--sortie", sortie) == 0
 
-    assert [b.id for b in bouteilles] == [vues.identifiant for vues in photos]
-    premiere = json.loads(journal.read_text(encoding="utf-8").splitlines()[0])
-    assert premiere["id"] == photos[0].identifiant
-
-
-def test_photos_en_double_arretent_avant_tout_appel(tmp_path):
-    """Une photo copiée deux fois : on s'arrête avant de payer deux fois."""
-    (tmp_path / "x.jpg").write_bytes(b"meme photo")
-    (tmp_path / "y.jpg").write_bytes(b"meme photo")
-    appels = []
-
-    class Espion:
-        def extract(self, *arguments, **options):
-            appels.append(1)
-            return Bouteille()
-
-    photos = [PhotosBouteille(etiquette=tmp_path / "x.jpg"), PhotosBouteille(etiquette=tmp_path / "y.jpg")]
-    with pytest.raises(ValueError, match="Photos identiques"):
-        run_v0.extraire(Espion(), photos)
-    assert appels == []
+    assert [identifiant for (identifiant,) in requete(base, "SELECT identifiant FROM bouteille ORDER BY position")] == attendus
+    assert colonne_excel(sortie, "id") == attendus
 
 
-def test_reprise_sur_un_dossier_modifie_est_refusee(tmp_path):
-    """Sinon chaque bouteille reprise serait décalée d'une ligne, en silence."""
-    journal = tmp_path / "extraction.jsonl"
-    source = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
-    with pytest.raises(ConnectionError):
-        run_v0.extraire(ExtracteurQuiTombe(source, tombe_a=4), _photos(6), journal)
+def test_photos_en_double_arretent_avant_tout_appel(tmp_path, dossier_photos, monkeypatch, capsys):
+    """Une photo copiée deux fois : on s'arrête avant de payer deux fois — et
+    avant même de créer le client du modèle ou l'inventaire."""
+    shutil.copy(dossier_photos / "bouteille_02_etiquette.jpg", dossier_photos / "copie_etiquette.jpg")
+    shutil.copy(dossier_photos / "bouteille_02_contre.jpg", dossier_photos / "copie_contre.jpg")
+    base = tmp_path / "cave.db"
+    clients = []
+    monkeypatch.setattr(run_v0, "_extracteur", lambda *arguments: clients.append(1) or fixtures())
 
-    autres = [PhotosBouteille(etiquette=Path(f"(autre)/b{i}/etiquette.jpg")) for i in range(6)]
-    with pytest.raises(ValueError, match="ne correspond plus aux photos"):
-        run_v0.extraire(FixtureExtractor([]), autres, journal, reprendre=True)
+    code = lancer("--photos", dossier_photos, "--base", base, "--sortie", tmp_path / "l.xlsx")
+
+    assert code == 2
+    assert "La même photo est déposée deux fois" in capsys.readouterr().err
+    assert clients == []
+    assert requete(base, "SELECT count(*) FROM inventaire") == [(0,)]
 
 
-def test_quantite_modifiee_au_journal_est_respectee_au_rejeu(tmp_path):
-    """« Modifiable par l'expert » : sans interface, via le journal puis --auto.
-    Deux bouteilles identiques de quantités 2 et 1 donnent une ligne de 3."""
-    from openpyxl import load_workbook
+def test_la_reprise_ne_relit_jamais_le_dossier_d_origine(tmp_path, dossier_photos, monkeypatch):
+    """Successeur de « reprise sur un dossier modifié refusée » : les photos sont
+    copiées dans le stockage de l'outil à la création. Le dossier d'origine peut
+    changer ou disparaître, la reprise extrait les MÊMES photos, sans décalage."""
+    base = tmp_path / "cave.db"
+    recues = []
 
-    from src.config.maison import charger_config
-    from src.extract.schema import from_tool_input
+    class Espion(FixtureExtractor):
+        def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
+            recues.extend([Path(etiquette), Path(contre_etiquette)])
+            return super().extraire_brut(etiquette, contre_etiquette, autres)
 
-    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    reste = fixtures(depuis=3)
+    brancher(monkeypatch, ExtracteurQuiTombe(tombe_a=4), Espion(reste._charges, reste.config))
+    assert lancer("--photos", dossier_photos, "--base", base, "--sortie", tmp_path / "l.xlsx") == 2
+    identifiants = requete(base, "SELECT identifiant FROM bouteille ORDER BY position")
+
+    shutil.rmtree(dossier_photos)
+    assert lancer("--inventaire", 1, "--base", base, "--sortie", tmp_path / "l.xlsx") == 0
+
+    assert len(recues) == 6
+    assert all(photo.parent == dossier_stockage() and photo.is_file() for photo in recues)
+    assert requete(base, "SELECT identifiant FROM bouteille ORDER BY position") == identifiants
+    assert statuts(base) == ["extraite"] * 6
+
+
+def test_la_quantite_corrigee_par_l_expert_s_additionne_a_l_export(tmp_path, monkeypatch):
+    """Successeur du rejeu d'un journal modifié à la main : la quantité se corrige
+    par inventaire.py. Deux bouteilles identiques de quantités 2 et 1 donnent une
+    ligne de 3."""
+    config = charger_config(CONFIG_TEST)
     charge = {}
     for colonne in config.colonnes_modele:
         if colonne.type == "liste":
@@ -270,21 +386,15 @@ def test_quantite_modifiee_au_journal_est_respectee_au_rejeu(tmp_path):
             charge[colonne.cle] = 1
         else:
             charge[colonne.cle] = "Texte lu"
+    photos = generer_photos_fictives(tmp_path / "photos", 2)
+    base, sortie = tmp_path / "cave.db", tmp_path / "corrige.xlsx"
+    brancher(monkeypatch, FixtureExtractor([charge, charge], config))
+    assert lancer("--photos", photos, "--base", base, "--sortie", tmp_path / "l.xlsx") == 0
 
-    journal = tmp_path / "extraction.jsonl"
-    lignes = []
-    for identifiant, quantite in (("B-1", 2), ("B-2", 1)):
-        bouteille = from_tool_input(charge, config)
-        bouteille.id, bouteille.quantite = identifiant, quantite
-        lignes.append(json.dumps(bouteille.as_dict(), ensure_ascii=False))
-    journal.write_text("\n".join(lignes) + "\n", encoding="utf-8")
+    assert inventaire.main(["corriger", "1", "1", "quantite", "2", "--auteur", "expert", "--base", str(base)]) == 0
+    assert inventaire.main(["exporter", "1", "--sortie", str(sortie), "--base", str(base)]) == 0
 
-    sortie = tmp_path / "listing.xlsx"
-    assert run_v0.main(["--auto", str(journal), "--sortie", str(sortie)]) == 0
-
-    feuille = load_workbook(sortie).active
-    index = [c.cle for c in config.colonnes].index("quantite") + 1
-    assert [feuille.cell(row=r, column=index).value for r in range(2, feuille.max_row + 1)] == [3]
+    assert colonne_excel(sortie, "quantite") == [3]
 
 
 # --- photos vérifiées avant tout appel (decisions.md 0068) ----------------------
@@ -307,3 +417,69 @@ def test_photos_invalides_signalees_sans_cle_ni_appel(tmp_path, capsys, monkeypa
     assert code == 2
     assert "IMPAIR" in capsys.readouterr().err
     assert not (tmp_path / "l.xlsx").exists()
+
+
+def test_cle_absente_l_inventaire_est_garde_et_la_reprise_indiquee(
+    tmp_path, dossier_photos, monkeypatch, capsys
+):
+    """Les photos sont vérifiées et stockées avant que la clé soit nécessaire : il
+    suffit de reprendre l'inventaire une fois la clé renseignée."""
+    import google.genai
+
+    def client_sans_cle(*arguments, **options):
+        raise ValueError("Missing key inputs argument!")  # ce que répond le SDK
+
+    monkeypatch.setattr(google.genai, "Client", client_sans_cle)
+    base = tmp_path / "cave.db"
+
+    code = lancer("--photos", dossier_photos, "--base", base, "--sortie", tmp_path / "l.xlsx")
+
+    erreur = capsys.readouterr().err
+    assert code == 2
+    assert "Clé Gemini absente" in erreur
+    assert "python run_v0.py --inventaire 1" in erreur
+    assert statuts(base) == ["a_extraire"] * 6
+
+
+def test_listing_manuel_introuvable_signale_avant_tout_appel(tmp_path, dossier_photos, monkeypatch, capsys):
+    base = tmp_path / "cave.db"
+    clients = []
+    monkeypatch.setattr(run_v0, "_extracteur", lambda *arguments: clients.append(1) or fixtures())
+
+    code = lancer("--photos", dossier_photos, "--manual", tmp_path / "absent.xlsx", "--base", base)
+
+    assert code == 2
+    assert "Listing manuel introuvable" in capsys.readouterr().err
+    assert clients == []
+
+
+def test_inventaire_inconnu(tmp_path, capsys):
+    assert lancer("--inventaire", 99, "--base", tmp_path / "cave.db") == 2
+    assert "Aucun inventaire n°99" in capsys.readouterr().err
+
+
+def test_photos_et_inventaire_sont_exclusifs(tmp_path):
+    with pytest.raises(SystemExit):
+        lancer("--photos", tmp_path, "--inventaire", 1)
+
+
+# --- options remplacées : un message qui nomme la remplaçante (decisions.md 0084) ---------
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        ["--journal", "out/listing_auto.jsonl"],
+        ["--journal"],
+        ["--photos", "data/photos", "--reprendre"],
+        ["--auto", "out/listing_auto.jsonl"],
+        ["--auto", "out/listing_auto.jsonl", "--manual", "listing.xlsx"],
+    ],
+)
+def test_une_option_remplacee_dit_par_quoi_la_remplacer(options, capsys):
+    code = run_v0.main(options)
+
+    erreur = capsys.readouterr().err
+    assert code == 2
+    assert "--inventaire ID" in erreur
+    assert "unrecognized arguments" not in erreur

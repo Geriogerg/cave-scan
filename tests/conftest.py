@@ -48,6 +48,21 @@ def base_et_stockage_isoles(tmp_path, monkeypatch):
     monkeypatch.setenv("CAVE_SCAN_STOCKAGE", str(tmp_path / "isolee" / "stockage"))
 
 
+@pytest.fixture(autouse=True)
+def aucun_vrai_modele(monkeypatch):
+    """Garde-fou : aucun test ne peut appeler un vrai modèle (decisions.md 0101).
+
+    Aucune clé dans l'environnement, et le `.env` de l'utilisateur — qui en
+    contient une vraie — n'est jamais lu : les lignes de commande le chargeraient
+    sinon dans `os.environ`, pour la suite de la session de tests.
+    """
+    from src.config import environnement
+
+    for variable in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY"):
+        monkeypatch.delenv(variable, raising=False)
+    monkeypatch.setattr(environnement, "charger_env", lambda *arguments: None)
+
+
 @pytest.fixture(scope="session")
 def base_modele(tmp_path_factory):
     """Une base migrée UNE fois par les vraies migrations, recopiée par chaque test.
