@@ -22,6 +22,28 @@ if TYPE_CHECKING:
     from src.config.maison import ConfigMaison
 
 
+def generer_photos_fictives(dossier: Path, nombre_bouteilles: int) -> Path:
+    """2 × N petites images DISTINCTES, datées dans l'ordre, pour le dry-run.
+
+    Le dry-run exerce ainsi le vrai chemin de création — appariement par date de
+    prise de vue, empreintes, stockage (decisions.md 0085) — tandis que
+    l'extracteur de fixtures, lui, ignore leur contenu.
+    """
+    from PIL import Image
+
+    dossier = Path(dossier)
+    dossier.mkdir(parents=True, exist_ok=True)
+    for rang in range(2 * nombre_bouteilles):
+        couleur = ((rang * 37) % 256, (rang * 91) % 256, (rang * 53) % 256)
+        image = Image.new("RGB", (16, 16), couleur)
+        exif = Image.Exif()
+        exif[0x0132] = f"2026:01:01 10:{rang // 60:02d}:{rang % 60:02d}"  # date de l'image
+        exif[0x010E] = f"photo fictive {rang + 1}"  # rend chaque fichier unique
+        role = "etiquette" if rang % 2 == 0 else "contre"
+        image.save(dossier / f"bouteille_{rang // 2 + 1:02d}_{role}.jpg", "JPEG", exif=exif.tobytes())
+    return dossier
+
+
 class FixtureExtractor:
     """Rejoue, dans l'ordre, des charges utiles d'appel d'outil enregistrées.
 

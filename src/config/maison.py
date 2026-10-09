@@ -16,6 +16,7 @@ système, quantité).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import unicodedata
@@ -174,23 +175,47 @@ def plier(texte: Any) -> str:
 
 def charger_config(chemin: str | Path) -> ConfigMaison:
     """Charge et valide la config d'une maison. Lève `ConfigInvalide` sinon."""
+    return lire_config(chemin)[0]
+
+
+def lire_config(chemin: str | Path) -> tuple[ConfigMaison, str]:
+    """La config validée ET son texte exact, pour la figer en base (decisions.md 0073)."""
     chemin = Path(chemin)
     if not chemin.exists():
         raise FileNotFoundError(f"Config maison introuvable : {chemin}")
+    texte = chemin.read_text(encoding="utf-8")
+    return config_depuis_texte(texte, chemin), texte
 
+
+def config_depuis_texte(texte: str, source: str | Path) -> ConfigMaison:
+    """Valide une config à partir de son texte — celui d'un fichier, ou la copie
+    figée d'un inventaire relue depuis la base. `source` ne sert qu'aux messages
+    et au nom de fichier copié dans l'export."""
+    source = Path(source)
     try:
-        brut = json.loads(
-            chemin.read_text(encoding="utf-8"), object_pairs_hook=_refuser_doublons
-        )
+        brut = json.loads(texte, object_pairs_hook=_refuser_doublons)
     except json.JSONDecodeError as erreur:
         raise ConfigInvalide(
-            f"{chemin} : JSON illisible, ligne {erreur.lineno} colonne "
+            f"{source} : JSON illisible, ligne {erreur.lineno} colonne "
             f"{erreur.colno} : {erreur.msg}."
         ) from erreur
     except _CleEnDouble as erreur:
-        raise ConfigInvalide(f"{chemin} : {erreur}") from None
+        raise ConfigInvalide(f"{source} : {erreur}") from None
 
-    return _valider(brut, chemin)
+    return _valider(brut, source)
+
+
+def empreinte_config(texte: str) -> str:
+    """SHA-256 de la forme CANONIQUE du JSON : clés triées, sans espaces.
+
+    Deux fichiers qui ne diffèrent que par leur mise en forme ont la même
+    empreinte — une remise en forme ne crée pas de nouvelle version de config
+    (decisions.md 0073). Tout changement de contenu, si.
+    """
+    canonique = json.dumps(
+        json.loads(texte), sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    )
+    return hashlib.sha256(canonique.encode("utf-8")).hexdigest()
 
 
 class _CleEnDouble(Exception):

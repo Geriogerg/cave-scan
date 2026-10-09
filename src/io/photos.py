@@ -84,6 +84,7 @@ class Appariement:
     bouteilles: list[PhotosBouteille]
     tri: str  # TRI_EXIF ou TRI_NOM
     sans_date: list[str] = field(default_factory=list)  # pourquoi on a trié par nom
+    dates: dict[Path, datetime | None] = field(default_factory=dict)  # prise de vue, par photo
 
 
 def apparier_photos(racine: str | Path) -> Appariement:
@@ -104,7 +105,8 @@ def apparier_photos(racine: str | Path) -> Appariement:
             f"(extensions reconnues : {', '.join(sorted(EXTENSIONS_IMAGE))})."
         )
 
-    images, tri, sans_date = _trier(images)
+    dates = {image: _date_de_prise_de_vue(image) for image in images}
+    images, tri, sans_date = _trier(images, dates)
 
     if len(images) % 2:
         raise PhotosInvalides(
@@ -119,7 +121,9 @@ def apparier_photos(racine: str | Path) -> Appariement:
         PhotosBouteille(etiquette=images[rang], contre_etiquette=images[rang + 1])
         for rang in range(0, len(images), 2)
     ]
-    return Appariement(bouteilles=bouteilles, tri=tri, sans_date=[c.name for c in sans_date])
+    return Appariement(
+        bouteilles=bouteilles, tri=tri, sans_date=[c.name for c in sans_date], dates=dates
+    )
 
 
 def grouper_photos(racine: str | Path) -> list[PhotosBouteille]:
@@ -161,13 +165,14 @@ def _refuser_les_formats_non_lus(fichiers: list[Path]) -> None:
     )
 
 
-def _trier(images: list[Path]) -> tuple[list[Path], str, list[Path]]:
+def _trier(
+    images: list[Path], dates: dict[Path, datetime | None]
+) -> tuple[list[Path], str, list[Path]]:
     """Par date EXIF si TOUTES les photos en ont une ; sinon toutes par nom.
 
     Un tri mixte (dates pour les unes, noms pour les autres) intercalerait les
     photos au hasard : c'est tout l'un ou tout l'autre.
     """
-    dates = {image: _date_de_prise_de_vue(image) for image in images}
     sans_date = [image for image, date in dates.items() if date is None]
     if not sans_date:
         return (

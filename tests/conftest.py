@@ -21,6 +21,23 @@ if str(RACINE) not in sys.path:
     sys.path.insert(0, str(RACINE))
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
+CONFIG_TEST = RACINE / "config" / "maisons" / "maison_test.json"
+
+
+@pytest.fixture
+def dossier_photos(tmp_path):
+    """Les photos de 6 bouteilles, distinctes et datées dans l'ordre — autant que
+    de fixtures dans bouteilles_auto.json."""
+    from src.extract.fixture_extract import generer_photos_fictives
+
+    return generer_photos_fictives(tmp_path / "photos", 6)
+
+
+@pytest.fixture
+def nom_maison():
+    from src.config.maison import charger_config
+
+    return charger_config(CONFIG_TEST).maison
 
 
 @pytest.fixture(autouse=True)

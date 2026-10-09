@@ -559,6 +559,18 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - 0089 — Dépendances : SQLAlchemy et Alembic ajoutés. Restent : google-genai,
   anthropic, openpyxl, pillow, python-dotenv, pytest.
 
+- 0090 — `creer_inventaire` vérifie TOUT avant d'écrire quoi que ce soit : config
+  valide, maison demandée = maison décrite par la config, appariement (impair,
+  format illisible, sous-dossier), puis photos en double par empreinte. Les
+  doublons sont cherchés APRÈS l'appariement : un nombre impair reste signalé
+  comme tel, c'est le défaut le plus courant. Le dossier d'origine n'est gardé
+  que pour mémoire ; les bouteilles pointent vers les copies du stockage.
+
+- 0091 — Stockage : le nom garde l'extension en minuscules (elle donne le type
+  d'image envoyé au modèle), et la copie passe par un fichier temporaire
+  renommé à la fin — une coupure en pleine copie ne laisse jamais une photo
+  tronquée sous un nom valide.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
