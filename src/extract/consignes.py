@@ -51,9 +51,13 @@ LIBELLE_ETIQUETTE = "Photo — étiquette :"
 LIBELLE_CONTRE_ETIQUETTE = "Photo — contre-étiquette :"
 LIBELLE_AUTRE = "Photo — vue complémentaire {index} :"
 
+# Ne PRÉSUPPOSE pas que les photos montrent la même bouteille : elles sont
+# appariées par ordre de prise de vue, et une erreur d'appariement doit pouvoir
+# être signalée (guide, étape 4.4). Affirmer l'inverse l'aurait empêchée.
 INSTRUCTION_FINALE = (
-    "Ces photos montrent une seule et même bouteille. Relève les champs de "
-    "catalogage lisibles et abstiens-toi sur les autres."
+    "Ces photos sont censées montrer une seule et même bouteille : vérifie-le "
+    "et dis-le dans photos_meme_bouteille. Relève les champs de catalogage "
+    "lisibles et abstiens-toi sur les autres."
 )
 
 

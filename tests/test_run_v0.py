@@ -58,34 +58,10 @@ def test_normalize_est_l_identite_en_v0():
     assert normalize(bouteille) == bouteille
 
 
-# --- regroupement des photos --------------------------------------------
-
-
-def test_un_sous_dossier_par_bouteille(tmp_path):
-    for nom in ("b02", "b01"):
-        dossier = tmp_path / nom
-        dossier.mkdir()
-        (dossier / "01_etiquette.jpg").touch()
-        (dossier / "02_contre_etiquette.jpg").touch()
-        (dossier / "03_capsule.jpg").touch()
-
-    bouteilles = grouper_photos(tmp_path)
-    assert [b.nom for b in bouteilles] == ["b01", "b02"]
-
-    premiere = bouteilles[0]
-    assert premiere.etiquette.name == "01_etiquette.jpg"
-    assert premiere.contre_etiquette.name == "02_contre_etiquette.jpg"
-    assert [a.name for a in premiere.autres] == ["03_capsule.jpg"]
-
-
-def test_dossier_plat_une_image_par_bouteille(tmp_path):
-    (tmp_path / "a.jpg").touch()
-    (tmp_path / "b.png").touch()
-    (tmp_path / "notes.txt").touch()
-
-    bouteilles = grouper_photos(tmp_path)
-    assert len(bouteilles) == 2
-    assert all(b.contre_etiquette is None for b in bouteilles)
+# --- photos ---------------------------------------------------------------
+# Les tests « un sous-dossier par bouteille » et « dossier plat = une image par
+# bouteille » encodaient la convention remplacée par decisions.md 0023
+# (appariement par ordre). Leurs successeurs sont dans tests/test_photos.py.
 
 
 def test_dossier_sans_image_leve_une_erreur(tmp_path):
@@ -309,3 +285,25 @@ def test_quantite_modifiee_au_journal_est_respectee_au_rejeu(tmp_path):
     feuille = load_workbook(sortie).active
     index = [c.cle for c in config.colonnes].index("quantite") + 1
     assert [feuille.cell(row=r, column=index).value for r in range(2, feuille.max_row + 1)] == [3]
+
+
+# --- photos vérifiées avant tout appel (decisions.md 0068) ----------------------
+
+
+def test_photos_invalides_signalees_sans_cle_ni_appel(tmp_path, capsys, monkeypatch):
+    """Le refus arrive AVANT la création du client du modèle : aucune clé
+    n'est nécessaire pour apprendre qu'il manque une photo."""
+    from PIL import Image
+
+    for variable in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY"):
+        monkeypatch.delenv(variable, raising=False)
+    dossier = tmp_path / "photos"
+    dossier.mkdir()
+    for nom in ("IMG_0001.jpg", "IMG_0002.jpg", "IMG_0003.jpg"):
+        Image.new("RGB", (8, 8)).save(dossier / nom, "JPEG")
+
+    code = run_v0.main(["--photos", str(dossier), "--sortie", str(tmp_path / "l.xlsx")])
+
+    assert code == 2
+    assert "IMPAIR" in capsys.readouterr().err
+    assert not (tmp_path / "l.xlsx").exists()

@@ -170,6 +170,13 @@ CHAMPS_COMPARABLES: tuple[str, ...] = (
     "importateur",
 )
 
+# Questions posées au modèle qui ne sont pas des champs de `Bouteille` : elles
+# pilotent le pipeline. Réponse « non » à la cohérence de la paire de photos ->
+# DOUTE_PAIRE_PHOTOS dans `champs_a_verifier` (guide, étape 4.4).
+PHOTOS_MEME_BOUTEILLE = "photos_meme_bouteille"
+CHAMPS_TECHNIQUES: tuple[str, ...] = (PHOTOS_MEME_BOUTEILLE,)
+DOUTE_PAIRE_PHOTOS = "paire_photos"
+
 # Nature des champs v0 que le modèle remplit et qu'une config de maison peut
 # redéfinir (description, vocabulaire). Sert à refuser une config qui en
 # changerait la nature — un millésime ne devient pas une liste par mégarde.
@@ -339,8 +346,22 @@ def tool_schema() -> dict[str, Any]:
                         "marchande. Chaîne vide s'il n'y a rien à signaler."
                     ),
                 },
+                PHOTOS_MEME_BOUTEILLE: {
+                    "type": "string",
+                    "enum": ["oui", "non", NON_DETERMINABLE],
+                    "description": (
+                        "Les photos fournies montrent-elles bien la MÊME bouteille ? "
+                        "Elles sont appariées par ordre de prise de vue, une erreur "
+                        "d'appariement est possible. « non » si elles semblent "
+                        "appartenir à deux bouteilles différentes (producteur, "
+                        "appellation ou millésime incompatibles, bouteilles "
+                        "visiblement distinctes) ; « oui » si rien ne s'y oppose ; "
+                        f"« {NON_DETERMINABLE} » s'il n'y a qu'une photo ou si rien "
+                        "ne permet de trancher."
+                    ),
+                },
             },
-            "required": list(CHAMPS_MODELE),
+            "required": [*CHAMPS_MODELE, *CHAMPS_TECHNIQUES],
         },
     }
 
@@ -454,6 +475,17 @@ def from_tool_input(charge: dict[str, Any], config: ConfigMaison | None = None) 
             bouteille.valeurs_maison[colonne.cle] = _valeur_de_colonne(colonne, charge.get(colonne.cle))
         if colonne.source == "modele_best_effort" and colonne.cle not in bouteille.champs_a_verifier:
             bouteille.champs_a_verifier.append(colonne.cle)
+
+    # Paire de photos incohérente selon le modèle : signalée pour relecture,
+    # jamais corrigée en silence (guide, étape 4.4 ; decisions.md 0069).
+    if str(charge.get(PHOTOS_MEME_BOUTEILLE) or "").strip().casefold() == "non":
+        if DOUTE_PAIRE_PHOTOS not in bouteille.champs_a_verifier:
+            bouteille.champs_a_verifier.append(DOUTE_PAIRE_PHOTOS)
+        signalement = (
+            "Le modèle signale que les photos appariées ne semblent pas montrer "
+            "la même bouteille : vérifier l'appariement."
+        )
+        bouteille.notes = f"{bouteille.notes} {signalement}".strip()
 
     return bouteille
 

@@ -340,7 +340,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   lieu d'être rabattus sur l'enum v0 — écarté : une seule fonction de lecture
   (le modèle aurait pu fixer une quantité).
 
-- 0060 — Dépendances : pyyaml retiré avec l'ancienne config YAML. Restent
+- 0060 — [remplacée par 0070] Dépendances : pyyaml retiré avec l'ancienne config YAML. Restent
   google-genai, anthropic, openpyxl, python-dotenv, pytest.
 
 - 0061 — Schéma envoyé au modèle = champs v0 de CLAUDE.md (« Champs à
@@ -400,6 +400,39 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   recalculée), 1 par défaut. En attendant une interface, elle se modifie dans le
   journal puis `--auto` refait l'export ; le regroupement additionne.
 
+- 0068 — Appariement des photos par ordre (0023), sans jamais deviner : tri
+  par date de prise de vue EXIF si TOUTES les photos en ont une, sinon toutes
+  par nom de fichier en tri naturel (« photo 2 » avant « photo 10 ») — jamais
+  de tri mixte, qui intercalerait les photos au hasard ; paires consécutives
+  étiquette / contre-étiquette. ARRÊT avec message explicite sur : nombre
+  impair, photo dans un format non lu (HEIC d'iPhone, TIFF, RAW…, avec le
+  réglage iPhone à changer), photos rangées dans un sous-dossier (ancienne
+  convention, elles ne seraient jamais lues). Fichiers non-photo ignorés.
+  L'appariement est affiché AVANT l'extraction, et vérifié avant même de créer
+  le client du modèle : un dossier invalide se signale sans clé ni coût —
+  écarté : écarter la photo orpheline et continuer (décalage silencieux).
+
+- 0069 — Paire incohérente : question technique `photos_meme_bouteille`
+  (oui | non | non_determinable) posée au modèle — pas un champ de `Bouteille`.
+  « non » -> `paire_photos` dans `champs_a_verifier` (doute précis : la ligne
+  est surlignée) et une note. La consigne finale ne présuppose plus que les
+  photos montrent la même bouteille : l'affirmer aurait dissuadé le modèle de
+  signaler une erreur d'appariement.
+
+- 0070 — Dépendances : Pillow ajouté (dates EXIF). pillow-heif NON ajouté —
+  Pillow seul ne lit pas le HEIC, qui est refusé avec un message clair et la
+  marche à suivre ; pillow-heif s'installe sans difficulté ici (vérifié, non
+  installé) mais il faudrait en plus convertir en JPEG avant l'envoi (Anthropic
+  n'accepte pas le HEIC) : à décider selon le téléphone de l'expert. Restent :
+  google-genai, anthropic, openpyxl, pillow, python-dotenv, pytest.
+
+- 0071 — Sortie d'erreur aussi en UTF-8 (étend 0039) : les refus de config et
+  de photos s'affichaient avec des accents mutilés, au moment précis où il faut
+  les lire. Clé Gemini absente -> message clair renvoyant à `.env`, plus de
+  trace Python brute. Appel de fonction automatique du SDK Gemini coupé
+  explicitement (aucun appel de fonction ici ; il était actif par défaut et
+  l'annonçait par un avertissement à chaque run).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
@@ -411,3 +444,5 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - La maison accepte-t-elle que les photos de ses lots transitent par un palier
   gratuit dont le fournisseur peut exploiter les données (0050) ? Si non :
   backend payant, ou modèle local.
+- Le téléphone de l'expert est-il un iPhone réglé en HEIC ? Si oui : réglage
+  « Le plus compatible », ou ajout de pillow-heif + conversion JPEG (0070).

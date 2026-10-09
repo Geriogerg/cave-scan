@@ -281,3 +281,10 @@ def test_les_deux_backends_envoient_le_meme_schema_pour_une_maison():
     anthropic_ = VisionExtractor(client=object(), config=config)._outil["input_schema"]
     gemini = _extracteur(config=config)._config.response_json_schema
     assert anthropic_ == gemini
+
+
+def test_l_appel_de_fonction_automatique_est_coupe():
+    """Aucun appel de fonction ici : sans le dire, le SDK l'active par défaut."""
+    from google.genai import _extra_utils
+
+    assert _extra_utils.should_disable_afc(_extracteur()._config)

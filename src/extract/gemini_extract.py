@@ -79,6 +79,9 @@ class GeminiExtractor:
             # et il suit la config de la maison (guide, étape 4.2).
             response_mime_type="application/json",
             response_json_schema=schema_extraction(config)["input_schema"],
+            # Aucun appel de fonction ici : on le dit explicitement, sinon le SDK
+            # l'active par défaut et l'annonce par un avertissement à chaque run.
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
         self._dernier_appel = 0.0
 

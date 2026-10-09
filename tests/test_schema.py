@@ -7,6 +7,7 @@ from src.extract.schema import (
     CHAMPS_COMPARABLES,
     CHAMPS_HORS_MODELE,
     CHAMPS_MODELE,
+    CHAMPS_TECHNIQUES,
     NON_DETERMINABLE,
     NON_LISIBLE,
     Bouteille,
@@ -126,11 +127,15 @@ def test_tool_schema_exige_tous_les_champs():
 
     Adapté au contrat pilote : l'identifiant, la quantité et les valeurs propres
     à la maison existent sur `Bouteille` mais ne sont JAMAIS demandés au modèle.
+    Et le modèle répond aussi à des questions techniques (la paire de photos
+    est-elle cohérente ?) qui ne sont pas des champs de `Bouteille` : elles sont
+    exigées elles aussi.
     """
     schema = tool_schema()
     proprietes = schema["input_schema"]["properties"]
-    assert set(proprietes) == set(CHAMPS_MODELE)
-    assert set(schema["input_schema"]["required"]) == set(CHAMPS_MODELE)
+    attendus = set(CHAMPS_MODELE) | set(CHAMPS_TECHNIQUES)
+    assert set(proprietes) == attendus
+    assert set(schema["input_schema"]["required"]) == attendus
     for champ in CHAMPS_HORS_MODELE:
         assert champ not in proprietes, champ
 

@@ -32,7 +32,7 @@ from src.extract.base import Extractor
 from src.extract.fixture_extract import FixtureExtractor
 from src.extract.schema import Bouteille, bouteille_depuis_dict
 from src.io.manual_listing import colonnes_toujours_vides, load_manual
-from src.io.photos import PhotosBouteille, grouper_photos
+from src.io.photos import PhotosBouteille, PhotosInvalides, apparier_photos
 from src.normalize.normalize import normalize
 
 RACINE = Path(__file__).resolve().parent
@@ -166,11 +166,29 @@ def _verifier_reprise(bouteilles: list[Bouteille], identifiants: list[str], jour
             )
 
 
+def _annoncer_appariement(appariement) -> None:
+    """Montre l'appariement AVANT l'extraction : une paire décalée se voit ici,
+    pas après avoir payé tous les appels (decisions.md 0023, 0068)."""
+    print(f"Appariement de {len(appariement.bouteilles)} paire(s), tri par {appariement.tri} :")
+    if appariement.sans_date:
+        print(
+            f"  ⚠  {len(appariement.sans_date)} photo(s) sans date EXIF "
+            f"({', '.join(appariement.sans_date[:3])}{'…' if len(appariement.sans_date) > 3 else ''}) : "
+            f"tri par nom de fichier pour TOUTES — vérifier qu'il suit l'ordre de prise de vue."
+        )
+    for rang, vues in enumerate(appariement.bouteilles, start=1):
+        print(f"  {rang:>3}. {vues.nom}")
+    print()
+
+
 def _photos_factices(nombre: int) -> list[PhotosBouteille]:
     """Chemins fictifs du dry-run : `FixtureExtractor` les ignore, mais le
     pipeline garde exactement la même forme qu'avec de vraies photos."""
     return [
-        PhotosBouteille(etiquette=Path(f"(fixture)/bouteille_{i:02d}/etiquette.jpg"))
+        PhotosBouteille(
+            etiquette=Path(f"(fixture)/bouteille_{i:02d}_etiquette.jpg"),
+            contre_etiquette=Path(f"(fixture)/bouteille_{i:02d}_contre.jpg"),
+        )
         for i in range(1, nombre + 1)
     ]
 
@@ -238,9 +256,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = analyseur.parse_args(argv)
     journal = arguments.journal or arguments.sortie.with_suffix(".jsonl")
 
-    # Le rapport contient des accents ; la console Windows est en cp1252 par défaut.
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    # Le rapport ET les messages d'erreur contiennent des accents ; la console
+    # Windows est en cp1252 par défaut. Les deux flux, sinon un refus de config
+    # ou de photos s'afficherait mutilé, au moment précis où il faut le lire.
+    for flux in (sys.stdout, sys.stderr):
+        if hasattr(flux, "reconfigure"):
+            flux.reconfigure(encoding="utf-8", errors="replace")
 
     _charger_env()
 
@@ -272,20 +293,38 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         if not arguments.photos:
             analyseur.error("--photos est requis hors --dry-run.")
+
+        # Les photos sont vérifiées AVANT de créer le client du modèle : un
+        # dossier invalide (nombre impair, HEIC…) se signale sans clé ni coût.
+        try:
+            appariement = apparier_photos(arguments.photos)
+        except PhotosInvalides as erreur:
+            print(erreur, file=sys.stderr)
+            return 2
+        photos = appariement.bouteilles
+        _annoncer_appariement(appariement)
+        if arguments.limite:
+            photos = photos[: arguments.limite]
+
         # Imports tardifs : le dry-run ne doit dépendre d'aucun SDK ni clé API,
         # et le backend gratuit ne doit pas exiger le SDK payant (ni l'inverse).
         if arguments.backend == "gemini":
             from src.extract.gemini_extract import GeminiExtractor
 
-            extracteur: Extractor = GeminiExtractor(config=config)
+            try:
+                extracteur: Extractor = GeminiExtractor(config=config)
+            except ValueError as erreur:  # le SDK refuse de créer un client sans clé
+                print(
+                    f"Clé Gemini absente : {erreur}\n"
+                    f"-> La renseigner dans {RACINE / '.env'} (GEMINI_API_KEY=...), "
+                    f"voir .env.example.",
+                    file=sys.stderr,
+                )
+                return 2
         else:
             from src.extract.vision_extract import VisionExtractor
 
             extracteur = VisionExtractor(config=config)
-
-        photos = grouper_photos(arguments.photos)
-        if arguments.limite:
-            photos = photos[: arguments.limite]
         chemin_manuel = arguments.manual
         print(f"Modèle : {extracteur.modele} — {len(photos)} bouteille(s).\n")
 
