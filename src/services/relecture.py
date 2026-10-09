@@ -34,7 +34,7 @@ from src.services.extraction import (
     derniere_extraction_reussie,
     extractions_de,
 )
-from src.services.inventaires import actualiser_statut, config_figee
+from src.services.inventaires import actualiser_statut, charger_inventaire, config_figee
 
 # Le changement de statut d'une bouteille (validation, remise à relire) est
 # tracé dans l'historique sous ce nom (decisions.md 0083).
@@ -292,3 +292,32 @@ def valider(session: Session, bouteille_id: int, auteur: str) -> None:
     actualiser_statut(bouteille.inventaire)
     session.commit()
 
+
+
+def valider_inventaire(session: Session, inventaire_id: int, auteur: str) -> int:
+    """Valide d'un coup toutes les bouteilles extraites de l'inventaire
+    (decisions.md 0120). Refusé, sans rien valider, s'il reste une bouteille en
+    erreur ou pas encore extraite. Renvoie le nombre de bouteilles validées."""
+    auteur = _auteur(auteur)
+    inventaire = charger_inventaire(session, inventaire_id)
+    en_erreur = [b.position for b in inventaire.bouteilles if b.statut == "erreur"]
+    pas_extraites = [b.position for b in inventaire.bouteilles if b.statut in ("a_extraire", "en_cours")]
+    if en_erreur or pas_extraites:
+        raisons = []
+        if en_erreur:
+            raisons.append(
+                f"{len(en_erreur)} bouteille(s) en erreur ({_positions(en_erreur)}) : relancer "
+                f"leur extraction ou les corriger avant de valider"
+            )
+        if pas_extraites:
+            raisons.append(f"{len(pas_extraites)} bouteille(s) pas encore extraite(s) ({_positions(pas_extraites)})")
+        raise ValidationRefusee("L'inventaire ne peut pas encore être validé : " + " ; ".join(raisons) + ".")
+    a_valider = [b.id for b in inventaire.bouteilles if b.statut == "extraite"]
+    for bouteille_id in a_valider:
+        valider(session, bouteille_id, auteur)
+    return len(a_valider)
+
+
+def _positions(positions: list[int]) -> str:
+    montrees = ", ".join(f"n°{p}" for p in positions[:10])
+    return montrees + (" …" if len(positions) > 10 else "")

@@ -52,6 +52,22 @@ class ReponseInexploitable(ValueError):
     """La réponse du modèle est arrivée, mais on ne peut pas la lire."""
 
 
+class Limiteur(Protocol):
+    """Limite de débit partagée entre workers (decisions.md 0114).
+
+    Implémentée en base par `src/services/debit.py` ; l'extracteur ne connaît
+    que ce contrat. Sans limiteur, un extracteur espace seul ses appels.
+    """
+
+    def attendre_mon_tour(self) -> None:
+        """Bloque jusqu'au créneau de l'appel suivant (pause commune comprise)."""
+        ...
+
+    def ralentir(self, pause_s: float) -> None:
+        """Limite de débit atteinte : TOUS les workers attendent `pause_s`."""
+        ...
+
+
 @runtime_checkable
 class Extractor(Protocol):
     """Transforme les photos d'UNE bouteille en champs de catalogage."""

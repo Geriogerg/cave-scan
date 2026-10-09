@@ -26,7 +26,7 @@ import httpx
 from google import genai
 from google.genai import errors, types
 
-from src.extract.base import CheminPhoto, SortieModele, bouteille_depuis_sortie
+from src.extract.base import CheminPhoto, Limiteur, SortieModele, bouteille_depuis_sortie
 from src.extract.consignes import (
     INSTRUCTION_FINALE,
     LIBELLE_AUTRE,
@@ -77,12 +77,15 @@ class GeminiExtractor:
         pause_s: float = PAUSE_ENTRE_APPELS_S,
         tentatives_max: int = TENTATIVES_MAX,
         config: ConfigMaison | None = None,
+        limiteur: Limiteur | None = None,
     ) -> None:
         # Le client résout sa clé seul : GEMINI_API_KEY, sinon GOOGLE_API_KEY.
         self.client = client or genai.Client()
         self.modele = modele or os.environ.get(VARIABLE_MODELE) or MODELE_DEFAUT
         self.pause_s = pause_s
         self.tentatives_max = tentatives_max
+        # Partagé en base entre workers (0114) ; sans lui, espacement local.
+        self.limiteur = limiteur
         self.config = config  # la maison : vocabulaire et colonnes envoyées au modèle
         self._config = types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
@@ -153,11 +156,20 @@ class GeminiExtractor:
                 if not _merite_reprise(erreur) or dernier:
                     raise
                 # Attente croissante : 9 s, 18 s, 36 s avec la pause par défaut.
-                time.sleep(self.pause_s * (2**tentative))
+                # Partagée : tous les workers ralentissent ensemble au lieu de
+                # multiplier les tentatives (0114).
+                attente = self.pause_s * (2**tentative)
+                if self.limiteur is not None:
+                    self.limiteur.ralentir(attente)
+                else:
+                    time.sleep(attente)
         raise AssertionError("inatteignable")  # pragma: no cover
 
     def _respecter_le_quota(self) -> None:
         """Espace les appels pour rester sous la limite du palier gratuit."""
+        if self.limiteur is not None:
+            self.limiteur.attendre_mon_tour()
+            return
         if self.pause_s <= 0:
             return
         attente = self.pause_s - (time.monotonic() - self._dernier_appel)

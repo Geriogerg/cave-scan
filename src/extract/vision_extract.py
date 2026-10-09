@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 import anthropic
 
-from src.extract.base import CheminPhoto, SortieModele, bouteille_depuis_sortie
+from src.extract.base import CheminPhoto, Limiteur, SortieModele, bouteille_depuis_sortie
 from src.extract.consignes import (
     INSTRUCTION_FINALE,
     LIBELLE_AUTRE,
@@ -146,6 +146,7 @@ class VisionExtractor:
         modele: str | None = None,
         max_tokens: int = 16000,
         config: ConfigMaison | None = None,
+        limiteur: Limiteur | None = None,
     ) -> None:
         # Le client résout ses identifiants seul (ANTHROPIC_API_KEY, profil ant).
         # Pannes passagères (débit, délai, surcharge, 5xx) : le SDK réessaie
@@ -153,6 +154,7 @@ class VisionExtractor:
         self.client = client or anthropic.Anthropic(max_retries=NOUVELLES_TENTATIVES)
         self.modele = modele or os.environ.get(VARIABLE_MODELE) or MODELE_DEFAUT
         self.max_tokens = max_tokens
+        self.limiteur = limiteur  # espacement partagé entre workers (0114)
         # Le schéma suit la config de la maison (guide, étape 4.2) : colonnes
         # expert et système jamais envoyées.
         self.config = config
@@ -201,6 +203,8 @@ class VisionExtractor:
         contre_etiquette: CheminPhoto | None,
         autres: Sequence[CheminPhoto] | None,
     ) -> Any:
+        if self.limiteur is not None:
+            self.limiteur.attendre_mon_tour()
         try:
             return self.client.messages.create(
                 model=self.modele,
