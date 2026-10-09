@@ -578,7 +578,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   Anthropic : le SDK réessaie lui-même ; le nombre de tentatives (3) est fixé
   explicitement plutôt que laissé au défaut.
 
-- 0093 — À la relance, une bouteille restée `en_cours` est une extraction
+- 0093 — [remplacée par 0110] À la relance, une bouteille restée `en_cours` est une extraction
   interrompue (coupure, arrêt brutal) : elle est refaite. Une relance forcée sur
   une bouteille validée la remet à relire, et c'est tracé dans l'historique
   (auteur « relance forcée (modèle) »).
@@ -686,6 +686,79 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   devient facultatif (migration 0002, accord donné le 2026-10-09 ; les données
   existantes sont conservées) ; le contrat `Bouteille` ne change pas. Le modèle
   reçoit alors la seule étiquette — les extracteurs le géraient déjà.
+
+---
+
+## Session 3 — tâches de fond + API
+
+- 0109 — File d'attente EN BASE (pas de Redis ni de Celery) : le statut des
+  bouteilles est la file. Une bouteille est réservée de façon ATOMIQUE par une
+  seule fonction, `reserver_bouteille()` — sous SQLite un `UPDATE … WHERE
+  statut = 'a_extraire' … RETURNING` ; au passage à PostgreSQL, `FOR UPDATE SKIP
+  LOCKED` ne changera qu'elle. Deux workers ne peuvent jamais réserver la même
+  bouteille.
+
+- 0110 — [remplace 0093] « en_cours » = réservation VIVANTE : la bouteille porte
+  qui l'a réservée, quand, et un horodatage de vie mis à jour pendant le
+  traitement. Une bouteille en cours dont l'horodatage dépasse le délai
+  d'abandon (configurable) est remise à extraire ; si sa réponse était déjà en
+  base (arrêt entre l'enregistrement de la réponse et le statut), elle est
+  terminée SANS nouvel appel — jamais un appel payé deux fois.
+
+- 0111 — Chaque inventaire a un état d'extraction (non_lancee, lancee, annulee,
+  arretee) : le worker ne réserve que dans les inventaires lancés. Lancer,
+  annuler et relancer les erreurs sont des actions explicites et idempotentes ;
+  annuler laisse les bouteilles non commencées « à extraire », celles en cours
+  terminent. Une panne systématique passe l'inventaire à « arretee » avec son
+  motif : aucun worker ne continue.
+
+- 0112 — Les bouteilles en erreur ne sont plus retentées automatiquement : c'est
+  l'action « relancer les erreurs ». La ligne de commande `--inventaire ID`
+  garde son comportement (relancer les erreurs, lancer, extraire au premier
+  plan) ; un Ctrl-C y libère proprement la réservation.
+
+- 0113 — SQLite en mode WAL avec `busy_timeout` ; transactions courtes, une
+  session par tâche, aucune transaction ouverte pendant l'appel au modèle (les
+  chemins des photos sont lus avant).
+
+- 0114 — Limite de débit PARTAGÉE en base (table `limite_debit`) : espacement
+  minimal entre deux appels à un modèle, et pause commune après une limite de
+  débit atteinte — on ralentit tous les workers au lieu de multiplier les
+  tentatives. Rien en mémoire : un redémarrage la respecte.
+
+- 0115 — Parallélisme : un processus worker, un pool de threads borné (4 par
+  défaut, configurable). Les appels au modèle attendent le réseau : des threads
+  suffisent, sans multiprocessing.
+
+- 0116 — Envoi des photos par l'API : chaque fichier est réellement ouvert
+  (Pillow), limites de taille par fichier et de nombre par inventaire (au moins
+  600), noms nettoyés ; puis `creer_inventaire` est réutilisé tel quel, avec
+  tous ses garde-fous (impair, doublons). HEIC refusé avec un message clair tant
+  que pillow-heif n'est pas installé (0070).
+
+- 0117 — Photos servies uniquement par une route qui vérifie qu'elles
+  appartiennent à l'inventaire demandé. Version réduite (rotation EXIF
+  appliquée) et version pleine taille, toutes deux RÉENCODÉES sans aucune
+  métadonnée (qualité 95) : l'« original » brut porterait l'EXIF, dont la
+  position GPS de la cave. Le fichier stocké reste intact.
+
+- 0118 — API FastAPI, couche fine : format d'erreur unique `{code, message,
+  detail}` en français, chaque exception de service traduite en un seul endroit ;
+  aucune logique dans les routes. L'auteur d'une correction est fourni dans la
+  requête via une dépendance, et toutes les routes passent par une dépendance
+  d'accès vide aujourd'hui : la connexion (session 7) les remplacera sans
+  réécrire les routes. Écoute sur 127.0.0.1 uniquement.
+
+- 0119 — Lancement : `python serveur.py` (API), `python worker.py` (worker),
+  `python dev.py` (les deux, pour le développement).
+
+- 0120 — Valider un inventaire = valider d'un coup toutes ses bouteilles
+  extraites ; refusé, avec un message pour l'expert, s'il reste une bouteille en
+  erreur ou non extraite.
+
+- 0121 — Migration 0003 (accord donné le 2026-10-09) : état d'extraction de
+  l'inventaire, réservation et horodatage de vie des bouteilles, table
+  `limite_debit`. Le contrat `Bouteille` ne change pas.
 
 ---
 

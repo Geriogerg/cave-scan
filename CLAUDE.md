@@ -2,19 +2,20 @@
 
 > Lu à chaque session. Fait autorité. En cas de doute métier, ce fichier tranche ;
 > s'il est muet, demande — n'invente pas. Décisions techniques → `decisions.md`.
-> La stratégie long terme est dans `ROADMAP.md` : **pas besoin de la lire pour
-> coder la v0**, et on ne construit rien qui n'y soit pas explicitement demandé.
+> La stratégie et la séquence des sessions sont dans `ROADMAP.md` : **pas besoin
+> de le lire pour coder**. On ne construit que le périmètre du guide de session en
+> cours (`docs/sessions/`).
 
-## Ce qu'on construit (v0, rien d'autre)
+## Ce qu'on construit
 
 À partir des photos d'une bouteille (étiquette + contre-étiquette), extraire les
 champs de catalogage, exporter un Excel au format d'une maison, et COMPARER ce
 listing automatique au listing manuel de l'expert, champ par champ.
 
-**Le livrable de la v0 est le tableau de scores par champ.** On le fait évoluer
-vers une version pilote (voir decisions.md, section « Produit pilote »). Toujours
-pas d'interface tant qu'une session ne la demande pas, et jamais d'estimation par
-le modèle.
+La v0 a livré son tableau de scores par champ. On la fait évoluer vers une
+version pilote utilisée directement par l'expert d'une maison de vente (voir
+decisions.md, section « Produit pilote »). Pas d'écran web tant qu'une session ne
+le demande pas, et jamais d'estimation par le modèle.
 
 Champs à extraire : appellation, domaine/producteur, cuvée, couleur,
 couleur_source, effervescence, millésime, région, pays, format, contenance_cl,
@@ -58,6 +59,29 @@ précise le périmètre de la session ; ce fichier-ci donne les règles permanen
   suppression-recréation : on ne perd jamais les données d'un inventaire.
 - Logique métier dans des **fonctions de service** sans état caché ; la ligne de
   commande et la future application web ne font que les appeler.
+
+## API et tâches de fond (règles permanentes)
+
+- **L'API est une couche fine** : chaque route valide l'entrée, appelle une
+  fonction de service, met en forme la réponse. Aucune logique métier dans les
+  routes ni dans le worker.
+- **Le travail en attente vit dans la base**, pas en mémoire : un redémarrage du
+  serveur ou du worker ne perd rien, et une bouteille restée « en cours » après
+  un arrêt brutal est remise à extraire.
+- **Une bouteille n'est jamais extraite deux fois en même temps.** Elle est
+  réservée de façon atomique avant traitement.
+- **Parallélisme borné et configurable** (quelques extractions simultanées), avec
+  respect des limites de débit de l'API du modèle.
+- **Les erreurs suivent la classification déjà décidée** (systématique → arrêt de
+  l'inventaire ; passagère → nouvelles tentatives puis erreur sur la bouteille ;
+  réponse inexploitable → erreur sur la bouteille).
+- **Pas d'infrastructure lourde** pour le pilote (pas de Redis, pas de Celery) :
+  une file d'attente en base et un processus worker suffisent pour 300
+  bouteilles.
+- **Les photos ne sont jamais servies comme un dossier statique** : une route
+  vérifie que la photo appartient à l'inventaire demandé. Les métadonnées EXIF
+  (dont la position GPS de la cave du client) ne sont jamais renvoyées par l'API.
+- Tant que la connexion n'existe pas (session 7), le serveur n'écoute qu'en local.
 
 ## Contraintes dures (ne jamais violer)
 
