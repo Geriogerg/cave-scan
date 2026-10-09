@@ -588,6 +588,22 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   bouteille ; sa version de prompt est celle qu'aurait reçue un vrai modèle
   pour la même maison.
 
+- 0095 — Dans les services, l'historique d'une bouteille (extractions,
+  corrections) est LU par une requête explicite, jamais par une liste chargée
+  plus tôt dans la session ; il est ÉCRIT en rattachant l'enregistrement à la
+  bouteille. Découvert par les tests : une liste chargée une fois (pour
+  calculer l'« ancienne valeur ») restait figée, et une correction ajoutée
+  ensuite n'apparaissait pas dans les valeurs courantes.
+
+- 0096 — Saisie de l'expert : une quantité accepte « 3 » comme 3 mais refuse 0,
+  2,5, « cinq » ; un nombre accepte la virgule française (« 13,5 ») ;
+  `non_determinable` est une saisie valide pour une liste (« je ne peux pas
+  trancher » est une réponse) ; un texte est libre. Une correction est
+  possible quel que soit le statut — l'expert peut renseigner une bouteille
+  en erreur —, mais ne la rend pas validable pour autant. Les corrections
+  survivent à une relance forcée : elles s'appliquent à la nouvelle
+  extraction.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

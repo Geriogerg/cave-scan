@@ -20,7 +20,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, object_session
 
 from src.donnees.modeles import Correction, Extraction, FicheBouteille
 from src.donnees.stockage import chemin_stocke
@@ -64,9 +65,26 @@ class BilanExtraction:
 
 
 def derniere_extraction_reussie(bouteille: FicheBouteille) -> Extraction | None:
-    """La dernière extraction sans erreur : c'est elle qui fait foi."""
-    reussies = [extraction for extraction in bouteille.extractions if extraction.erreur is None]
-    return reussies[-1] if reussies else None
+    """La dernière extraction sans erreur : c'est elle qui fait foi.
+
+    Lue par une requête, jamais par une liste chargée plus tôt dans la session :
+    une extraction ajoutée depuis doit compter (decisions.md 0095).
+    """
+    return object_session(bouteille).scalars(
+        select(Extraction)
+        .where(Extraction.bouteille_id == bouteille.id, Extraction.erreur.is_(None))
+        .order_by(Extraction.id.desc())
+        .limit(1)
+    ).first()
+
+
+def extractions_de(bouteille: FicheBouteille) -> list[Extraction]:
+    """Toutes les extractions de la bouteille, de la plus ancienne à la plus récente."""
+    return list(
+        object_session(bouteille).scalars(
+            select(Extraction).where(Extraction.bouteille_id == bouteille.id).order_by(Extraction.id)
+        )
+    )
 
 
 def charger_bouteille(session: Session, bouteille_id: int) -> FicheBouteille:
@@ -104,9 +122,8 @@ def extraire_bouteille(
             contre_etiquette=chemin_stocke(stockage, bouteille.photo_contre.chemin),
         )
     except Exception as erreur:  # `extraire_brut` ne lève que pour une panne systématique
-        session.add(
+        bouteille.extractions.append(
             Extraction(
-                bouteille_id=bouteille.id,
                 sortie_brute=None,
                 modele=getattr(extracteur, "modele", "inconnu"),
                 version_prompt=getattr(extracteur, "version_prompt", "inconnue"),
@@ -120,7 +137,6 @@ def extraire_bouteille(
 
     # 1. La réponse d'abord : en base, validée, avant toute interprétation.
     extraction = Extraction(
-        bouteille_id=bouteille.id,
         sortie_brute=sortie.brut,
         modele=sortie.modele,
         version_prompt=sortie.version_prompt,
@@ -129,7 +145,7 @@ def extraire_bouteille(
         duree_ms=_millisecondes(debut),
         erreur=sortie.erreur,
     )
-    session.add(extraction)
+    bouteille.extractions.append(extraction)
     session.commit()
 
     # 2. Puis l'interprétation : si elle échoue, la réponse reste ; seule
@@ -143,9 +159,8 @@ def extraire_bouteille(
     bouteille.statut = "erreur" if extraction.erreur else "extraite"
     if etait_validee:
         # Relance forcée d'une bouteille validée : elle est à relire (0083).
-        session.add(
+        bouteille.corrections.append(
             Correction(
-                bouteille_id=bouteille.id,
                 champ="statut",
                 ancienne_valeur="validee",
                 nouvelle_valeur=bouteille.statut,

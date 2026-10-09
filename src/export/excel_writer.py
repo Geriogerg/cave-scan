@@ -9,8 +9,9 @@ Règles d'affichage (CLAUDE.md, decisions.md 0055) :
 - une abstention (`non_lisible`, `non_determinable`) s'affiche en case VIDE et
   la ligne est SURLIGNÉE : l'abstention reste visible, sans être maquillée en
   valeur ;
-- les colonnes expert restent vides — l'estimation n'est jamais remplie —, sauf
-  la quantité, 1 par défaut ;
+- les colonnes expert affichent la saisie de l'expert, et seulement elle : le
+  modèle ne remplit jamais l'estimation (CLAUDE.md, decisions.md 0082) ; la
+  quantité vaut 1 par défaut ;
 - aucune formule : le fichier livré doit être inerte et relisible.
 """
 
@@ -51,7 +52,9 @@ def valeur_stockee(bouteille: Bouteille, colonne: Colonne) -> Any:
     if colonne.cle == COLONNE_QUANTITE:
         return bouteille.quantite
     if colonne.source == "expert":
-        return None  # saisi par l'expert : l'outil n'y écrit rien (decisions.md 0005)
+        # Ce que l'EXPERT a saisi (estimation comprise), ou rien. Le modèle ne peut
+        # pas écrire ici : sa lecture ne remplit que les colonnes lues (0082).
+        return bouteille.valeurs_maison.get(colonne.cle)
 
     if colonne.cle in NATURE_DES_CHAMPS:
         valeur = getattr(bouteille, colonne.cle)
