@@ -127,6 +127,12 @@ def _canoniser_nombre(valeur: Any) -> str | None:
     return format(nombre.normalize(), "f")
 
 
+ENTETE_SCORE_MODELE = (
+    "SCORE DU MODÈLE : sa sortie brute, sans les corrections de l'expert "
+    "(mesurées à part dans les statistiques de l'inventaire)."
+)
+
+
 def plier(valeur: Any) -> str:
     """Réduit une valeur à sa forme comparable : sans casse, sans accents.
 
@@ -305,6 +311,9 @@ def formater_rapport(rapport: RapportComparaison) -> str:
 
     lignes = [
         f"Comparaison auto vs manuel — {rapport.n_lignes} bouteille(s)",
+        # Ce que mesure ce tableau : le modèle, pas le travail de l'expert
+        # (decisions.md 0081).
+        ENTETE_SCORE_MODELE,
         "",
         f"{'champ':<{largeur_champ}}  {'accuracy':>8}  {'absten.':>8}  "
         f"{'compar.':>7}  {'exact':>5}  {'desac.':>6}  {'m.vide':>6}",

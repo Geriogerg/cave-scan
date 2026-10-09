@@ -604,6 +604,26 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   survivent à une relance forcée : elles s'appliquent à la nouvelle
   extraction.
 
+- 0097 — Non-régression vérifiée sur PIÈCES : mêmes photos, mêmes fixtures, on
+  produit l'export par le chemin de la session 1 et depuis la base, et on
+  compare valeurs, types de cellule, surlignage, polices, largeurs, gel des
+  en-têtes et propriétés du fichier — identiques. L'export depuis la base
+  réutilise `ecrire_excel` sans le modifier : seule la source des valeurs
+  change.
+
+- 0098 — Coût par bouteille = tokens de TOUTES ses extractions (relances et
+  réponses inexploitables comprises : elles sont facturées), rapportés aux
+  bouteilles qui ont consommé des tokens mesurés. Une extraction sans mesure
+  (fixtures, panne survenue avant toute réponse) ne pèse pas et est comptée à
+  part : jamais un faux zéro qui ferait baisser la moyenne.
+
+- 0099 — Le rapport de comparaison porte, sous son titre, la mention « SCORE DU
+  MODÈLE : sa sortie brute, sans les corrections de l'expert » (0081) — ajoutée
+  sans modifier les lignes existantes. Export, statistiques et comparaison
+  vivent dans `src/services/restitution.py` : ils lisent à la fois les
+  inventaires et la relecture, les ranger dans l'un des deux aurait créé une
+  dépendance circulaire.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
