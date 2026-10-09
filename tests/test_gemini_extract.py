@@ -249,3 +249,35 @@ def test_le_modele_choisi_part_bien_dans_l_appel(photos):
     extracteur = _extracteur(_reponse({"appellation": "Pommard"}), modele="gemini-3.6-flash")
     extracteur.extract(etiquette)
     assert extracteur.client.dernier_appel["model"] == "gemini-3.6-flash"
+
+
+# --- ce qui part réellement au modèle (guide, étape 4.2) --------------------------
+
+
+def test_colonnes_expert_et_systeme_jamais_envoyees(photos):
+    """Vérifié sur la requête ENVOYÉE, pas seulement sur le générateur de schéma."""
+    from src.config.maison import charger_config
+    from tests.conftest import RACINE
+
+    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    extracteur = _extracteur(_reponse({"appellation": "Pommard"}), config=config)
+    extracteur.extract(photos[0])
+
+    envoye = extracteur.client.dernier_appel["config"].response_json_schema
+    for colonne in config.colonnes:
+        if not colonne.envoyee_au_modele:
+            assert colonne.cle not in envoye["properties"], colonne.cle
+    for colonne in config.colonnes_modele:
+        assert colonne.cle in envoye["properties"], colonne.cle
+
+
+def test_les_deux_backends_envoient_le_meme_schema_pour_une_maison():
+    """Même maison, même schéma : sinon leurs scores ne seraient pas comparables."""
+    from src.config.maison import charger_config
+    from src.extract.vision_extract import VisionExtractor
+    from tests.conftest import RACINE
+
+    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    anthropic_ = VisionExtractor(client=object(), config=config)._outil["input_schema"]
+    gemini = _extracteur(config=config)._config.response_json_schema
+    assert anthropic_ == gemini

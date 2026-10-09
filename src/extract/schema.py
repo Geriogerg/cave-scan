@@ -16,7 +16,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:  # import de typage seul : la config dépend de ce module, pas l'inverse
+    from src.config.maison import Colonne, ConfigMaison
 
 # Sentinelle des champs texte illisibles sur la photo.
 NON_LISIBLE = "non_lisible"
@@ -342,7 +345,66 @@ def tool_schema() -> dict[str, Any]:
     }
 
 
-def from_tool_input(charge: dict[str, Any]) -> Bouteille:
+def schema_extraction(config: ConfigMaison | None = None) -> dict[str, Any]:
+    """Le schéma réellement envoyé au modèle pour une maison (guide, étape 4.2).
+
+    = les champs v0 (CLAUDE.md, « Champs à extraire ») + les colonnes de la
+    config dont la source est `modele` ou `modele_best_effort` (decisions.md
+    0061). Conséquences :
+    - le noyau canonique fait partie des champs v0 : il est toujours extrait,
+      même si la config ne l'affiche pas (0021) ;
+    - une colonne de config qui porte le nom d'un champ v0 en redéfinit la
+      description et, pour une liste, le vocabulaire (ses codes) ;
+    - les colonnes `expert` et `systeme` ne sont JAMAIS ajoutées ;
+    - la consigne d'abstention est ajoutée par le code à chaque colonne : la
+      règle « ne jamais deviner » ne dépend pas de la rédaction de la maison.
+
+    Sans config : le schéma v0, inchangé.
+    """
+    outil = tool_schema()
+    if config is None:
+        return outil
+
+    proprietes = outil["input_schema"]["properties"]
+    for colonne in config.colonnes_modele:
+        proprietes[colonne.cle] = _propriete(colonne)
+    outil["input_schema"]["required"] = list(proprietes)
+    return outil
+
+
+def _propriete(colonne: Colonne) -> dict[str, Any]:
+    """Une colonne de config traduite en propriété du schéma."""
+    morceaux = [colonne.description] if colonne.description else []
+    if colonne.regle:
+        morceaux.append(f"Consigne : {colonne.regle}")
+    if colonne.source == "modele_best_effort":
+        morceaux.append(
+            "Proposition fondée UNIQUEMENT sur ce qui est visible sur les photos, "
+            "qu'un expert relira : ne rien décrire de non visible."
+        )
+
+    if colonne.type == "liste":
+        valeurs = " | ".join(
+            f"{valeur.code} — {valeur.description}" if valeur.description else valeur.code
+            for valeur in colonne.valeurs
+        )
+        morceaux.append(f"Valeurs possibles : {valeurs}.")
+        morceaux.append(
+            f"Si rien de visible ne permet de trancher : « {NON_DETERMINABLE} ». Ne jamais deviner."
+        )
+        return {"type": "string", "enum": list(colonne.codes), "description": " ".join(morceaux)}
+
+    if colonne.type == "nombre":
+        morceaux.append("Uniquement si c'est écrit ou visible. Sinon : null. Ne jamais deviner.")
+        return {"type": ["number", "null"], "description": " ".join(morceaux)}
+
+    morceaux.append(
+        f"Si ce n'est pas lisible ou visible sur les photos : « {NON_LISIBLE} ». Ne jamais deviner."
+    )
+    return {"type": "string", "description": " ".join(morceaux)}
+
+
+def from_tool_input(charge: dict[str, Any], config: ConfigMaison | None = None) -> Bouteille:
     """Construit une `Bouteille` à partir de la charge utile d'un appel d'outil.
 
     Tolérante par conception : une clé manquante retombe sur l'abstention, une
@@ -353,28 +415,56 @@ def from_tool_input(charge: dict[str, Any]) -> Bouteille:
     Source NON FIABLE : seuls les champs du modèle sont lus. `id`, `quantite`
     ou une colonne expert renvoyés par le modèle sont ignorés — il ne décide
     jamais de ce que posent l'outil ou l'expert (decisions.md 0059).
+
+    Avec la config d'une maison : son vocabulaire fait foi pour les listes
+    qu'elle redéfinit, ses colonnes propres vont dans `valeurs_maison`, et
+    chaque colonne best effort est ajoutée à `champs_a_verifier` — par le code,
+    toujours, sans dépendre du modèle (CLAUDE.md, decisions.md 0062).
     """
-    return Bouteille(
+    redefinies = {colonne.cle: colonne for colonne in config.colonnes_modele} if config else {}
+
+    def liste[E: StrEnum](champ: str, enum_cls: type[E], defaut: E) -> str:
+        colonne = redefinies.get(champ)
+        if colonne is not None:
+            return colonne.code_depuis(charge.get(champ)) or NON_DETERMINABLE
+        return _enum(enum_cls, charge.get(champ), defaut)
+
+    bouteille = Bouteille(
         appellation=_texte(charge.get("appellation")),
         domaine=_texte(charge.get("domaine")),
         cuvee=_texte(charge.get("cuvee")),
-        couleur=_enum(Couleur, charge.get("couleur"), Couleur.NON_DETERMINABLE),
+        couleur=liste("couleur", Couleur, Couleur.NON_DETERMINABLE),
         couleur_source=_enum(
             CouleurSource, charge.get("couleur_source"), CouleurSource.NON_LISIBLE
         ),
-        effervescence=_enum(
-            Effervescence, charge.get("effervescence"), Effervescence.NON_DETERMINABLE
-        ),
+        effervescence=liste("effervescence", Effervescence, Effervescence.NON_DETERMINABLE),
         millesime=_texte(charge.get("millesime")),
         region=_texte(charge.get("region")),
         pays=_texte(charge.get("pays")),
-        format=_enum(Format, charge.get("format"), Format.NON_DETERMINABLE),
+        format=liste("format", Format, Format.NON_DETERMINABLE),
         contenance_cl=_entier(charge.get("contenance_cl")),
         degre=_reel(charge.get("degre")),
         importateur=_texte(charge.get("importateur")),
         champs_a_verifier=[str(c) for c in charge.get("champs_a_verifier") or []],
         notes=str(charge.get("notes") or ""),
     )
+
+    for colonne in redefinies.values():
+        if colonne.cle not in NATURE_DES_CHAMPS:
+            bouteille.valeurs_maison[colonne.cle] = _valeur_de_colonne(colonne, charge.get(colonne.cle))
+        if colonne.source == "modele_best_effort" and colonne.cle not in bouteille.champs_a_verifier:
+            bouteille.champs_a_verifier.append(colonne.cle)
+
+    return bouteille
+
+
+def _valeur_de_colonne(colonne: Colonne, brute: Any) -> Any:
+    """Valeur d'une colonne propre à la maison, avec sa convention d'abstention."""
+    if colonne.type == "liste":
+        return colonne.code_depuis(brute) or NON_DETERMINABLE
+    if colonne.type == "nombre":
+        return _reel(brute)
+    return _texte(brute)
 
 
 def bouteille_depuis_dict(donnees: dict[str, Any]) -> Bouteille:

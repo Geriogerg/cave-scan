@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import unicodedata
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -84,6 +84,9 @@ class SignauxModele:
     couleur_source: dict[str, int] = field(default_factory=dict)
     lignes_a_relire: int = 0
     champs_a_verifier: dict[str, int] = field(default_factory=dict)
+    # Champs à vérifier PAR PRINCIPE (best effort) : exclus des doutes, sinon
+    # « relecture » vaudrait 100 % quelle que soit la qualité de lecture.
+    systematiques: tuple[str, ...] = ()
 
     @property
     def taux_relecture(self) -> float | None:
@@ -161,6 +164,7 @@ def comparer(
     auto: Sequence[Bouteille],
     manuel: Sequence[Mapping[str, Any]],
     champs: Sequence[str] = CHAMPS_COMPARABLES,
+    systematiques: Collection[str] = (),
 ) -> RapportComparaison:
     """Compare deux listings alignés ligne à ligne.
 
@@ -220,23 +224,32 @@ def comparer(
         n_lignes=len(auto),
         scores=scores,
         desaccords=desaccords,
-        signaux=relever_signaux(auto),
+        signaux=relever_signaux(auto, systematiques),
     )
 
 
-def relever_signaux(auto: Sequence[Bouteille]) -> SignauxModele:
-    """Agrège ce que le modèle a déclaré sur son propre travail."""
+def relever_signaux(
+    auto: Sequence[Bouteille], systematiques: Collection[str] = ()
+) -> SignauxModele:
+    """Agrège ce que le modèle a déclaré sur son propre travail.
+
+    `systematiques` : champs à vérifier par principe (colonnes best effort de la
+    maison), comptés à part — ce ne sont pas des doutes du modèle (0063).
+    """
+
+    def doutes(bouteille: Bouteille) -> list[str]:
+        return [champ for champ in bouteille.champs_a_verifier if champ not in systematiques]
+
     return SignauxModele(
         n_lignes=len(auto),
         couleur_source=dict(
             Counter(bouteille.couleur_source.value for bouteille in auto).most_common()
         ),
-        lignes_a_relire=sum(1 for bouteille in auto if bouteille.champs_a_verifier),
+        lignes_a_relire=sum(1 for bouteille in auto if doutes(bouteille)),
         champs_a_verifier=dict(
-            Counter(
-                champ for bouteille in auto for champ in bouteille.champs_a_verifier
-            ).most_common()
+            Counter(champ for bouteille in auto for champ in doutes(bouteille)).most_common()
         ),
+        systematiques=tuple(systematiques),
     )
 
 
@@ -277,6 +290,10 @@ def _formater_signaux(signaux: SignauxModele) -> list[str]:
             f"{champ} {nombre}" for champ, nombre in signaux.champs_a_verifier.items()
         )
         lignes.append(f"            {detail}")
+    if signaux.systematiques:
+        lignes.append(
+            f"            + toujours à vérifier (best effort) : {', '.join(signaux.systematiques)}"
+        )
 
     return lignes
 

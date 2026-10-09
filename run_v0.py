@@ -222,7 +222,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _restituer(bouteilles, config, arguments.manual, arguments.sortie, journal=None)
 
     if arguments.dry_run:
-        extracteur: Extractor = FixtureExtractor.depuis_json(FIXTURE_AUTO)
+        extracteur: Extractor = FixtureExtractor.depuis_json(FIXTURE_AUTO, config)
         photos = _photos_factices(len(extracteur))
         chemin_manuel = FIXTURE_MANUEL
         print(f"DRY-RUN — fixtures {FIXTURE_AUTO.name} / {FIXTURE_MANUEL.name}, hors ligne.\n")
@@ -234,11 +234,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         if arguments.backend == "gemini":
             from src.extract.gemini_extract import GeminiExtractor
 
-            extracteur: Extractor = GeminiExtractor()
+            extracteur: Extractor = GeminiExtractor(config=config)
         else:
             from src.extract.vision_extract import VisionExtractor
 
-            extracteur = VisionExtractor()
+            extracteur = VisionExtractor(config=config)
 
         photos = grouper_photos(arguments.photos)
         if arguments.limite:
@@ -270,7 +270,7 @@ def _restituer(
             "Le livrable de la v0 est la comparaison à l'expert ; sans son "
             "fichier,\nce run montre seulement ce que le modèle produit.\n"
         )
-        print(formater_signaux(relever_signaux(bouteilles)))
+        print(formater_signaux(relever_signaux(bouteilles, _systematiques(config))))
         return 0
 
     manuel = load_manual(chemin_manuel, config)
@@ -284,10 +284,16 @@ def _restituer(
             f"de ces champs ne veut rien dire."
         )
 
-    rapport = comparer(bouteilles, manuel)
+    rapport = comparer(bouteilles, manuel, systematiques=_systematiques(config))
     print()
     print(formater_rapport(rapport))
     return 0
+
+
+
+def _systematiques(config: ConfigMaison) -> tuple[str, ...]:
+    """Colonnes best effort : toujours à vérifier, donc pas des doutes du modèle."""
+    return tuple(colonne.cle for colonne in config.colonnes_best_effort)
 
 
 if __name__ == "__main__":

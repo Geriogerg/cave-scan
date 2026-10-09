@@ -13,9 +13,13 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from src.extract.base import CheminPhoto
 from src.extract.schema import Bouteille, from_tool_input
+
+if TYPE_CHECKING:
+    from src.config.maison import ConfigMaison
 
 
 class FixtureExtractor:
@@ -26,17 +30,18 @@ class FixtureExtractor:
     désérialisation, pas un raccourci.
     """
 
-    def __init__(self, charges: Sequence[dict]) -> None:
+    def __init__(self, charges: Sequence[dict], config: ConfigMaison | None = None) -> None:
         self._charges = list(charges)
+        self.config = config
         self._index = 0
 
     @classmethod
-    def depuis_json(cls, chemin: str | Path) -> FixtureExtractor:
+    def depuis_json(cls, chemin: str | Path, config: ConfigMaison | None = None) -> FixtureExtractor:
         chemin = Path(chemin)
         charges = json.loads(chemin.read_text(encoding="utf-8"))
         if not isinstance(charges, list):
             raise ValueError(f"{chemin} : une liste de charges utiles est attendue.")
-        return cls(charges)
+        return cls(charges, config)
 
     def __len__(self) -> int:
         return len(self._charges)
@@ -59,4 +64,4 @@ class FixtureExtractor:
             )
         charge = self._charges[self._index]
         self._index += 1
-        return from_tool_input(charge)
+        return from_tool_input(charge, self.config)

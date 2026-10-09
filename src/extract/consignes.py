@@ -39,7 +39,7 @@ FORMAT : ne le déduis jamais d'une impression de taille sur la photo — un gro
 
 COULEUR : renseigne couleur_source pour dire d'où vient l'information. « observee » si tu vois la couleur du vin ou qu'elle est écrite, « inferee » si tu la déduis de l'appellation ou du producteur, « non_lisible » si tu ne peux pas conclure.
 
-EFFERVESCENCE : indépendante de la couleur — un effervescent peut être blanc, rosé ou rouge, alors renseigne les deux séparément. Ne conclus « effervescent » que sur un signe réel : bouchon large maintenu par un muselet métallique, mention d'effervescence écrite, ou appellation qui ne produit que de l'effervescent. Sinon « non_determinable ».
+EFFERVESCENCE : un champ distinct de la couleur, à renseigner séparément. Pour la couleur, applique le vocabulaire et les définitions propres à ce champ, même s'il mêle couleur et type de vin. Ne conclus « effervescent » que sur un signe réel : bouchon large maintenu par un muselet métallique, mention d'effervescence écrite, ou appellation qui ne produit que de l'effervescent. Sinon « non_determinable ».
 
 CHAMPS_A_VERIFIER : liste-y le nom de chaque champ sur lequel un doute subsiste, même léger. C'est une file de relecture humaine, pas un aveu d'échec.
 

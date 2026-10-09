@@ -21,7 +21,7 @@ import json
 import os
 import time
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from google import genai
 from google.genai import errors, types
@@ -35,7 +35,10 @@ from src.extract.consignes import (
     SYSTEM_PROMPT,
     lire_photo,
 )
-from src.extract.schema import Bouteille, from_tool_input, tool_schema
+from src.extract.schema import Bouteille, from_tool_input, schema_extraction
+
+if TYPE_CHECKING:
+    from src.config.maison import ConfigMaison
 
 # Modèle Flash : le palier gratuit ne donne accès qu'à cette famille.
 MODELE_DEFAUT = "gemini-3.6-flash"
@@ -61,18 +64,21 @@ class GeminiExtractor:
         modele: str | None = None,
         pause_s: float = PAUSE_ENTRE_APPELS_S,
         tentatives_max: int = TENTATIVES_MAX,
+        config: ConfigMaison | None = None,
     ) -> None:
         # Le client résout sa clé seul : GEMINI_API_KEY, sinon GOOGLE_API_KEY.
         self.client = client or genai.Client()
         self.modele = modele or os.environ.get(VARIABLE_MODELE) or MODELE_DEFAUT
         self.pause_s = pause_s
         self.tentatives_max = tentatives_max
+        self.config = config  # la maison : vocabulaire et colonnes envoyées au modèle
         self._config = types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
             # Sortie contrainte par LE schéma du projet, pas par un schéma
-            # recopié : `schema.py` reste la source unique (decisions.md 0001).
+            # recopié : `schema.py` reste la source unique (decisions.md 0001),
+            # et il suit la config de la maison (guide, étape 4.2).
             response_mime_type="application/json",
-            response_json_schema=tool_schema()["input_schema"],
+            response_json_schema=schema_extraction(config)["input_schema"],
         )
         self._dernier_appel = 0.0
 
@@ -97,7 +103,7 @@ class GeminiExtractor:
                 champs_a_verifier=["tous"],
                 notes=f"Extraction échouée ({type(erreur).__name__}) : {erreur}",
             )
-        return bouteille_depuis_reponse(reponse)
+        return bouteille_depuis_reponse(reponse, self.config)
 
     def _appeler(self, contenu: list[Any]) -> Any:
         """Appelle le modèle en respectant le quota, avec reprise sur 429."""
@@ -169,7 +175,7 @@ def construire_contenu(
     return contenu
 
 
-def bouteille_depuis_reponse(reponse: Any) -> Bouteille:
+def bouteille_depuis_reponse(reponse: Any, config: ConfigMaison | None = None) -> Bouteille:
     """Lit le JSON contraint, en s'abstenant si le modèle n'a rien rendu.
 
     Une réponse bloquée ou vide ne doit pas casser une campagne : on renvoie
@@ -196,7 +202,7 @@ def bouteille_depuis_reponse(reponse: Any) -> Bouteille:
             notes=f"Réponse JSON inattendue : {type(charge).__name__} au lieu d'un objet.",
         )
 
-    return from_tool_input(charge)
+    return from_tool_input(charge, config)
 
 
 def _motif_vide(reponse: Any) -> str:

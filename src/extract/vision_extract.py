@@ -13,7 +13,7 @@ from __future__ import annotations
 import base64
 import os
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import anthropic
 
@@ -26,7 +26,10 @@ from src.extract.consignes import (
     SYSTEM_PROMPT,
     lire_photo,
 )
-from src.extract.schema import Bouteille, from_tool_input, tool_schema
+from src.extract.schema import Bouteille, from_tool_input, schema_extraction
+
+if TYPE_CHECKING:
+    from src.config.maison import ConfigMaison
 
 MODELE_DEFAUT = "claude-opus-5"
 VARIABLE_MODELE = "CAVE_SCAN_MODEL"
@@ -98,7 +101,7 @@ def construire_contenu(
     return contenu
 
 
-def bouteille_depuis_reponse(reponse: Any) -> Bouteille:
+def bouteille_depuis_reponse(reponse: Any, config: ConfigMaison | None = None) -> Bouteille:
     """Extrait la `Bouteille` de la réponse, en s'abstenant si le modèle n'a rien rendu.
 
     Un refus ou une réponse sans appel d'outil ne doit pas casser une campagne
@@ -107,7 +110,7 @@ def bouteille_depuis_reponse(reponse: Any) -> Bouteille:
     """
     for bloc in reponse.content:
         if bloc.type == "tool_use":
-            return from_tool_input(dict(bloc.input))
+            return from_tool_input(dict(bloc.input), config)
 
     motif = "aucun appel d'outil dans la réponse"
     if getattr(reponse, "stop_reason", None) == "refusal":
@@ -128,12 +131,16 @@ class VisionExtractor:
         client: anthropic.Anthropic | None = None,
         modele: str | None = None,
         max_tokens: int = 16000,
+        config: ConfigMaison | None = None,
     ) -> None:
         # Le client résout ses identifiants seul (ANTHROPIC_API_KEY, profil ant).
         self.client = client or anthropic.Anthropic()
         self.modele = modele or os.environ.get(VARIABLE_MODELE) or MODELE_DEFAUT
         self.max_tokens = max_tokens
-        self._outil = tool_schema()
+        # Le schéma suit la config de la maison (guide, étape 4.2) : colonnes
+        # expert et système jamais envoyées.
+        self.config = config
+        self._outil = schema_extraction(config)
 
     def extract(
         self,
@@ -158,7 +165,7 @@ class VisionExtractor:
                 champs_a_verifier=["tous"],
                 notes=f"Extraction échouée ({type(erreur).__name__}) : {erreur}",
             )
-        return bouteille_depuis_reponse(reponse)
+        return bouteille_depuis_reponse(reponse, self.config)
 
     def _appeler(
         self,

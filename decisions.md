@@ -343,6 +343,35 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - 0060 — Dépendances : pyyaml retiré avec l'ancienne config YAML. Restent
   google-genai, anthropic, openpyxl, python-dotenv, pytest.
 
+- 0061 — Schéma envoyé au modèle = champs v0 de CLAUDE.md (« Champs à
+  extraire ») + colonnes `modele` / `modele_best_effort` de la config. Une
+  colonne de config qui porte le nom d'un champ v0 en redéfinit la description
+  et le vocabulaire (ses codes deviennent l'enum). Le noyau canonique étant
+  parmi les champs v0, il est toujours extrait même si la config ne l'affiche
+  pas (0021) ; les champs v0 non affichés restent extraits pour la comparaison
+  et le journal — la config décide de l'affichage, pas de la mesure. Colonnes
+  expert et système : jamais ajoutées (vérifié sur la requête envoyée, pour les
+  deux backends). La consigne d'abstention est ajoutée PAR LE CODE à chaque
+  colonne : « ne jamais deviner » ne dépend pas de la rédaction de la maison —
+  écarté : un schéma fait des seules colonnes de la config (on aurait perdu
+  les champs mesurés par la v0).
+
+- 0062 — Lecture avec la config : chaque colonne best effort est ajoutée à
+  `champs_a_verifier` par le code, toujours et une seule fois (CLAUDE.md), sans
+  dépendre du modèle ; les colonnes propres à la maison vont dans
+  `valeurs_maison` ; un code hors vocabulaire devient `non_determinable`.
+
+- 0063 — Signaux du rapport : les champs best effort sont exclus des « doutes »
+  et affichés à part (« toujours à vérifier ») — sinon le taux de relecture
+  vaudrait 100 % quelle que soit la qualité de lecture, et ne mesurerait plus
+  rien. `compare_listings` reçoit leurs noms, pas la config : il reste du code
+  plat.
+
+- 0064 — Prompt : le paragraphe EFFERVESCENCE précise que la couleur suit le
+  vocabulaire propre à son champ, même s'il mêle couleur et type de vin (la
+  config de test classe « champagne » parmi les couleurs). Changement minimal,
+  commun aux deux backends, toujours sans exemple.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

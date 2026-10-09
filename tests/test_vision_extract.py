@@ -228,3 +228,50 @@ def test_l_outil_est_force():
     """La sortie est contrainte par construction, pas par parsing (0001)."""
     extracteur = VisionExtractor(client=object())
     assert extracteur._outil["name"] == "enregistrer_bouteille"
+
+
+# --- ce qui part réellement au modèle (guide, étape 4.2) --------------------------
+
+
+class ClientQuiCapture:
+    """Faux client Anthropic : enregistre la requête, renvoie un appel d'outil."""
+
+    def __init__(self, charge=None):
+        self.messages = self
+        self.appel: dict = {}
+        self.charge = charge or {"appellation": "Pommard"}
+
+    def create(self, **arguments):
+        self.appel = arguments
+        bloc = SimpleNamespace(type="tool_use", input=self.charge)
+        return SimpleNamespace(content=[bloc], stop_reason="tool_use", stop_details=None)
+
+
+def test_colonnes_expert_et_systeme_jamais_envoyees(photos):
+    """Vérifié sur la requête ENVOYÉE, pas seulement sur le générateur de schéma."""
+    from src.config.maison import charger_config
+    from tests.conftest import RACINE
+
+    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    client = ClientQuiCapture()
+    VisionExtractor(client=client, config=config).extract(photos[0])
+
+    outil = client.appel["tools"][0]
+    proprietes = outil["input_schema"]["properties"]
+    for colonne in config.colonnes:
+        if not colonne.envoyee_au_modele:
+            assert colonne.cle not in proprietes, colonne.cle
+    for colonne in config.colonnes_modele:
+        assert colonne.cle in proprietes, colonne.cle
+    assert client.appel["tool_choice"] == {"type": "tool", "name": outil["name"]}
+
+
+def test_la_reponse_est_lue_avec_la_config(photos):
+    """Le best effort est ajouté à « à vérifier » sur le chemin réel aussi."""
+    from src.config.maison import charger_config
+    from tests.conftest import RACINE
+
+    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    bouteille = VisionExtractor(client=ClientQuiCapture(), config=config).extract(photos[0])
+    for colonne in config.colonnes_best_effort:
+        assert colonne.cle in bouteille.champs_a_verifier

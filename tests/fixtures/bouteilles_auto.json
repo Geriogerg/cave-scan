@@ -13,6 +13,8 @@
     "contenance_cl": 75,
     "degre": 13.0,
     "importateur": "non_lisible",
+    "etat_etiquette": "parfait",
+    "description_etat": "Étiquette propre, capsule intacte.",
     "champs_a_verifier": [],
     "notes": ""
   },
@@ -30,7 +32,13 @@
     "contenance_cl": null,
     "degre": null,
     "importateur": "non_lisible",
-    "champs_a_verifier": ["millesime", "degre", "contenance_cl"],
+    "etat_etiquette": "tachee",
+    "description_etat": "Étiquette mouillée dans l'angle inférieur droit, capsule entamée.",
+    "champs_a_verifier": [
+      "millesime",
+      "degre",
+      "contenance_cl"
+    ],
     "notes": "Capsule entamée, millésime non lisible. Étiquette mouillée dans l'angle inférieur droit."
   },
   {
@@ -47,6 +55,8 @@
     "contenance_cl": 75,
     "degre": 12.5,
     "importateur": "non_lisible",
+    "etat_etiquette": "parfait",
+    "description_etat": "Étiquette propre, capsule intacte.",
     "champs_a_verifier": [],
     "notes": ""
   },
@@ -64,7 +74,11 @@
     "contenance_cl": 75,
     "degre": 14.0,
     "importateur": "Vins Dupuy",
-    "champs_a_verifier": ["millesime"],
+    "etat_etiquette": "legerement_marquee",
+    "description_etat": "Étiquette légèrement frottée, collerette présente.",
+    "champs_a_verifier": [
+      "millesime"
+    ],
     "notes": "Dernier chiffre du millésime partiellement masqué par la collerette."
   },
   {
@@ -81,6 +95,8 @@
     "contenance_cl": 150,
     "degre": 14.5,
     "importateur": "non_lisible",
+    "etat_etiquette": "parfait",
+    "description_etat": "Étiquette propre, capsule intacte.",
     "champs_a_verifier": [],
     "notes": ""
   },
@@ -98,6 +114,8 @@
     "contenance_cl": 75,
     "degre": 12.0,
     "importateur": "non_lisible",
+    "etat_etiquette": "parfait",
+    "description_etat": "Étiquette propre, muselet et coiffe intacts.",
     "champs_a_verifier": [],
     "notes": "Muselet et coiffe intacts."
   }
