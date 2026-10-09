@@ -2,11 +2,12 @@
 
 Lit un .xlsx (le format attendu du fichier de l'expert) ou un .json (fixtures).
 
-Ce qui reste ouvert : la correspondance entre les en-têtes RÉELS de la maison
-et nos champs canoniques. Seuls nos propres en-têtes d'export sont connus, ce
-qui suffit à se comparer à soi-même en attendant. Inventer les siens serait
-deviner (decisions.md 0007) ; à défaut de correspondance, le chargement échoue
-bruyamment plutôt que de rendre un rapport vide et crédible (0044).
+Avec la config de la maison, le fichier se lit dans SA langue : les en-têtes
+sont reconnus par leur `nom` de colonne, et les libellés de liste (« Rosé »)
+sont ramenés à leur code stable (« rose ») — c'est le code qu'on compare
+(decisions.md 0057). Sans config, seuls les noms de champs canoniques sont
+reconnus. Une correspondance nulle échoue bruyamment plutôt que de rendre un
+rapport vide et crédible (0044).
 
 Reste une simple fonction : pas d'abstraction de formats, pas de registre de
 loaders tant que deux `if` suffisent (decisions.md 0013, YAGNI).
@@ -23,10 +24,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from src.config.maison import ConfigMaison
 from src.extract.schema import CHAMPS_COMPARABLES
 
 
-def load_manual(chemin: str | Path) -> list[dict[str, Any]]:
+def load_manual(chemin: str | Path, config: ConfigMaison | None = None) -> list[dict[str, Any]]:
     """Charge le listing manuel et l'aligne sur les champs canoniques.
 
     Renvoie une ligne par bouteille, dans l'ordre du fichier. Les clés sont
@@ -45,50 +47,46 @@ def load_manual(chemin: str | Path) -> list[dict[str, Any]]:
             raise ValueError(
                 f"{chemin} : une liste de lignes est attendue, reçu {type(brut).__name__}."
             )
-        lignes = [_aligner(ligne) for ligne in brut]
-        _verifier_correspondance(lignes, chemin)
-        return lignes
+    elif suffixe == ".xlsx":
+        brut = _lire_xlsx(chemin, config)
+    else:
+        raise NotImplementedError(
+            f"Format de listing manuel non pris en charge : {suffixe or '(sans extension)'}. "
+            f"Formats lus : .xlsx et .json. Pour un autre format, ajouter sa "
+            f"lecture dans {__file__}."
+        )
 
-    if suffixe == ".xlsx":
-        lignes = [_aligner(ligne) for ligne in _lire_xlsx(chemin)]
-        _verifier_correspondance(lignes, chemin)
-        return lignes
-
-    raise NotImplementedError(
-        f"Format de listing manuel non pris en charge : {suffixe or '(sans extension)'}. "
-        f"Formats lus : .xlsx et .json. Pour un autre format, ajouter sa "
-        f"lecture dans {__file__}."
-    )
+    lignes = [_decoder(_aligner(ligne), config) for ligne in brut]
+    _verifier_correspondance(lignes, chemin)
+    return lignes
 
 
 def _normaliser_entete(entete: Any) -> str:
     """Réduit un en-tête à sa forme comparable : sans casse, accents ni ponctuation.
 
-    « Millésime » et « millesime » désignent la même colonne ; « Degré (% vol.) »
-    demande en plus un alias, cf. `ENTETES_CONNUES`.
+    « Domaine / Château » et « domaine-chateau » désignent la même colonne.
     """
     texte = unicodedata.normalize("NFKD", str(entete or ""))
     sans_accents = "".join(c for c in texte if not unicodedata.combining(c))
     return "".join(c for c in sans_accents.casefold() if c.isalnum())
 
 
-# En-têtes que NOUS produisons (config/maisons/exemple.yaml) et qui ne se
-# devinent pas par simple normalisation. Permet de relire un fichier sorti de
-# l'outil — utile pour se comparer à soi-même en attendant l'expert.
-#
-# Les en-têtes RÉELS de la maison ne sont PAS ici : ils ne sont pas connus, et
-# les inventer serait deviner (decisions.md 0007). Ils s'ajouteront à cette
-# table en regardant son fichier ; d'ici là, `_verifier_correspondance()`
-# refuse bruyamment un fichier dont rien ne correspond (0044).
-ENTETES_CONNUES = {
-    "domaineproducteur": "domaine",
-    "degrevol": "degre",
-    "couleursource": "couleur_source",
-    "averifier": "champs_a_verifier",
-}
+def _correspondances(config: ConfigMaison | None) -> dict[str, str]:
+    """En-tête normalisé -> champ canonique.
+
+    Les noms de champs canoniques sont toujours reconnus ; avec une config, les
+    en-têtes de la maison (`nom` de chaque colonne) le sont aussi. Rien n'est
+    inventé : un en-tête qui n'est dans aucun des deux reste ignoré.
+    """
+    table = {_normaliser_entete(champ): champ for champ in CHAMPS_COMPARABLES}
+    if config is not None:
+        for colonne in config.colonnes:
+            if colonne.cle in CHAMPS_COMPARABLES:
+                table[_normaliser_entete(colonne.nom)] = colonne.cle
+    return table
 
 
-def _lire_xlsx(chemin: Path) -> list[dict[str, Any]]:
+def _lire_xlsx(chemin: Path, config: ConfigMaison | None) -> list[dict[str, Any]]:
     """Lit la 1re feuille : 1re ligne = en-têtes, le reste = les bouteilles.
 
     Les colonnes non reconnues sont ignorées (lot, estimation...), les valeurs
@@ -104,12 +102,11 @@ def _lire_xlsx(chemin: Path) -> list[dict[str, Any]]:
     if entetes_brutes is None:
         raise ValueError(f"{chemin} : feuille vide, aucun en-tête.")
 
-    champs_normalises = {_normaliser_entete(c): c for c in CHAMPS_COMPARABLES}
+    table = _correspondances(config)
     colonnes: dict[int, str] = {}
     for index, entete in enumerate(entetes_brutes):
-        cle = _normaliser_entete(entete)
-        champ = champs_normalises.get(cle) or ENTETES_CONNUES.get(cle)
-        if champ in CHAMPS_COMPARABLES:
+        champ = table.get(_normaliser_entete(entete))
+        if champ is not None:
             colonnes[index] = champ
 
     lignes: list[dict[str, Any]] = []
@@ -177,3 +174,22 @@ def _aligner(ligne: Any) -> dict[str, Any]:
             f"Ligne de listing manuel invalide : dict attendu, reçu {type(ligne).__name__}."
         )
     return {champ: ligne.get(champ, "") for champ in CHAMPS_COMPARABLES}
+
+
+def _decoder(ligne: dict[str, Any], config: ConfigMaison | None) -> dict[str, Any]:
+    """Ramène les libellés de liste de la maison à leur code stable.
+
+    « Rosé » devient « rose », « Demi-bouteille » devient « demi_bouteille » :
+    c'est le code qu'on stocke et qu'on compare. Une valeur qui n'est ni un
+    libellé ni un code de la liste est laissée telle quelle — elle ressortira
+    en désaccord, visible, au lieu d'être corrigée en silence.
+    """
+    if config is None:
+        return ligne
+    for champ, valeur in ligne.items():
+        colonne = config.colonne(champ)
+        if colonne is not None and colonne.type == "liste":
+            code = colonne.code_depuis(valeur)
+            if code is not None:
+                ligne[champ] = code
+    return ligne

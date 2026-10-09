@@ -35,7 +35,9 @@ NOYAU_CANONIQUE = ("domaine", "appellation", "millesime", "format")
 
 # Colonnes que l'outil sait calculer lui-même (source « systeme ») : une
 # colonne système inconnue serait une colonne vide sans explication.
-COLONNES_SYSTEME = ("id", "a_verifier")
+COLONNE_ID = "id"
+COLONNE_A_VERIFIER = "a_verifier"
+COLONNES_SYSTEME = (COLONNE_ID, COLONNE_A_VERIFIER)
 
 # Seule colonne expert que le pipeline connaît : elle porte une valeur par
 # défaut (1) et s'additionne au regroupement (decisions.md 0017).

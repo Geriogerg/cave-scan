@@ -26,16 +26,17 @@ from src.compare.compare_listings import (
     formater_signaux,
     relever_signaux,
 )
-from src.export.excel_writer import charger_config, ecrire_excel
+from src.config.maison import ConfigInvalide, ConfigMaison, charger_config
+from src.export.excel_writer import ecrire_excel
 from src.extract.base import Extractor
 from src.extract.fixture_extract import FixtureExtractor
-from src.extract.schema import Bouteille, from_tool_input
+from src.extract.schema import Bouteille, bouteille_depuis_dict
 from src.io.manual_listing import colonnes_toujours_vides, load_manual
 from src.io.photos import PhotosBouteille, grouper_photos
 from src.normalize.normalize import normalize
 
 RACINE = Path(__file__).resolve().parent
-CONFIG_DEFAUT = RACINE / "config" / "maisons" / "exemple.yaml"
+CONFIG_DEFAUT = RACINE / "config" / "maisons" / "maison_test.json"
 SORTIE_DEFAUT = RACINE / "out" / "listing_auto.xlsx"
 
 FIXTURES = RACINE / "tests" / "fixtures"
@@ -67,11 +68,15 @@ def _charger_env() -> None:
 
 
 def charger_journal(journal: Path) -> list[Bouteille]:
-    """Relit les bouteilles déjà extraites lors d'un run interrompu."""
+    """Relit les bouteilles déjà extraites lors d'un run interrompu.
+
+    Le journal est écrit par l'outil lui-même : il se relit comme une source de
+    confiance (identifiant, quantité, codes propres à la maison conservés).
+    """
     if not journal.exists():
         return []
     return [
-        from_tool_input(json.loads(ligne))
+        bouteille_depuis_dict(json.loads(ligne))
         for ligne in journal.read_text(encoding="utf-8").splitlines()
         if ligne.strip()
     ]
@@ -170,7 +175,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--maison",
         type=Path,
         default=CONFIG_DEFAUT,
-        help=f"Config de format de la maison (défaut : {CONFIG_DEFAUT.name}).",
+        help=f"Config JSON de la maison (défaut : {CONFIG_DEFAUT.name}). "
+        "Validée au démarrage : une config invalide arrête tout.",
     )
     analyseur.add_argument(
         "--sortie", type=Path, default=SORTIE_DEFAUT, help="Chemin du .xlsx produit."
@@ -195,13 +201,25 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     _charger_env()
 
+    # La config est validée AVANT tout appel au modèle : une config invalide ne
+    # doit coûter ni un appel, ni une seconde (guide, étape 4.1).
+    try:
+        config = charger_config(arguments.maison)
+    except ConfigInvalide as erreur:
+        print(erreur, file=sys.stderr)
+        return 2
+    print(f"Config : {config.maison}, version {config.version} ({config.chemin.name})")
+    for avertissement in config.avertissements:
+        print(f"⚠  {avertissement}")
+    print()
+
     # Rejeu : ni modèle, ni photos, ni clé — juste re-scorer.
     if arguments.auto:
         bouteilles = charger_journal(arguments.auto)
         if not bouteilles:
             analyseur.error(f"Journal vide ou introuvable : {arguments.auto}")
         print(f"Rejeu de {arguments.auto} — {len(bouteilles)} bouteille(s).")
-        return _restituer(bouteilles, arguments, journal=None)
+        return _restituer(bouteilles, config, arguments.manual, arguments.sortie, journal=None)
 
     if arguments.dry_run:
         extracteur: Extractor = FixtureExtractor.depuis_json(FIXTURE_AUTO)
@@ -230,18 +248,18 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     print("Extraction :")
     bouteilles = extraire(extracteur, photos, journal, arguments.reprendre)
-    arguments.manual = chemin_manuel
-    return _restituer(bouteilles, arguments, journal)
+    return _restituer(bouteilles, config, chemin_manuel, arguments.sortie, journal)
 
 
 def _restituer(
-    bouteilles: list[Bouteille], arguments: argparse.Namespace, journal: Path | None
+    bouteilles: list[Bouteille],
+    config: ConfigMaison,
+    chemin_manuel: Path | None,
+    sortie: Path,
+    journal: Path | None,
 ) -> int:
     """Excel + rapport. Commun à l'extraction et au rejeu d'un journal."""
-    chemin_manuel = arguments.manual
-
-    config = charger_config(arguments.maison)
-    chemin_excel = ecrire_excel(bouteilles, config, arguments.sortie)
+    chemin_excel = ecrire_excel(bouteilles, config, sortie)
     print(f"\nListing automatique écrit : {chemin_excel}")
     if journal is not None:
         print(f"Journal d'extraction       : {journal}")
@@ -255,7 +273,7 @@ def _restituer(
         print(formater_signaux(relever_signaux(bouteilles)))
         return 0
 
-    manuel = load_manual(chemin_manuel)
+    manuel = load_manual(chemin_manuel, config)
 
     vides = colonnes_toujours_vides(manuel)
     if vides:

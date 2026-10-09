@@ -186,7 +186,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - 0039 — `sys.stdout` forcé en UTF-8 dans `run_v0` — la console Windows est en
   cp1252 et mutilait les accents du rapport, qui est le livrable.
 
-- 0040 — `requirements.txt` recentré sur la v0 (anthropic, openpyxl, pyyaml,
+- 0040 — [remplacée par 0060] `requirements.txt` recentré sur la v0 (anthropic, openpyxl, pyyaml,
   pytest) — `requests`, `beautifulsoup4` et `rapidfuzz` servaient au scraping et
   au matching LWIN d'un périmètre antérieur, hors v0.
 
@@ -236,7 +236,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   journal est aussi la trace brute des réponses, indépendante de l'Excel —
   écarté : n'écrire qu'à la fin.
 
-- 0047 — Option de config `abstention_vide` par colonne, activée sur les colonnes
+- 0047 — [remplacée par 0055] Option de config `abstention_vide` par colonne, activée sur les colonnes
   numériques de l'exemple — « non lisible » dans une colonne de nombres casse le
   tri et le filtre du commissaire-priseur. L'abstention reste visible par le
   surlignage de la ligne et la colonne « À vérifier », donc rien n'est perdu
@@ -298,6 +298,50 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   maison : on rend le conflit visible plutôt que de le trancher à sa place.
   maison_test.json en contient un (description de `description_etat`) —
   écarté : bloquer (empêcherait la maison d'écrire ses consignes), ou ignorer.
+
+- 0054 — Contrat `Bouteille` étendu : `id` (système), `quantite` (expert, 1
+  par défaut), `valeurs_maison` (colonnes propres à la maison, par clé) ; et
+  `couleur`, `effervescence`, `format` typés `str` — ils portent un CODE, celui
+  de l'enum v0 ou celui du vocabulaire de la maison quand sa config redéfinit
+  le champ (maison_test.json a des couleurs et des formats absents des enums
+  v0). Les enums restent le vocabulaire par défaut ; leurs membres étant des
+  `str`, le code existant et le test de comparaison sont inchangés — écarté :
+  ranger les listes de maison à part (le même champ aurait eu deux valeurs).
+
+- 0055 — Export : une abstention (`non_lisible`, `non_determinable`) s'affiche
+  en case VIDE et la ligne est surlignée (CLAUDE.md). Une ligne est surlignée
+  si une case lue par le modèle est vide pour abstention, si un code sort du
+  vocabulaire de la maison (affiché tel quel, jamais masqué), ou si le modèle
+  signale un doute PRÉCIS. Les champs best effort, toujours dans « À
+  vérifier », ne surlignent pas à eux seuls — sinon toutes les lignes le
+  seraient et le surlignage ne dirait plus rien — écarté : surligner dès que
+  « À vérifier » n'est pas vide (règle v0).
+
+- 0056 — Version de la config copiée dans les propriétés du classeur (titre
+  « maison — config vN », champ version, nom du fichier de config) — lisible
+  dans Fichier > Propriétés sans ajouter de feuille ni de ligne qui casserait
+  l'import du fichier chez la maison — écarté : une feuille « Infos ».
+
+- 0057 — `load_manual(chemin, config)` lit le fichier de l'expert dans la
+  langue de la maison : en-têtes reconnus par le `nom` des colonnes de la
+  config, libellés de liste ramenés à leur code (on compare des codes). Une
+  valeur ni libellé ni code reste telle quelle et ressort en désaccord. La
+  table d'en-têtes codée en dur (issue d'exemple.yaml) disparaît : la config
+  la remplace — écarté : garder une table d'alias dans le code.
+
+- 0058 — Un texte qui commence par « = » est écrit comme TEXTE dans l'Excel —
+  un texte lu sur une étiquette ne doit jamais devenir une formule exécutée à
+  l'ouverture du fichier par la maison.
+
+- 0059 — `id`, `quantite` et `valeurs_maison` ne sont jamais demandés au
+  modèle, et ignorés s'il les renvoie (`from_tool_input` = source non fiable).
+  Le journal d'extraction se relit par `bouteille_depuis_dict` (source de
+  confiance) : identifiant, quantité et codes de maison y sont conservés au
+  lieu d'être rabattus sur l'enum v0 — écarté : une seule fonction de lecture
+  (le modèle aurait pu fixer une quantité).
+
+- 0060 — Dépendances : pyyaml retiré avec l'ancienne config YAML. Restent
+  google-genai, anthropic, openpyxl, python-dotenv, pytest.
 
 ---
 

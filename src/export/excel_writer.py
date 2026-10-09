@@ -1,139 +1,105 @@
 """Export d'une liste de `Bouteille` vers un .xlsx au format d'une maison.
 
-Fond et forme séparés : ce module ne connaît QUE le contrat `Bouteille` et une
-config. Les colonnes, en-têtes et libellés viennent d'un YAML — une nouvelle
-maison est un fichier de config, jamais une sous-classe (decisions.md 0011).
+Fond et forme séparés : ce module ne connaît QUE le contrat `Bouteille` et la
+config de la maison (`src/config/maison.py`). Colonnes, en-têtes, ordre et
+libellés viennent du JSON — changer de maison ou de libellé, c'est modifier un
+fichier, jamais le code (decisions.md 0011, 0020).
 
-Aucune formule n'est écrite : le fichier livré doit être inerte et relisible.
+Règles d'affichage (CLAUDE.md, decisions.md 0055) :
+- une abstention (`non_lisible`, `non_determinable`) s'affiche en case VIDE et
+  la ligne est SURLIGNÉE : l'abstention reste visible, sans être maquillée en
+  valeur ;
+- les colonnes expert restent vides — l'estimation n'est jamais remplie —, sauf
+  la quantité, 1 par défaut ;
+- aucune formule : le fichier livré doit être inerte et relisible.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-import yaml
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from src.extract.schema import (
-    CHAMPS,
-    NON_DETERMINABLE,
-    NON_LISIBLE,
-    Bouteille,
+from src.config.maison import (
+    COLONNE_A_VERIFIER,
+    COLONNE_ID,
+    COLONNE_QUANTITE,
+    Colonne,
+    ConfigMaison,
 )
+from src.extract.schema import NATURE_DES_CHAMPS, Bouteille, est_abstention
+
+# Mise en forme commune à toutes les maisons — pas des valeurs de maison.
+POLICE = "Arial"
+TAILLE_POLICE = 10
+TITRE_FEUILLE = "Catalogue"
+COULEUR_SURLIGNAGE = "FFF2CC"
+LARGEUR_MIN, LARGEUR_MAX = 8, 50
 
 
-@dataclass(frozen=True)
-class Colonne:
-    """Une colonne du fichier livré.
+def valeur_stockee(bouteille: Bouteille, colonne: Colonne) -> Any:
+    """La valeur interne d'une colonne : un CODE pour les listes, jamais un libellé."""
+    if colonne.cle == COLONNE_ID:
+        return bouteille.id
+    if colonne.cle == COLONNE_A_VERIFIER:
+        return list(bouteille.champs_a_verifier)
+    if colonne.cle == COLONNE_QUANTITE:
+        return bouteille.quantite
+    if colonne.source == "expert":
+        return None  # saisi par l'expert : l'outil n'y écrit rien (decisions.md 0005)
 
-    `champ` vaut ``None`` pour une colonne que le modèle ne remplit pas : elle
-    sort vide et reste à la main de la maison (typiquement lot et estimation).
+    if colonne.cle in NATURE_DES_CHAMPS:
+        valeur = getattr(bouteille, colonne.cle)
+    else:
+        valeur = bouteille.valeurs_maison.get(colonne.cle)
+    return valeur.value if isinstance(valeur, StrEnum) else valeur
+
+
+def valeur_affichee(bouteille: Bouteille, colonne: Colonne) -> Any:
+    """Ce qui s'écrit dans la case. `None` = case vide.
+
+    Les nombres restent des nombres (Excel doit pouvoir les trier), un code de
+    liste s'affiche avec son libellé de maison, une abstention laisse la case
+    vide — et c'est `a_relire()` qui surligne la ligne.
     """
+    valeur = valeur_stockee(bouteille, colonne)
 
-    entete: str
-    champ: str | None = None
-    largeur: int = 18
-    # Laisse la case VIDE plutôt que d'y écrire « non lisible ». Réservé aux
-    # colonnes numériques : y mêler du texte casse le tri et le filtre pour le
-    # commissaire-priseur. L'abstention reste visible par le surlignage de la
-    # ligne et la colonne « À vérifier » (decisions.md 0047).
-    abstention_vide: bool = False
-
-
-@dataclass(frozen=True)
-class ConfigMaison:
-    """Format de sortie d'une maison. Pures données, aucun comportement."""
-
-    maison: str
-    colonnes: list[Colonne]
-    langue: str = "fr"
-    titre_feuille: str = "Catalogue"
-    police: str = "Arial"
-    taille_police: int = 10
-    figer_entetes: bool = True
-    surlignage_a_verifier: str | None = None
-    libelles: dict[str, str] = field(default_factory=dict)
-
-
-def charger_config(chemin: str | Path) -> ConfigMaison:
-    """Lit un YAML de maison et valide ses champs source.
-
-    Une colonne qui référence un champ inexistant de `Bouteille` est une faute
-    de frappe : on s'arrête ici plutôt que de livrer un fichier avec une colonne
-    silencieusement vide.
-    """
-    chemin = Path(chemin)
-    if not chemin.exists():
-        raise FileNotFoundError(f"Config maison introuvable : {chemin}")
-
-    brut = yaml.safe_load(chemin.read_text(encoding="utf-8")) or {}
-    feuille = brut.get("feuille") or {}
-
-    colonnes: list[Colonne] = []
-    for index, entree in enumerate(brut.get("colonnes") or []):
-        champ = entree.get("champ")
-        if champ is not None and champ not in CHAMPS:
-            raise ValueError(
-                f"{chemin} : colonne {index} (« {entree.get('entete')} ») référence "
-                f"le champ inconnu « {champ} ». Champs disponibles : {', '.join(CHAMPS)}."
-            )
-        colonnes.append(
-            Colonne(
-                entete=str(entree.get("entete", "")),
-                champ=champ,
-                largeur=int(entree.get("largeur", 18)),
-                abstention_vide=bool(entree.get("abstention_vide", False)),
-            )
-        )
-
-    if not colonnes:
-        raise ValueError(f"{chemin} : aucune colonne définie.")
-
-    return ConfigMaison(
-        maison=str(brut.get("maison", "")),
-        colonnes=colonnes,
-        langue=str(brut.get("langue", "fr")),
-        titre_feuille=str(feuille.get("titre", "Catalogue")),
-        police=str(feuille.get("police", "Arial")),
-        taille_police=int(feuille.get("taille_police", 10)),
-        figer_entetes=bool(feuille.get("figer_entetes", True)),
-        surlignage_a_verifier=brut.get("surlignage_a_verifier"),
-        libelles={str(k): str(v) for k, v in (brut.get("libelles") or {}).items()},
-    )
-
-
-def valeur_cellule(bouteille: Bouteille, colonne: Colonne, libelles: dict[str, str]) -> Any:
-    """Valeur affichée d'une case, abstentions traduites selon la config.
-
-    Les nombres restent des nombres (Excel doit pouvoir les trier), le texte
-    reste du texte, et une abstention s'écrit avec le libellé de la maison.
-    """
-    if colonne.champ is None:
-        return ""
-
-    valeur = getattr(bouteille, colonne.champ)
-
-    if isinstance(valeur, list):
-        return ", ".join(str(element) for element in valeur)
-
-    if isinstance(valeur, StrEnum):
-        valeur = valeur.value
-
-    if valeur is None:
-        if colonne.abstention_vide:
-            return ""
-        return libelles.get("numerique_absent", libelles.get(NON_LISIBLE, NON_LISIBLE))
-
-    if isinstance(valeur, str) and valeur in (NON_LISIBLE, NON_DETERMINABLE):
-        return "" if colonne.abstention_vide else libelles.get(valeur, valeur)
-
+    if colonne.cle == COLONNE_A_VERIFIER:
+        return ", ".join(valeur) or None
+    if colonne.envoyee_au_modele and est_abstention(valeur):
+        return None
+    if valeur is None or valeur == "":
+        return None
+    if colonne.type == "liste":
+        libelle = colonne.libelle(valeur)
+        # Un code hors du vocabulaire de la maison s'affiche tel quel : jamais
+        # masqué, et la ligne est surlignée.
+        return libelle if libelle is not None else valeur
     return valeur
+
+
+def a_relire(bouteille: Bouteille, config: ConfigMaison) -> bool:
+    """La ligne doit-elle être surlignée ? (decisions.md 0055)
+
+    Oui si une case lue par le modèle est vide pour cause d'abstention, si un
+    code sort du vocabulaire de la maison, ou si le modèle a signalé un doute
+    PRÉCIS. Les champs best effort, eux, sont à vérifier par principe : les
+    compter surlignerait toutes les lignes et le surlignage ne dirait plus rien.
+    """
+    for colonne in config.colonnes_modele:
+        valeur = valeur_stockee(bouteille, colonne)
+        if est_abstention(valeur):
+            return True
+        if colonne.type == "liste" and colonne.libelle(valeur) is None:
+            return True
+
+    systematiques = {colonne.cle for colonne in config.colonnes_best_effort}
+    return any(champ not in systematiques for champ in bouteille.champs_a_verifier)
 
 
 def ecrire_excel(
@@ -147,42 +113,47 @@ def ecrire_excel(
 
     classeur = Workbook()
     feuille = classeur.active
-    feuille.title = config.titre_feuille
+    feuille.title = TITRE_FEUILLE
+
+    # Version de la config copiée dans le fichier : savoir quelle nomenclature a
+    # produit un export donné (guide, étape 4.1 ; decisions.md 0056).
+    classeur.properties.title = f"{config.maison} — config v{config.version}"
+    classeur.properties.version = str(config.version)
+    classeur.properties.subject = config.chemin.name
     classeur.properties.language = config.langue
 
-    police = Font(name=config.police, size=config.taille_police)
-    police_entete = Font(name=config.police, size=config.taille_police, bold=True)
-    surlignage = (
-        PatternFill(
-            start_color=config.surlignage_a_verifier,
-            end_color=config.surlignage_a_verifier,
-            fill_type="solid",
-        )
-        if config.surlignage_a_verifier
-        else None
+    police = Font(name=POLICE, size=TAILLE_POLICE)
+    police_entete = Font(name=POLICE, size=TAILLE_POLICE, bold=True)
+    surlignage = PatternFill(
+        start_color=COULEUR_SURLIGNAGE, end_color=COULEUR_SURLIGNAGE, fill_type="solid"
     )
-    alignement_entete = Alignment(vertical="center", wrap_text=True)
 
+    largeurs = [len(colonne.nom) for colonne in config.colonnes]
     for index, colonne in enumerate(config.colonnes, start=1):
-        cellule = feuille.cell(row=1, column=index, value=colonne.entete)
+        cellule = feuille.cell(row=1, column=index, value=colonne.nom)
         cellule.font = police_entete
-        cellule.alignment = alignement_entete
-        feuille.column_dimensions[get_column_letter(index)].width = colonne.largeur
+        cellule.alignment = Alignment(vertical="center", wrap_text=True)
 
     for numero_ligne, bouteille in enumerate(bouteilles, start=2):
-        a_verifier = bool(bouteille.champs_a_verifier)
+        surligner = a_relire(bouteille, config)
         for index, colonne in enumerate(config.colonnes, start=1):
-            cellule = feuille.cell(
-                row=numero_ligne,
-                column=index,
-                value=valeur_cellule(bouteille, colonne, config.libelles),
-            )
+            valeur = valeur_affichee(bouteille, colonne)
+            cellule = feuille.cell(row=numero_ligne, column=index, value=valeur)
+            if isinstance(valeur, str) and valeur.startswith("="):
+                # Un texte lu sur une étiquette ne doit jamais devenir une
+                # formule exécutée à l'ouverture du fichier.
+                cellule.data_type = "s"
             cellule.font = police
-            if a_verifier and surlignage is not None:
+            if surligner:
                 cellule.fill = surlignage
+            if valeur is not None:
+                largeurs[index - 1] = max(largeurs[index - 1], len(str(valeur)))
 
-    if config.figer_entetes:
-        feuille.freeze_panes = "A2"
+    for index, largeur in enumerate(largeurs, start=1):
+        feuille.column_dimensions[get_column_letter(index)].width = min(
+            max(largeur + 2, LARGEUR_MIN), LARGEUR_MAX
+        )
+    feuille.freeze_panes = "A2"
 
     classeur.save(chemin)
     return chemin

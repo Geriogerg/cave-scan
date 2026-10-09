@@ -85,28 +85,43 @@ class Format(StrEnum):
 
 @dataclass
 class Bouteille:
-    """Les champs de catalogage extraits d'une bouteille.
+    """Une bouteille physique : ce que le modèle a lu, et ce que posent l'outil
+    et l'expert. Une ligne interne = une bouteille (decisions.md 0016).
 
-    Les valeurs par défaut sont toutes des abstentions : une `Bouteille()` vide
-    n'affirme rien. C'est volontaire — un champ non renseigné ne doit jamais
-    passer pour une lecture.
+    Les valeurs par défaut des champs lus sont toutes des abstentions : une
+    `Bouteille()` vide n'affirme rien. C'est volontaire — un champ non renseigné
+    ne doit jamais passer pour une lecture.
+
+    Champs de liste (couleur, effervescence, format) : un CODE stable. C'est la
+    valeur de l'enum v0, ou le code du vocabulaire de la maison quand sa config
+    redéfinit le champ (decisions.md 0054). Les membres d'enum étant des `str`,
+    les deux s'écrivent et se comparent de la même façon.
     """
+
+    # Système : posé par le pipeline, jamais par le modèle (decisions.md 0016).
+    id: str = ""
 
     appellation: str = NON_LISIBLE
     domaine: str = NON_LISIBLE
     cuvee: str = NON_LISIBLE
-    couleur: Couleur = Couleur.NON_DETERMINABLE
+    couleur: str = Couleur.NON_DETERMINABLE
     couleur_source: CouleurSource = CouleurSource.NON_LISIBLE
-    effervescence: Effervescence = Effervescence.NON_DETERMINABLE
+    effervescence: str = Effervescence.NON_DETERMINABLE
     millesime: str = NON_LISIBLE
     region: str = NON_LISIBLE
     pays: str = NON_LISIBLE
-    format: Format = Format.NON_DETERMINABLE
+    format: str = Format.NON_DETERMINABLE
     contenance_cl: int | None = None
     degre: float | None = None
     importateur: str = NON_LISIBLE
     champs_a_verifier: list[str] = field(default_factory=list)
     notes: str = ""
+
+    # Expert : jamais envoyé au modèle, 1 par défaut (decisions.md 0017).
+    quantite: int = 1
+
+    # Colonnes propres à la maison (sa config), par clé ; codes pour les listes.
+    valeurs_maison: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         """Vue dict sérialisable (enums réduits à leur valeur texte)."""
@@ -117,12 +132,21 @@ class Bouteille:
                 valeur = valeur.value
             elif isinstance(valeur, list):
                 valeur = list(valeur)
+            elif isinstance(valeur, dict):
+                valeur = dict(valeur)
             sortie[f.name] = valeur
         return sortie
 
 
 # Ordre canonique des champs, tel que déclaré sur la dataclass.
 CHAMPS: tuple[str, ...] = tuple(f.name for f in fields(Bouteille))
+
+# Champs que le pipeline pose lui-même : jamais demandés au modèle, et ignorés
+# s'il les renvoie quand même (decisions.md 0059).
+CHAMPS_HORS_MODELE: tuple[str, ...] = ("id", "quantite", "valeurs_maison")
+
+# Champs que le modèle remplit : ce sont eux, et eux seuls, que le schéma exige.
+CHAMPS_MODELE: tuple[str, ...] = tuple(c for c in CHAMPS if c not in CHAMPS_HORS_MODELE)
 
 # Champs effectivement comparables au listing manuel de l'expert.
 # `couleur_source`, `champs_a_verifier` et `notes` sont des métadonnées produites
@@ -313,7 +337,7 @@ def tool_schema() -> dict[str, Any]:
                     ),
                 },
             },
-            "required": list(CHAMPS),
+            "required": list(CHAMPS_MODELE),
         },
     }
 
@@ -325,6 +349,10 @@ def from_tool_input(charge: dict[str, Any]) -> Bouteille:
     valeur d'enum inconnue devient ``non_determinable``. Un modèle qui répond
     de travers doit produire une abstention, jamais une exception ni une valeur
     inventée.
+
+    Source NON FIABLE : seuls les champs du modèle sont lus. `id`, `quantite`
+    ou une colonne expert renvoyés par le modèle sont ignorés — il ne décide
+    jamais de ce que posent l'outil ou l'expert (decisions.md 0059).
     """
     return Bouteille(
         appellation=_texte(charge.get("appellation")),
@@ -347,6 +375,33 @@ def from_tool_input(charge: dict[str, Any]) -> Bouteille:
         champs_a_verifier=[str(c) for c in charge.get("champs_a_verifier") or []],
         notes=str(charge.get("notes") or ""),
     )
+
+
+def bouteille_depuis_dict(donnees: dict[str, Any]) -> Bouteille:
+    """Relit une `Bouteille` sérialisée par `as_dict()` — le journal d'extraction.
+
+    Source de CONFIANCE (produite par l'outil lui-même), à l'inverse de
+    `from_tool_input` : les champs posés par l'outil et l'expert sont relus, et
+    un code de liste propre à une maison est conservé tel quel au lieu d'être
+    rabattu sur l'enum v0 — le rejeu d'un journal ne doit rien perdre.
+    """
+    bouteille = from_tool_input(donnees)
+    for champ, enum_cls in (("couleur", Couleur), ("effervescence", Effervescence), ("format", Format)):
+        brut = donnees.get(champ)
+        if isinstance(brut, str) and brut.strip():
+            code = brut.strip()
+            connus = {membre.value for membre in enum_cls}
+            setattr(bouteille, champ, enum_cls(code) if code in connus else code)
+    bouteille.id = str(donnees.get("id") or "")
+    bouteille.quantite = _quantite(donnees.get("quantite"))
+    bouteille.valeurs_maison = dict(donnees.get("valeurs_maison") or {})
+    return bouteille
+
+
+def _quantite(valeur: Any) -> int:
+    """Quantité saisie par l'expert : un entier ≥ 1, sinon la valeur par défaut."""
+    quantite = _entier(valeur)
+    return quantite if quantite is not None and quantite >= 1 else 1
 
 
 def _texte(valeur: Any) -> str:

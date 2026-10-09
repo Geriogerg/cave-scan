@@ -12,7 +12,8 @@ import pytest
 from openpyxl import Workbook
 
 from src.compare.compare_listings import comparer
-from src.export.excel_writer import charger_config, ecrire_excel
+from src.config.maison import charger_config
+from src.export.excel_writer import ecrire_excel
 from src.extract.schema import CHAMPS_COMPARABLES, Bouteille, from_tool_input
 from src.io.manual_listing import (
     _aligner,
@@ -124,18 +125,50 @@ def ecrire_xlsx(tmp_path, entetes, lignes, nom="listing.xlsx"):
     return chemin
 
 
+CONFIG_TEST = FIXTURES.parent.parent / "config" / "maisons" / "maison_test.json"
+
+
 def test_lecture_d_un_xlsx(tmp_path):
+    """Adapté : les en-têtes de maison viennent de la config, plus d'exemple.yaml.
+    Un nom de champ canonique (« Contenance (cl) ») reste reconnu sans elle."""
+    config = charger_config(CONFIG_TEST)
     chemin = ecrire_xlsx(
         tmp_path,
-        ["Domaine / Producteur", "Appellation", "Millésime", "Contenance (cl)"],
+        [
+            config.colonne("domaine").nom,
+            config.colonne("appellation").nom,
+            config.colonne("millesime").nom,
+            "Contenance (cl)",
+        ],
         [["Domaine Rossignol-Trapet", "Gevrey-Chambertin", "2018", 75]],
     )
-    lignes = load_manual(chemin)
+    lignes = load_manual(chemin, config)
 
     assert len(lignes) == 1
     assert lignes[0]["domaine"] == "Domaine Rossignol-Trapet"
     assert lignes[0]["millesime"] == "2018"
     assert lignes[0]["contenance_cl"] == 75
+
+
+def test_les_libelles_de_la_maison_sont_ramenes_a_leur_code(tmp_path):
+    """On compare des codes stables, pas des libellés modifiables."""
+    config = charger_config(CONFIG_TEST)
+    liste = next(c for c in config.colonnes_modele if c.type == "liste")
+    valeur = liste.valeurs[0]
+    chemin = ecrire_xlsx(
+        tmp_path, [liste.nom, config.colonne("domaine").nom], [[valeur.libelle.upper(), "Domaine X"]]
+    )
+    assert load_manual(chemin, config)[0][liste.cle] == valeur.code
+
+
+def test_une_valeur_hors_liste_reste_telle_quelle(tmp_path):
+    """Elle ressortira en désaccord, visible, plutôt que corrigée en silence."""
+    config = charger_config(CONFIG_TEST)
+    liste = next(c for c in config.colonnes_modele if c.type == "liste")
+    chemin = ecrire_xlsx(
+        tmp_path, [liste.nom, config.colonne("domaine").nom], [["Valeur inconnue", "Domaine X"]]
+    )
+    assert load_manual(chemin, config)[0][liste.cle] == "Valeur inconnue"
 
 
 def test_les_accents_et_la_casse_des_entetes_sont_absorbes(tmp_path):
@@ -176,16 +209,17 @@ def test_aller_retour_excel_le_fichier_produit_se_relit(tmp_path):
         (FIXTURES / "bouteilles_auto.json").read_text(encoding="utf-8")
     )
     bouteilles = [from_tool_input(charge) for charge in charges]
-    config = charger_config(FIXTURES.parent.parent / "config" / "maisons" / "exemple.yaml")
+    config = charger_config(CONFIG_TEST)
     chemin = ecrire_excel(bouteilles, config, tmp_path / "auto.xlsx")
 
-    relu = load_manual(chemin)
+    relu = load_manual(chemin, config)
 
     assert len(relu) == len(bouteilles)
     assert relu[0]["domaine"] == "Domaine Rossignol-Trapet"
-    assert relu[0]["contenance_cl"] == 75
+    assert relu[0]["millesime"] == "2018"
 
-    # Et comparé à lui-même : zéro désaccord.
+    # Et comparé à lui-même : zéro désaccord — libellés relus comme des codes,
+    # abstentions relues comme des cases vides (jamais comme des valeurs).
     rapport = comparer(bouteilles, relu)
     assert rapport.desaccords == []
 

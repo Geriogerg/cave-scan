@@ -5,6 +5,8 @@ from __future__ import annotations
 from src.extract.schema import (
     CHAMPS,
     CHAMPS_COMPARABLES,
+    CHAMPS_HORS_MODELE,
+    CHAMPS_MODELE,
     NON_DETERMINABLE,
     NON_LISIBLE,
     Bouteille,
@@ -12,6 +14,7 @@ from src.extract.schema import (
     CouleurSource,
     Effervescence,
     Format,
+    bouteille_depuis_dict,
     est_abstention,
     from_tool_input,
     tool_schema,
@@ -119,11 +122,60 @@ def test_from_tool_input_lit_les_valeurs_normales():
 
 
 def test_tool_schema_exige_tous_les_champs():
-    """Tous les champs sont requis : le modèle doit se prononcer, quitte à s'abstenir."""
+    """Tous les champs du modèle sont requis : il doit se prononcer, quitte à s'abstenir.
+
+    Adapté au contrat pilote : l'identifiant, la quantité et les valeurs propres
+    à la maison existent sur `Bouteille` mais ne sont JAMAIS demandés au modèle.
+    """
     schema = tool_schema()
     proprietes = schema["input_schema"]["properties"]
-    assert set(proprietes) == set(CHAMPS)
-    assert set(schema["input_schema"]["required"]) == set(CHAMPS)
+    assert set(proprietes) == set(CHAMPS_MODELE)
+    assert set(schema["input_schema"]["required"]) == set(CHAMPS_MODELE)
+    for champ in CHAMPS_HORS_MODELE:
+        assert champ not in proprietes, champ
+
+
+# --- contrat pilote : id, quantité, valeurs de maison (decisions.md 0054) ---
+
+
+def test_id_quantite_et_valeurs_maison_par_defaut():
+    bouteille = Bouteille()
+    assert bouteille.id == ""
+    assert bouteille.quantite == 1
+    assert bouteille.valeurs_maison == {}
+
+
+def test_le_modele_ne_peut_pas_poser_id_quantite_ni_estimation():
+    """Même s'il les renvoie, le modèle ne décide jamais de ce que posent
+    l'outil ou l'expert (decisions.md 0059)."""
+    bouteille = from_tool_input(
+        {"appellation": "Pommard", "id": "X", "quantite": 99, "estimation": "800-1000"}
+    )
+    assert bouteille.id == ""
+    assert bouteille.quantite == 1
+    assert "estimation" not in bouteille.as_dict()
+    assert bouteille.valeurs_maison == {}
+
+
+def test_le_journal_se_relit_sans_rien_perdre():
+    """Un code propre à une maison ne doit pas être rabattu sur l'enum v0."""
+    origine = Bouteille(
+        id="B-0001",
+        couleur="code_de_maison",
+        format=Format.MAGNUM,
+        quantite=5,
+        valeurs_maison={"etat_etiquette": "un_code", "description_etat": "Un texte."},
+        champs_a_verifier=["format"],
+    )
+    relue = bouteille_depuis_dict(origine.as_dict())
+    assert relue == origine
+    assert relue.format is Format.MAGNUM  # un code v0 redevient le membre d'enum
+
+
+def test_quantite_invalide_au_journal_retombe_sur_un():
+    assert bouteille_depuis_dict({"quantite": 0}).quantite == 1
+    assert bouteille_depuis_dict({"quantite": "trois"}).quantite == 1
+    assert bouteille_depuis_dict({"quantite": "4"}).quantite == 4
 
 
 def test_tool_schema_ferme_les_enums():
