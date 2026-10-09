@@ -224,14 +224,14 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   échouer aussi sur un mapping partiel (l'expert a le droit de ne pas tout
   remplir), d'où l'avertissement plutôt que l'erreur dans ce cas.
 
-- 0045 — Politique d'erreur API en deux classes : panne PASSAGÈRE (429, 5xx,
+- 0045 — [remplacée par 0079] Politique d'erreur API en deux classes : panne PASSAGÈRE (429, 5xx,
   réseau) → abstention tracée dans `notes`, la campagne continue ; panne
   SYSTÉMATIQUE (401, 403, 404, 400) → remonte et arrête tout — répéter une clé
   invalide 200 fois ne produirait que 200 lignes vides en facturant chaque
   échec. La politique vit dans `vision_extract` pour que `run_v0` reste sans
   dépendance au SDK — écarté : tout avaler (aurait masqué le risque 0029).
 
-- 0046 — Journal `.jsonl` écrit au fil de l'eau + `--reprendre` — une campagne de
+- 0046 — [remplacée par 0079] Journal `.jsonl` écrit au fil de l'eau + `--reprendre` — une campagne de
   200 bouteilles interrompue à la 180e perdait 180 appels API déjà payés ; le
   journal est aussi la trace brute des réponses, indépendante de l'Excel —
   écarté : n'écrire qu'à la fin.
@@ -396,7 +396,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   valeur de l'autre — un test l'a révélé — écarté : fusionner sur les seules
   clés.
 
-- 0067 — Quantité « modifiable par l'expert » : stockée par bouteille (jamais
+- 0067 — [remplacée par 0082] Quantité « modifiable par l'expert » : stockée par bouteille (jamais
   recalculée), 1 par défaut. En attendant une interface, elle se modifie dans le
   journal puis `--auto` refait l'export ; le regroupement additionne.
 
@@ -432,6 +432,111 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   trace Python brute. Appel de fonction automatique du SDK Gemini coupé
   explicitement (aucun appel de fonction ici ; il était actif par défaut et
   l'annonçait par un avertissement à chaque run).
+
+## Session 2 — bibliothèque + base de données
+
+- 0072 — La sortie brute du modèle est IMMUABLE : stockée telle que reçue, jamais
+  réécrite ni supprimée (garde posée sur le modèle de données lui-même, pas
+  seulement une convention). Une correction de l'expert est un enregistrement
+  séparé (champ, ancienne valeur, nouvelle valeur, auteur, date). La valeur
+  affichée = sortie du modèle relue avec la config de l'inventaire, remplacée
+  par la dernière correction de chaque champ ; elle est RECALCULÉE à chaque
+  lecture, jamais stockée — il n'existe donc jamais deux vérités — écarté :
+  écrire la valeur corrigée par-dessus l'extraction.
+
+- 0073 — Config figée par inventaire : `config_version` garde le texte complet
+  du JSON et une empreinte SHA-256 de sa forme canonique (clés triées, sans
+  espaces — une simple remise en forme ne crée pas de version). Nouvelle
+  version dès que l'empreinte change, numérotée par un compteur propre à
+  chaque maison ; le numéro déclaré dans le JSON est conservé à côté, et un
+  AVERTISSEMENT s'affiche si le contenu a changé sans que ce numéro ait été
+  incrémenté. L'export d'un inventaire relit SA version, jamais le fichier —
+  écarté : relire le JSON à chaque export (l'export d'un inventaire changerait
+  après coup).
+
+- 0074 — Photos copiées dans un stockage géré par l'outil, nommées par leur
+  SHA-256 complet ; la base ne garde que le chemin RELATIF au stockage et
+  l'empreinte (le stockage peut être déplacé). Une même photo déposée deux fois
+  dans un inventaire est refusée à la création ; présente dans deux
+  inventaires, elle n'est stockée qu'une fois. Jamais d'image dans la base —
+  écarté : pointer vers le dossier d'origine (que l'utilisateur peut déplacer).
+
+- 0075 — SQLite en local via SQLAlchemy 2 (ORM déclaratif), pour passer à
+  PostgreSQL sans réécrire ; schéma créé et modifié UNIQUEMENT par migrations
+  Alembic (mode « batch », nécessaire pour modifier une table sous SQLite),
+  jamais par `create_all` ; un test vérifie que les migrations correspondent
+  exactement aux modèles. Base et stockage configurables par variables
+  d'environnement (`CAVE_SCAN_DB`, `CAVE_SCAN_STOCKAGE`), par défaut sous
+  `data/`, jamais versionné.
+
+- 0076 — Chaque extraction trace : modèle, version du prompt, tokens d'entrée
+  et de sortie, durée, date, erreur. Version du prompt = empreinte de TOUT ce
+  qui part au modèle (consignes + schéma de la maison) : deux runs de même
+  version ont reçu exactement la même demande. Tokens de sortie Gemini =
+  réponse + réflexion (les deux sont facturés). Durée mesurée par le service
+  autour de l'appel : pauses de quota et nouvelles tentatives comprises, c'est
+  le temps réel par bouteille.
+
+- 0077 — Protocol `Extractor` : `extraire_brut() -> SortieModele` (réponse brute,
+  modèle, version du prompt, tokens, erreur), et `extract() -> Bouteille`
+  CONSTRUIT à partir d'`extraire_brut()` — une seule implémentation par
+  fournisseur. `extraire_brut()` ne lève que pour une panne systématique ;
+  tout autre résultat revient comme une donnée — écarté : faire mémoriser à
+  l'extracteur ses derniers tokens (état caché).
+
+- 0078 — La réponse brute est ENREGISTRÉE AVANT d'être interprétée : si
+  l'interprétation échoue (JSON illisible, réponse vide, bogue), ce que le
+  modèle a répondu reste en base, l'erreur est notée sur l'extraction et la
+  bouteille passe en erreur — un appel payé n'est jamais perdu.
+
+- 0079 — Trois classes d'erreurs à l'extraction : SYSTÉMATIQUES (clé invalide,
+  modèle inconnu, requête mal formée) -> enregistrées, puis l'inventaire
+  s'arrête ; PASSAGÈRES (limite de débit, délai dépassé, serveur surchargé ou
+  en erreur) -> quelques nouvelles tentatives à délai croissant, puis erreur
+  sur la bouteille, sans bloquer les autres ; RÉPONSE INEXPLOITABLE -> erreur
+  sur la bouteille seule. Une erreur imprévue est traitée comme systématique
+  (mieux vaut s'arrêter que répéter un bogue sur 300 bouteilles). Après un
+  arrêt, `--inventaire ID` reprend là où on s'est arrêté : les bouteilles
+  extraites ne sont jamais refaites, celles en erreur sont retentées.
+
+- 0080 — Logique métier dans des fonctions de service à session de base et
+  stockage EXPLICITES (pas d'état global, pas de couche « repository », pas de
+  bus d'événements). `run_v0.py` et `inventaire.py` n'appellent que ces
+  fonctions et ne font qu'afficher.
+
+- 0081 — La comparaison au listing de l'expert mesure la SORTIE DU MODÈLE seule,
+  sans les corrections, et le rapport le dit ; sinon chaque correction de
+  l'expert gonflerait le score du modèle. Les corrections sont mesurées à part
+  par `stats_inventaire` (champs les plus corrigés).
+
+- 0082 — `corriger` accepte les colonnes lues par le modèle ET les colonnes de
+  source expert (estimation comprise) ; il refuse un champ inconnu et les
+  colonnes système. Saisie validée selon le type : quantité = entier ≥ 1,
+  liste = code connu (un libellé de la maison est ramené à son code), nombre =
+  nombre, texte = libre. L'export affiche la saisie de l'expert ; le modèle ne
+  peut toujours rien écrire dans une colonne expert (CLAUDE.md). La quantité
+  courante est portée par la bouteille, son historique par les corrections.
+
+- 0083 — Statut d'inventaire : `ouvert` | `valide` ; il passe à `valide` quand
+  toutes ses bouteilles le sont. Seule une bouteille extraite peut être
+  validée : une bouteille en erreur ne le peut pas, donc un inventaire qui en
+  contient une ne peut pas passer à `valide`. Une correction (ou une relance
+  forcée) sur une bouteille validée la remet à relire (statut `extraite`) et
+  l'inventaire repasse à `ouvert`. La validation et la remise à relire sont
+  tracées dans l'historique des corrections (champ « statut », auteur, date),
+  sans colonne supplémentaire au schéma validé.
+
+- 0084 — Ligne de commande : `--journal`, `--reprendre` et `--auto` sont
+  remplacés par `--inventaire ID` (reprendre, réexporter, rescorer depuis la
+  base) et `--base` ; les utiliser affiche l'option qui les remplace, pas une
+  erreur générique. `--limite N` s'applique à la création de l'inventaire.
+  Nouvelle commande `inventaire.py` : lister, bouteilles, stats, corriger,
+  valider, exporter.
+
+- 0085 — `--dry-run` travaille sur une base et un stockage TEMPORAIRES, avec des
+  photos générées : le vrai chemin de création (appariement, empreintes,
+  stockage) est exercé hors ligne, et la base de l'utilisateur n'est jamais
+  touchée. Les tests isolent de même base et stockage.
 
 ---
 
