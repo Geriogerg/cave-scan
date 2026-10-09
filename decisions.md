@@ -372,6 +372,34 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   config de test classe « champagne » parmi les couleurs). Changement minimal,
   commun aux deux backends, toujours sans exemple.
 
+- 0065 — Identifiant stable = empreinte SHA-256 du CONTENU des photos de la
+  bouteille (« B- » + 10 caractères), posé par le pipeline : identique d'un run
+  à l'autre et insensible au renommage des fichiers (photos absentes du disque,
+  au dry-run : empreinte du chemin). Deux bouteilles au même identifiant (photo
+  copiée deux fois) arrêtent le run AVANT tout appel au modèle ; `--reprendre`
+  refuse un journal qui ne correspond plus aux photos (sinon décalage silencieux
+  de toutes les lignes reprises) — écarté : un numéro d'ordre (change dès qu'on
+  insère une photo), un UUID (change à chaque run).
+
+- 0066 — Regroupement à l'EXPORT seulement : en interne une ligne reste une
+  bouteille (comparaison et journal ne voient jamais de regroupement).
+  Égalité STRICTE sur les clés de `regroupement_export` (pas de pliage, ce
+  serait normaliser). Une bouteille À RELIRE n'est jamais fusionnée : elle
+  garde sa ligne pour que ses cases vides restent visibles — donc une
+  abstention sur une clé n'est jamais une égalité (on fusionnerait un magnum et
+  une bouteille au format illisible). Quantités additionnées, identifiants tous
+  listés, doutes réunis ; une colonne hors clé qui diffère garde toutes ses
+  valeurs, jointes par « / ». Conséquence assumée : sur des gros plans, le
+  format est non déterminable, donc rien ne se regroupe tant qu'il n'est pas
+  renseigné. Découvert en cours de route : la première version (fusion dès que
+  les clés sont égales) masquait l'abstention d'une bouteille derrière la
+  valeur de l'autre — un test l'a révélé — écarté : fusionner sur les seules
+  clés.
+
+- 0067 — Quantité « modifiable par l'expert » : stockée par bouteille (jamais
+  recalculée), 1 par défaut. En attendant une interface, elle se modifie dans le
+  journal puis `--auto` refait l'export ; le regroupement additionne.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

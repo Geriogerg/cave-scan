@@ -94,13 +94,20 @@ def extraire(
     (decisions.md 0046) : une campagne de 200 bouteilles interrompue à la 180e
     ne doit pas perdre 180 appels API déjà payés. `reprendre` repart de là où
     le journal s'arrête.
+
+    Chaque bouteille reçoit l'identifiant stable de ses photos (decisions.md
+    0065), posé par le pipeline et jamais par le modèle.
     """
+    identifiants = [vues.identifiant for vues in photos]
+    _refuser_les_doublons(photos, identifiants)
+
     bouteilles: list[Bouteille] = []
 
     if journal is not None:
         journal.parent.mkdir(parents=True, exist_ok=True)
         if reprendre:
             bouteilles = charger_journal(journal)
+            _verifier_reprise(bouteilles, identifiants, journal)
             if bouteilles:
                 print(f"  reprise : {len(bouteilles)} bouteille(s) déjà au journal")
         else:
@@ -115,12 +122,48 @@ def extraire(
                 autres=vues.autres,
             )
         )
+        bouteille.id = identifiants[index - 1]
         bouteilles.append(bouteille)
         if journal is not None:
             with journal.open("a", encoding="utf-8") as flux:
                 flux.write(json.dumps(bouteille.as_dict(), ensure_ascii=False) + "\n")
 
     return bouteilles
+
+
+def _refuser_les_doublons(photos: Sequence[PhotosBouteille], identifiants: list[str]) -> None:
+    """Deux bouteilles aux photos identiques : presque toujours une photo copiée
+    deux fois. On s'arrête AVANT tout appel au modèle plutôt que de payer deux
+    fois la même bouteille et de fausser l'alignement avec le listing."""
+    vus: dict[str, int] = {}
+    doublons = []
+    for rang, identifiant in enumerate(identifiants):
+        if identifiant in vus:
+            doublons.append(f"{photos[vus[identifiant]].nom} et {photos[rang].nom}")
+        vus.setdefault(identifiant, rang)
+    if doublons:
+        raise ValueError(
+            "Photos identiques pour plusieurs bouteilles (photo copiée deux fois ?) : "
+            + " ; ".join(doublons)
+        )
+
+
+def _verifier_reprise(bouteilles: list[Bouteille], identifiants: list[str], journal: Path) -> None:
+    """Une reprise n'a de sens que sur les MÊMES photos : sinon chaque bouteille
+    reprise serait décalée d'une ligne, en silence."""
+    if len(bouteilles) > len(identifiants):
+        raise ValueError(
+            f"{journal} contient {len(bouteilles)} bouteille(s) pour {len(identifiants)} "
+            f"paire(s) de photos : le dossier a changé depuis le run interrompu. "
+            f"Relancer sans --reprendre."
+        )
+    for rang, (bouteille, attendu) in enumerate(zip(bouteilles, identifiants), start=1):
+        if bouteille.id and bouteille.id != attendu:
+            raise ValueError(
+                f"{journal} ne correspond plus aux photos (bouteille n°{rang} : "
+                f"{bouteille.id} au journal, {attendu} sur le disque). Dossier modifié "
+                f"depuis le run interrompu ? Relancer sans --reprendre."
+            )
 
 
 def _photos_factices(nombre: int) -> list[PhotosBouteille]:

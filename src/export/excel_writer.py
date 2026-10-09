@@ -83,6 +83,70 @@ def valeur_affichee(bouteille: Bouteille, colonne: Colonne) -> Any:
     return valeur
 
 
+def regrouper(bouteilles: Sequence[Bouteille], config: ConfigMaison) -> list[list[Bouteille]]:
+    """Fusionne, À L'EXPORT seulement, les bouteilles identiques sur les clés de
+    `regroupement_export` (guide, étape 4.3 ; decisions.md 0017, 0066).
+
+    En interne, une ligne reste une bouteille : la comparaison à l'expert et le
+    journal ne voient jamais de regroupement.
+
+    - Égalité STRICTE des codes et valeurs : pas de pliage casse/accents, ce
+      serait déjà de la normalisation.
+    - Une bouteille À RELIRE (abstention sur une case lue, code hors
+      vocabulaire, doute précis) n'est jamais fusionnée : elle garde sa ligne,
+      pour que ses cases vides restent visibles. En particulier, une abstention
+      sur une clé n'est pas une égalité — « illisible » ne veut pas dire
+      « identique », on fusionnerait sinon un magnum et une bouteille dont le
+      format n'a pas pu être lu.
+    - Ordre de première apparition conservé.
+    """
+    if not config.regroupement_export:
+        return [[bouteille] for bouteille in bouteilles]
+
+    colonnes = [config.colonne(cle) for cle in config.regroupement_export]
+    groupes: dict[tuple[Any, ...], list[Bouteille]] = {}
+    lignes: list[list[Bouteille]] = []
+    for bouteille in bouteilles:
+        cle = tuple(valeur_stockee(bouteille, colonne) for colonne in colonnes)
+        if a_relire(bouteille, config):
+            lignes.append([bouteille])
+        elif cle in groupes:
+            groupes[cle].append(bouteille)
+        else:
+            groupes[cle] = [bouteille]
+            lignes.append(groupes[cle])
+    return lignes
+
+
+def valeur_affichee_ligne(groupe: Sequence[Bouteille], colonne: Colonne) -> Any:
+    """Ce qui s'écrit dans la case d'une ligne d'export, regroupée ou non.
+
+    Quantités additionnées, identifiants tous listés, doutes réunis. Pour les
+    autres colonnes : la valeur commune, ou les valeurs distinctes jointes par
+    « / » — un regroupement ne doit rien faire disparaître.
+    """
+    if colonne.cle == COLONNE_QUANTITE:
+        return sum(bouteille.quantite for bouteille in groupe)
+    if colonne.cle == COLONNE_ID:
+        return ", ".join(bouteille.id for bouteille in groupe if bouteille.id) or None
+    if colonne.cle == COLONNE_A_VERIFIER:
+        champs = dict.fromkeys(c for bouteille in groupe for c in bouteille.champs_a_verifier)
+        return ", ".join(champs) or None
+
+    distinctes = list(
+        dict.fromkeys(
+            valeur
+            for valeur in (valeur_affichee(bouteille, colonne) for bouteille in groupe)
+            if valeur is not None
+        )
+    )
+    if not distinctes:
+        return None
+    if len(distinctes) == 1:
+        return distinctes[0]
+    return " / ".join(str(valeur) for valeur in distinctes)
+
+
 def a_relire(bouteille: Bouteille, config: ConfigMaison) -> bool:
     """La ligne doit-elle être surlignée ? (decisions.md 0055)
 
@@ -134,10 +198,11 @@ def ecrire_excel(
         cellule.font = police_entete
         cellule.alignment = Alignment(vertical="center", wrap_text=True)
 
-    for numero_ligne, bouteille in enumerate(bouteilles, start=2):
-        surligner = a_relire(bouteille, config)
+    for numero_ligne, groupe in enumerate(regrouper(bouteilles, config), start=2):
+        # Une ligne regroupée est à relire dès qu'une de ses bouteilles l'est.
+        surligner = any(a_relire(bouteille, config) for bouteille in groupe)
         for index, colonne in enumerate(config.colonnes, start=1):
-            valeur = valeur_affichee(bouteille, colonne)
+            valeur = valeur_affichee_ligne(groupe, colonne)
             cellule = feuille.cell(row=numero_ligne, column=index, value=valeur)
             if isinstance(valeur, str) and valeur.startswith("="):
                 # Un texte lu sur une étiquette ne doit jamais devenir une

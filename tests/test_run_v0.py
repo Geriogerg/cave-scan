@@ -15,7 +15,7 @@ from src.extract.fixture_extract import FixtureExtractor
 from src.extract.schema import Bouteille, Couleur, Format
 from src.io.photos import PhotosBouteille, grouper_photos
 from src.normalize.normalize import REGLES, normalize
-from tests.conftest import FIXTURES
+from tests.conftest import FIXTURES, RACINE
 
 
 # --- la couture Extractor -----------------------------------------------
@@ -218,3 +218,94 @@ def test_les_signaux_se_lisent_sans_listing_expert():
     assert "observee 5/6" in texte
     assert "inferee 1/6" in texte
     assert "relecture 2/6" in texte
+
+
+# --- identifiant stable (decisions.md 0065) ------------------------------------
+
+
+def test_identifiant_stable_et_insensible_au_renommage(tmp_path):
+    etiquette, contre = tmp_path / "a.jpg", tmp_path / "b.jpg"
+    etiquette.write_bytes(b"photo etiquette")
+    contre.write_bytes(b"photo contre")
+    premier = PhotosBouteille(etiquette=etiquette, contre_etiquette=contre).identifiant
+
+    assert PhotosBouteille(etiquette=etiquette, contre_etiquette=contre).identifiant == premier
+    renommee = etiquette.rename(tmp_path / "IMG_9999.jpg")
+    assert PhotosBouteille(etiquette=renommee, contre_etiquette=contre).identifiant == premier
+    contre.write_bytes(b"autre photo")
+    assert PhotosBouteille(etiquette=renommee, contre_etiquette=contre).identifiant != premier
+
+
+def test_chaque_bouteille_recoit_l_identifiant_de_ses_photos(tmp_path):
+    journal = tmp_path / "extraction.jsonl"
+    photos = _photos(6)
+    extracteur = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+
+    bouteilles = run_v0.extraire(extracteur, photos, journal)
+
+    assert [b.id for b in bouteilles] == [vues.identifiant for vues in photos]
+    premiere = json.loads(journal.read_text(encoding="utf-8").splitlines()[0])
+    assert premiere["id"] == photos[0].identifiant
+
+
+def test_photos_en_double_arretent_avant_tout_appel(tmp_path):
+    """Une photo copiée deux fois : on s'arrête avant de payer deux fois."""
+    (tmp_path / "x.jpg").write_bytes(b"meme photo")
+    (tmp_path / "y.jpg").write_bytes(b"meme photo")
+    appels = []
+
+    class Espion:
+        def extract(self, *arguments, **options):
+            appels.append(1)
+            return Bouteille()
+
+    photos = [PhotosBouteille(etiquette=tmp_path / "x.jpg"), PhotosBouteille(etiquette=tmp_path / "y.jpg")]
+    with pytest.raises(ValueError, match="Photos identiques"):
+        run_v0.extraire(Espion(), photos)
+    assert appels == []
+
+
+def test_reprise_sur_un_dossier_modifie_est_refusee(tmp_path):
+    """Sinon chaque bouteille reprise serait décalée d'une ligne, en silence."""
+    journal = tmp_path / "extraction.jsonl"
+    source = FixtureExtractor.depuis_json(FIXTURES / "bouteilles_auto.json")
+    with pytest.raises(ConnectionError):
+        run_v0.extraire(ExtracteurQuiTombe(source, tombe_a=4), _photos(6), journal)
+
+    autres = [PhotosBouteille(etiquette=Path(f"(autre)/b{i}/etiquette.jpg")) for i in range(6)]
+    with pytest.raises(ValueError, match="ne correspond plus aux photos"):
+        run_v0.extraire(FixtureExtractor([]), autres, journal, reprendre=True)
+
+
+def test_quantite_modifiee_au_journal_est_respectee_au_rejeu(tmp_path):
+    """« Modifiable par l'expert » : sans interface, via le journal puis --auto.
+    Deux bouteilles identiques de quantités 2 et 1 donnent une ligne de 3."""
+    from openpyxl import load_workbook
+
+    from src.config.maison import charger_config
+    from src.extract.schema import from_tool_input
+
+    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    charge = {}
+    for colonne in config.colonnes_modele:
+        if colonne.type == "liste":
+            charge[colonne.cle] = colonne.codes[0]
+        elif colonne.type == "nombre":
+            charge[colonne.cle] = 1
+        else:
+            charge[colonne.cle] = "Texte lu"
+
+    journal = tmp_path / "extraction.jsonl"
+    lignes = []
+    for identifiant, quantite in (("B-1", 2), ("B-2", 1)):
+        bouteille = from_tool_input(charge, config)
+        bouteille.id, bouteille.quantite = identifiant, quantite
+        lignes.append(json.dumps(bouteille.as_dict(), ensure_ascii=False))
+    journal.write_text("\n".join(lignes) + "\n", encoding="utf-8")
+
+    sortie = tmp_path / "listing.xlsx"
+    assert run_v0.main(["--auto", str(journal), "--sortie", str(sortie)]) == 0
+
+    feuille = load_workbook(sortie).active
+    index = [c.cle for c in config.colonnes].index("quantite") + 1
+    assert [feuille.cell(row=r, column=index).value for r in range(2, feuille.max_row + 1)] == [3]

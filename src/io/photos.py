@@ -16,6 +16,7 @@ diffère, c'est ici que ça se corrige, en un seul endroit.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -33,6 +34,24 @@ class PhotosBouteille:
     @property
     def nom(self) -> str:
         return self.etiquette.parent.name or self.etiquette.stem
+
+    @property
+    def identifiant(self) -> str:
+        """Identifiant stable de la bouteille : empreinte du CONTENU de ses photos.
+
+        Le même d'un run à l'autre, insensible au renommage des fichiers — c'est
+        ce qui permet de reprendre une campagne ou de retrouver une bouteille
+        (decisions.md 0016, 0065). Une photo absente du disque (dry-run sur
+        fixtures) contribue par son chemin.
+        """
+        empreinte = hashlib.sha256()
+        for chemin in (self.etiquette, self.contre_etiquette, *self.autres):
+            if chemin is None:
+                continue
+            chemin = Path(chemin)
+            empreinte.update(chemin.read_bytes() if chemin.is_file() else str(chemin).encode())
+            empreinte.update(b"\0")
+        return f"B-{empreinte.hexdigest()[:10].upper()}"
 
 
 def _images_triees(dossier: Path) -> list[Path]:
