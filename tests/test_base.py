@@ -274,6 +274,8 @@ def test_la_migration_0002_garde_les_donnees_d_une_base_existante(tmp_path):
         assert connexion.exec_driver_sql(
             "SELECT identifiant, photo_etiquette_id, photo_contre_id FROM bouteille"
         ).fetchall() == [("B-1", 1, 2)]
+        # 0003 : l'inventaire existant reçoit l'état d'extraction par défaut.
+        assert connexion.exec_driver_sql("SELECT extraction FROM inventaire").scalar() == "non_lancee"
         connexion.exec_driver_sql(
             "INSERT INTO bouteille (id, inventaire_id, identifiant, photo_etiquette_id, "
             "photo_contre_id, position, quantite, statut) VALUES (2, 1, 'B-2', 2, NULL, 2, 1, 'a_extraire')"

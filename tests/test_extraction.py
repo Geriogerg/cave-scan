@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from datetime import timedelta
 from types import SimpleNamespace
 
 import httpx
@@ -19,7 +20,7 @@ from google.genai import errors
 from sqlalchemy import create_engine, func, select
 
 from src.config.maison import charger_config
-from src.donnees.modeles import Extraction, FicheBouteille
+from src.donnees.modeles import Extraction, FicheBouteille, maintenant
 from src.extract.base import Extractor, SortieModele, bouteille_depuis_sortie
 from src.extract.consignes import version_prompt
 from src.extract.fixture_extract import FixtureExtractor
@@ -210,11 +211,22 @@ def test_la_reprise_ne_refait_pas_les_bouteilles_extraites(session, inventaire_i
 
 
 def test_une_extraction_interrompue_est_reprise(session, inventaire_id, stockage):
-    """Coupure en plein appel : la bouteille reste `en_cours`, la reprise la refait."""
-    bouteille = bouteilles(session, inventaire_id)[0]
-    bouteille.statut = "en_cours"
+    """Coupure en plein appel (arrêt brutal) : la bouteille reste `en_cours` sans
+    signe de vie ; passé le délai d'abandon, la reprise la refait — mais jamais
+    une bouteille dont le worker est vivant (decisions.md 0110)."""
+    abandonnee, vivante = bouteilles(session, inventaire_id)[:2]
+    for bouteille, vu_le in ((abandonnee, maintenant() - timedelta(hours=1)), (vivante, maintenant())):
+        bouteille.statut, bouteille.reservee_par = "en_cours", "worker-ancien"
+        bouteille.reservee_le = bouteille.vu_le = vu_le
     session.commit()
     assert reste_a_extraire(session, inventaire_id) == 6
+
+    reprise = ExtracteurScenario()
+    bilan = extraire_inventaire(session, inventaire_id, reprise, stockage)
+
+    assert reprise.appels == 5  # l'abandonnée et les 4 autres ; jamais la vivante
+    assert (bilan.extraites, bilan.deja_faites) == (5, 0)
+    assert statuts(session, inventaire_id)[:2] == ["extraite", "en_cours"]
 
 
 def test_gemini_reessaie_a_delai_croissant(monkeypatch, tmp_path):

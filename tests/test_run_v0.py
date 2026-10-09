@@ -192,7 +192,8 @@ def test_chaque_extraction_est_en_base_des_son_retour(tmp_path, dossier_photos, 
 @pytest.mark.parametrize(
     "panne, statut_de_la_quatrieme",
     [
-        pytest.param(KeyboardInterrupt(), "en_cours", id="interruption"),
+        # Session 3 : un Ctrl-C rend la bouteille à la file (decisions.md 0112).
+        pytest.param(KeyboardInterrupt(), "a_extraire", id="interruption"),
         pytest.param(PermissionError("clé API invalide"), "erreur", id="panne-systematique"),
     ],
 )

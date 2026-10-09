@@ -34,6 +34,9 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 STATUTS_BOUTEILLE = ("a_extraire", "en_cours", "extraite", "erreur", "validee")
 STATUTS_INVENTAIRE = ("ouvert", "valide")
+# Où en est l'extraction d'un inventaire : le worker ne réserve que dans un
+# inventaire « lancee » (decisions.md 0111).
+ETATS_EXTRACTION = ("non_lancee", "lancee", "annulee", "arretee")
 
 # Noms de contraintes déterministes : Alembic ne sait modifier sous SQLite que
 # des contraintes nommées (mode « batch »). Sans cette convention, la première
@@ -95,6 +98,9 @@ class Inventaire(Base):
         CheckConstraint(
             "statut IN ('" + "', '".join(STATUTS_INVENTAIRE) + "')", name="statut"
         ),
+        CheckConstraint(
+            "extraction IN ('" + "', '".join(ETATS_EXTRACTION) + "')", name="extraction"
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -104,6 +110,11 @@ class Inventaire(Base):
     cree_le: Mapped[datetime] = mapped_column(DateTime, default=maintenant)
     statut: Mapped[str] = mapped_column(String(20), default="ouvert")
     dossier_source: Mapped[str | None] = mapped_column(Text)
+    extraction: Mapped[str] = mapped_column(
+        String(20), default="non_lancee", server_default="non_lancee"
+    )
+    extraction_lancee_le: Mapped[datetime | None] = mapped_column(DateTime)
+    motif_arret: Mapped[str | None] = mapped_column(Text)  # panne systématique
 
     maison: Mapped[Maison] = relationship()
     config_version: Mapped[ConfigVersion] = relationship()
@@ -158,12 +169,32 @@ class FicheBouteille(Base):
     position: Mapped[int]
     quantite: Mapped[int] = mapped_column(default=1)
     statut: Mapped[str] = mapped_column(String(20), default="a_extraire")
+    # Réservation VIVANTE pendant « en_cours » (decisions.md 0109, 0110) : qui,
+    # depuis quand, et le dernier signe de vie du worker qui la traite.
+    reservee_par: Mapped[str | None] = mapped_column(String(100))
+    reservee_le: Mapped[datetime | None] = mapped_column(DateTime)
+    vu_le: Mapped[datetime | None] = mapped_column(DateTime)
 
     inventaire: Mapped[Inventaire] = relationship(back_populates="bouteilles")
     photo_etiquette: Mapped[Photo] = relationship(foreign_keys=[photo_etiquette_id])
     photo_contre: Mapped[Photo | None] = relationship(foreign_keys=[photo_contre_id])
     extractions: Mapped[list[Extraction]] = relationship(order_by="Extraction.id")
     corrections: Mapped[list[Correction]] = relationship(order_by="Correction.id")
+
+
+class LimiteDebit(Base):
+    """Limite de débit d'un modèle, PARTAGÉE par tous les workers (decisions.md 0114).
+
+    `prochain_appel` espace les appels ; `pause_jusqu_a` suspend tout le monde
+    après une limite de débit atteinte. En base, pas en mémoire : un
+    redémarrage la respecte.
+    """
+
+    __tablename__ = "limite_debit"
+
+    modele: Mapped[str] = mapped_column(String(100), primary_key=True)
+    prochain_appel: Mapped[datetime | None] = mapped_column(DateTime)
+    pause_jusqu_a: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class Extraction(Base):

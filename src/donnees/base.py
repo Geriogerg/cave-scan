@@ -30,6 +30,7 @@ VARIABLE_BASE = "CAVE_SCAN_DB"
 VARIABLE_STOCKAGE = "CAVE_SCAN_STOCKAGE"
 BASE_DEFAUT = RACINE / "data" / "cave_scan.db"
 STOCKAGE_DEFAUT = RACINE / "data" / "stockage"
+ATTENTE_VERROU_MS = 30_000  # SQLite occupé par un autre écrivain : attendre, pas échouer
 
 
 def url_de_base(valeur: str | Path | None = None) -> str:
@@ -72,9 +73,14 @@ def creer_moteur(url: str) -> Engine:
     if moteur.dialect.name == "sqlite":
 
         @event.listens_for(moteur, "connect")
-        def _activer_cles_etrangeres(connexion: Any, _enregistrement: Any) -> None:
+        def _configurer_sqlite(connexion: Any, _enregistrement: Any) -> None:
             curseur = connexion.cursor()
             curseur.execute("PRAGMA foreign_keys=ON")
+            # Accès concurrents (worker + API, decisions.md 0113) : en WAL, les
+            # lecteurs ne bloquent plus l'écrivain ; un écrivain qui trouve la
+            # base occupée attend au lieu d'échouer.
+            curseur.execute("PRAGMA journal_mode=WAL")
+            curseur.execute(f"PRAGMA busy_timeout={ATTENTE_VERROU_MS}")
             curseur.close()
 
     return moteur
