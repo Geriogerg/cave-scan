@@ -143,6 +143,25 @@ CHAMPS_COMPARABLES: tuple[str, ...] = (
     "importateur",
 )
 
+# Nature des champs v0 que le modèle remplit et qu'une config de maison peut
+# redéfinir (description, vocabulaire). Sert à refuser une config qui en
+# changerait la nature — un millésime ne devient pas une liste par mégarde.
+NATURE_DES_CHAMPS: dict[str, str] = {
+    "appellation": "texte",
+    "domaine": "texte",
+    "cuvee": "texte",
+    "couleur": "liste",
+    "effervescence": "liste",
+    "millesime": "texte",
+    "region": "texte",
+    "pays": "texte",
+    "format": "liste",
+    "contenance_cl": "nombre",
+    "degre": "nombre",
+    "importateur": "texte",
+    "notes": "texte",
+}
+
 
 def est_abstention(valeur: Any) -> bool:
     """Le modèle a-t-il refusé de se prononcer sur ce champ ?

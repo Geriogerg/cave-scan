@@ -170,7 +170,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   générique couvre le lot ET l'estimation, plutôt qu'un cas particulier codé en
   dur pour l'estimation (0005) — écarté : traiter l'estimation à part.
 
-- 0036 — Une colonne de config qui référence un champ inexistant lève une erreur
+- 0036 — [remplacée par 0052] Une colonne de config qui référence un champ inexistant lève une erreur
   au chargement — une faute de frappe doit s'arrêter là, pas livrer une colonne
   silencieusement vide à une maison de vente.
 
@@ -276,6 +276,28 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   avec attente croissante avant de renoncer — sans cela, la moitié d'une
   campagne serait sortie en abstention et le score aurait été faux. La
   distinction passager/systématique de 0045 est conservée à l'identique.
+
+## Session 1 — config par maison
+
+- 0052 — Config JSON validée STRICTEMENT au chargement, toutes les erreurs
+  rassemblées dans un seul message : clés JSON en double détectées (le module
+  `json` garde silencieusement la dernière, d'où un `object_pairs_hook`),
+  clés inconnues refusées (préfixe « _ » = commentaire), types et sources
+  connus, `cle` et en-têtes uniques (à la casse près), codes et libellés
+  uniques, `non_determinable` réservé et ajouté d'office à chaque liste,
+  `canonique` ⇔ noyau 0021, colonnes système limitées à ce que l'outil sait
+  calculer (`id`, `a_verifier`), quantité forcément expert, aucune colonne
+  modèle sur un champ du pipeline, nature d'un champ v0 (texte | liste |
+  nombre) non modifiable, regroupement limité aux colonnes lues par le modèle
+  — une config mal écrite ne doit jamais produire un export plausible et faux
+  — écarté : valider au fil de l'usage (l'erreur surgirait en plein export).
+
+- 0053 — Un texte envoyé au modèle qui contient un exemple de réponse (citation
+  entre guillemets, « par exemple », « ex. ») est SIGNALÉ au chargement, pas
+  refusé — c'est du few-shot (CLAUDE.md), mais la config appartient à la
+  maison : on rend le conflit visible plutôt que de le trancher à sa place.
+  maison_test.json en contient un (description de `description_etat`) —
+  écarté : bloquer (empêcherait la maison d'écrire ses consignes), ou ignorer.
 
 ---
 
