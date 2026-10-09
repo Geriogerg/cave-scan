@@ -773,6 +773,12 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   extraire dans un inventaire lancé NI en cours nulle part — il attend donc la
   reprise des bouteilles abandonnées avant de conclure.
 
+- 0124 — `dev.py` fait tourner le worker dans un thread de son propre processus
+  (et non dans un sous-processus) : l'arrêter, même brutalement, arrête les
+  deux — jamais de worker orphelin sous Windows. En production, `serveur.py` et
+  `worker.py` restent deux processus. `serveur.py` n'a aucune option d'hôte :
+  127.0.0.1 en dur jusqu'à la connexion (session 7).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

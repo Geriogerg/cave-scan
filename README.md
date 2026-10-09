@@ -109,6 +109,39 @@ python inventaire.py exporter 1 --sortie out/cave_dupont.xlsx
   pas être validée.
 - `stats` donne les tokens consommés par bouteille : c'est la base du coût réel.
 
+## API et extraction en arrière-plan
+
+Deux processus : le serveur API et le worker qui extrait. Pour développer, une
+commande lance les deux à la fois.
+
+```
+python serveur.py                    (API sur http://127.0.0.1:8000, local uniquement)
+python worker.py                     (Gemini, 4 extractions simultanées)
+python dev.py                        (les deux à la fois)
+python dev.py --backend factice      (sans réseau ni quota : réponses fausses, pour développer)
+```
+
+La documentation interactive est sur http://127.0.0.1:8000/docs. On peut y :
+- créer un inventaire en envoyant ses photos (`POST /inventaires`) ;
+- lancer l'extraction, suivre la progression, annuler, relancer les erreurs ;
+- lister et consulter les bouteilles, les corriger, les valider ;
+- télécharger l'Excel.
+
+Les actions de l'expert (corriger, valider) demandent l'en-tête `X-Auteur`.
+
+- **Rien n'est perdu.** Le travail en attente vit dans la base. Si le worker est
+  arrêté (Ctrl-C), il termine les extractions commencées. S'il est tué, un
+  worker relancé reprend les bouteilles abandonnées au bout de 2 minutes, sans
+  jamais extraire deux fois la même.
+- **Le débit est réglé pour tous les workers à la fois.** Les appels sont
+  espacés (`--espacement`, 4,5 s par défaut pour le palier gratuit Gemini). Sur
+  une limite atteinte, tout le monde ralentit au lieu de multiplier les
+  tentatives.
+- **Le quota gratuit Gemini (20 requêtes par jour) ne suffit pas pour un
+  inventaire réel.** Il faut une clé payante (Gemini ou `--backend anthropic`).
+- `run_v0.py` et `inventaire.py` continuent de fonctionner, sur les mêmes
+  fonctions et la même base.
+
 ## Où sont les données
 
 - **Base** : `data/cave_scan.db` (SQLite). Se change avec `CAVE_SCAN_DB` (chemin,
@@ -146,7 +179,10 @@ aucun test ne peut appeler un vrai modèle.
 | Chemin                         | Rôle                                                                |
 |--------------------------------|---------------------------------------------------------------------|
 | `run_v0.py`, `inventaire.py`   | lignes de commande : elles appellent les services et affichent      |
-| `src/services/`                | inventaires, extraction, relecture, restitution (export, stats, score) |
+| `serveur.py`, `worker.py`, `dev.py` | API JSON (local), worker d'extraction, les deux pour développer |
+| `src/api/`                     | API FastAPI : routes fines, format d'erreur unique                  |
+| `src/worker.py`                | boucle du worker : réserver, extraire en parallèle, signes de vie   |
+| `src/services/`                | inventaires, extraction, file d'attente, pilotage, débit, relecture, consultation, envoi des photos, restitution |
 | `src/donnees/`                 | modèles SQLAlchemy, ouverture et migration de la base, stockage des photos |
 | `src/extract/`                 | contrat `Bouteille`, extracteurs Gemini, Anthropic et fixtures      |
 | `src/config/`                  | config par maison, lecture de `.env`                                |
