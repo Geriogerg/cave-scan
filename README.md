@@ -54,6 +54,13 @@ Dans l'ordre, `run_v0.py` :
 5. avec `--manual`, affiche le **score du modèle** face à l'expert ; sans, les
    signaux du modèle.
 
+Vous n'avez que des étiquettes, sans contre-étiquette ? Ajoutez `--sans-contre` :
+chaque photo devient une bouteille.
+
+```
+python run_v0.py --photos data/etiquettes --sans-contre
+```
+
 Autres options : `--backend gemini|anthropic`, `--maison config/maisons/x.json`
 et `--base`.
 

@@ -678,6 +678,15 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   disparaît ; son test devient « un code de la maison n'est jamais perdu à la
   relecture depuis la base ».
 
+- 0108 — Contre-étiquette facultative : `run_v0.py --photos DOSSIER --sans-contre`
+  traite un dossier d'étiquettes seules, une photo par bouteille (nombre impair
+  accepté). C'est l'utilisateur qui le déclare, par dossier : l'outil ne devine
+  jamais si une photo est une étiquette ou une contre-étiquette, et sans
+  l'option l'appariement par paires reste exigé. Schéma : `photo_contre_id`
+  devient facultatif (migration 0002, accord donné le 2026-10-09 ; les données
+  existantes sont conservées) ; le contrat `Bouteille` ne change pas. Le modèle
+  reçoit alors la seule étiquette — les extracteurs le géraient déjà.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

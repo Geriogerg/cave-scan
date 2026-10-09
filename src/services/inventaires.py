@@ -52,12 +52,14 @@ def creer_inventaire(
     nom: str,
     stockage: Path,
     limite: int | None = None,
+    sans_contre: bool = False,
 ) -> InventaireCree:
     """Enregistre la config (nouvelle version si son contenu a changé), copie les
     photos dans le stockage et forme les bouteilles par paires.
 
     `limite` ne garde que les N premières bouteilles (decisions.md 0084) — le
     contrôle du nombre impair porte quand même sur tout le dossier.
+    `sans_contre` : une photo par bouteille, sans contre-étiquette (0108).
     """
     config, texte = lire_config(config_path)
     if plier(config.maison) != plier(maison):
@@ -65,9 +67,11 @@ def creer_inventaire(
             f"La config {Path(config_path).name} décrit « {config.maison} », pas « {maison} »."
         )
 
-    appariement = apparier_photos(dossier_photos)  # impair, HEIC, sous-dossier : refus
+    appariement = apparier_photos(dossier_photos, sans_contre)  # impair, HEIC, sous-dossier : refus
     paires = appariement.bouteilles[:limite] if limite else appariement.bouteilles
-    images = [photo for vues in paires for photo in (vues.etiquette, vues.contre_etiquette)]
+    images = [
+        photo for vues in paires for photo in (vues.etiquette, vues.contre_etiquette) if photo is not None
+    ]
     empreintes = {image: empreinte_fichier(image) for image in images}
     _refuser_les_photos_en_double(images, empreintes)
 
@@ -103,7 +107,7 @@ def creer_inventaire(
             inventaire_id=inventaire.id,
             identifiant=vues.identifiant,
             photo_etiquette_id=photos[vues.etiquette].id,
-            photo_contre_id=photos[vues.contre_etiquette].id,
+            photo_contre_id=photos[vues.contre_etiquette].id if vues.contre_etiquette else None,
             position=position,
         )
         for position, vues in enumerate(paires, start=1)

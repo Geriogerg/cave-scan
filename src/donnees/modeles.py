@@ -153,14 +153,15 @@ class FicheBouteille(Base):
     inventaire_id: Mapped[int] = mapped_column(ForeignKey("inventaire.id"))
     identifiant: Mapped[str] = mapped_column(String(20))  # « B-… », decisions.md 0065
     photo_etiquette_id: Mapped[int] = mapped_column(ForeignKey("photo.id"))
-    photo_contre_id: Mapped[int] = mapped_column(ForeignKey("photo.id"))
+    # Facultative : un inventaire « --sans-contre » n'a que des étiquettes (decisions.md 0108).
+    photo_contre_id: Mapped[int | None] = mapped_column(ForeignKey("photo.id"))
     position: Mapped[int]
     quantite: Mapped[int] = mapped_column(default=1)
     statut: Mapped[str] = mapped_column(String(20), default="a_extraire")
 
     inventaire: Mapped[Inventaire] = relationship(back_populates="bouteilles")
     photo_etiquette: Mapped[Photo] = relationship(foreign_keys=[photo_etiquette_id])
-    photo_contre: Mapped[Photo] = relationship(foreign_keys=[photo_contre_id])
+    photo_contre: Mapped[Photo | None] = relationship(foreign_keys=[photo_contre_id])
     extractions: Mapped[list[Extraction]] = relationship(order_by="Extraction.id")
     corrections: Mapped[list[Correction]] = relationship(order_by="Correction.id")
 

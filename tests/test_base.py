@@ -228,3 +228,54 @@ def test_une_valeur_absente_est_stockee_comme_absente(session):
         ).scalar()
     moteur.dispose()
     assert brut is None
+
+
+def test_la_migration_0002_garde_les_donnees_d_une_base_existante(tmp_path):
+    """Une base créée avant la contre-étiquette facultative (0108) passe à 0002
+    sans rien perdre, et accepte ensuite une bouteille sans contre-étiquette."""
+    from alembic import command
+    from alembic.config import Config as ConfigAlembic
+
+    from src.donnees.base import RACINE
+
+    url = url_de_base(tmp_path / "ancienne.db")
+    configuration = ConfigAlembic(str(RACINE / "alembic.ini"))
+    configuration.set_main_option("script_location", str(RACINE / "migrations"))
+    configuration.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
+    configuration.attributes["depuis_le_code"] = True
+    command.upgrade(configuration, "0001")
+
+    moteur = create_engine(url)
+    with moteur.begin() as connexion:
+        connexion.exec_driver_sql("INSERT INTO maison (id, nom) VALUES (1, 'Maison')")
+        connexion.exec_driver_sql(
+            "INSERT INTO config_version (id, maison_id, numero, version_declaree, contenu, "
+            "empreinte, fichier_source, cree_le) VALUES (1, 1, 1, 1, '{}', 'e', 'c.json', '2026-01-01')"
+        )
+        connexion.exec_driver_sql(
+            "INSERT INTO inventaire (id, maison_id, config_version_id, nom, cree_le, statut, "
+            "dossier_source) VALUES (1, 1, 1, 'Cave', '2026-01-01', 'ouvert', 'x')"
+        )
+        for numero in (1, 2):
+            connexion.exec_driver_sql(
+                f"INSERT INTO photo (id, inventaire_id, chemin, empreinte, nom_origine, ordre) "
+                f"VALUES ({numero}, 1, 'p{numero}.jpg', 'h{numero}', 'p{numero}.jpg', {numero})"
+            )
+        connexion.exec_driver_sql(
+            "INSERT INTO bouteille (id, inventaire_id, identifiant, photo_etiquette_id, "
+            "photo_contre_id, position, quantite, statut) VALUES (1, 1, 'B-1', 1, 2, 1, 1, 'a_extraire')"
+        )
+    moteur.dispose()
+
+    migrer(url)
+
+    moteur = create_engine(url)
+    with moteur.begin() as connexion:
+        assert connexion.exec_driver_sql(
+            "SELECT identifiant, photo_etiquette_id, photo_contre_id FROM bouteille"
+        ).fetchall() == [("B-1", 1, 2)]
+        connexion.exec_driver_sql(
+            "INSERT INTO bouteille (id, inventaire_id, identifiant, photo_etiquette_id, "
+            "photo_contre_id, position, quantite, statut) VALUES (2, 1, 'B-2', 2, NULL, 2, 1, 'a_extraire')"
+        )
+    moteur.dispose()

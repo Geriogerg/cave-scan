@@ -3,6 +3,7 @@
 
     python run_v0.py --dry-run
     python run_v0.py --photos data/photos [--manual listing.xlsx] [--nom "Cave X"] [--limite 3]
+    python run_v0.py --photos data/etiquettes --sans-contre     (une photo par bouteille)
     python run_v0.py --inventaire 4 [--manual listing.xlsx]
 
 `--photos` crée un inventaire (config figée, photos stockées), l'extrait, l'exporte.
@@ -153,7 +154,10 @@ def _nouvel_inventaire(arguments: argparse.Namespace) -> int:
     with session_de_base(arguments.base) as session:
         # Les photos sont vérifiées (impair, HEIC, doublons) AVANT la création du
         # client du modèle : un dossier invalide se signale sans clé ni coût.
-        cree = _creer(session, config, chemin_config, arguments.photos, nom, stockage, arguments.limite)
+        cree = _creer(
+            session, config, chemin_config, arguments.photos, nom, stockage,
+            arguments.limite, arguments.sans_contre,
+        )
         extracteur = _extracteur(arguments.backend, config, cree.inventaire_id)
         print(f"Modèle : {extracteur.modele}\n")
         _extraire(session, cree.inventaire_id, extracteur, stockage)
@@ -163,7 +167,12 @@ def _nouvel_inventaire(arguments: argparse.Namespace) -> int:
 
 
 def _reprendre(arguments: argparse.Namespace) -> int:
-    creation = (("--maison", arguments.maison), ("--limite", arguments.limite), ("--nom", arguments.nom))
+    creation = (
+        ("--maison", arguments.maison),
+        ("--limite", arguments.limite),
+        ("--nom", arguments.nom),
+        ("--sans-contre", arguments.sans_contre or None),
+    )
     ignorees = [option for option, valeur in creation if valeur is not None]
     if ignorees:
         print(
@@ -204,9 +213,12 @@ def _creer(
     nom: str,
     stockage: Path,
     limite: int | None,
+    sans_contre: bool = False,
 ) -> InventaireCree:
     try:
-        cree = creer_inventaire(session, config.maison, chemin_config, photos, nom, stockage, limite)
+        cree = creer_inventaire(
+            session, config.maison, chemin_config, photos, nom, stockage, limite, sans_contre
+        )
     except (PhotosInvalides, NotADirectoryError) as erreur:
         raise Arret(str(erreur)) from None
 
@@ -218,7 +230,10 @@ def _creer(
 
     # L'appariement AVANT l'extraction : une paire décalée se voit ici, pas
     # après avoir payé tous les appels (decisions.md 0023, 0068).
-    print(f"Appariement de {cree.nb_bouteilles} paire(s), tri par {cree.tri} :")
+    if sans_contre:
+        print(f"{cree.nb_bouteilles} bouteille(s), une photo d'étiquette chacune, tri par {cree.tri} :")
+    else:
+        print(f"Appariement de {cree.nb_bouteilles} paire(s), tri par {cree.tri} :")
     if cree.sans_date:
         apercu = ", ".join(cree.sans_date[:3]) + ("…" if len(cree.sans_date) > 3 else "")
         print(
@@ -226,10 +241,7 @@ def _creer(
             f"de fichier pour TOUTES — vérifier qu'il suit l'ordre de prise de vue."
         )
     for bouteille in lister_bouteilles(session, cree.inventaire_id):
-        print(
-            f"  {bouteille.position:>3}. {bouteille.identifiant}  "
-            f"{bouteille.photo_etiquette.nom_origine} + {bouteille.photo_contre.nom_origine}"
-        )
+        print(f"  {bouteille.position:>3}. {bouteille.identifiant}  {_photos_de(bouteille)}")
     print()
     return cree
 
@@ -296,6 +308,12 @@ def _restituer(session: Session, inventaire_id: int, chemin_manuel: Path | None,
         )
     print()
     print(formater_rapport(resultat.rapport))
+
+
+def _photos_de(bouteille: FicheBouteille) -> str:
+    if bouteille.photo_contre is None:
+        return f"{bouteille.photo_etiquette.nom_origine} (sans contre-étiquette)"
+    return f"{bouteille.photo_etiquette.nom_origine} + {bouteille.photo_contre.nom_origine}"
 
 
 def _rappel_reprise(inventaire_id: int, base: Path | None) -> None:
@@ -386,6 +404,13 @@ def _analyseur() -> argparse.ArgumentParser:
         type=int,
         help="Le nouvel inventaire ne garde que les N premières bouteilles : vérifier "
         "sur 3 bouteilles avant d'en lancer 200.",
+    )
+    analyseur.add_argument(
+        "--sans-contre",
+        action="store_true",
+        help="Le dossier ne contient que des étiquettes : une photo par bouteille, "
+        "sans contre-étiquette. Sans cette option, les photos vont par paires "
+        "étiquette puis contre-étiquette.",
     )
     analyseur.add_argument(
         "--maison",

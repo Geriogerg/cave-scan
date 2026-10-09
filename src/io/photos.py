@@ -87,8 +87,13 @@ class Appariement:
     dates: dict[Path, datetime | None] = field(default_factory=dict)  # prise de vue, par photo
 
 
-def apparier_photos(racine: str | Path) -> Appariement:
-    """Reconstitue les paires étiquette / contre-étiquette d'un dossier à plat."""
+def apparier_photos(racine: str | Path, sans_contre: bool = False) -> Appariement:
+    """Reconstitue les paires étiquette / contre-étiquette d'un dossier à plat.
+
+    `sans_contre` : le dossier ne contient que des étiquettes, une photo par
+    bouteille (decisions.md 0108). C'est l'utilisateur qui le dit — l'outil ne
+    devine jamais si une photo est une étiquette ou une contre-étiquette.
+    """
     racine = Path(racine)
     if not racine.is_dir():
         raise NotADirectoryError(f"Dossier de photos introuvable : {racine}")
@@ -108,13 +113,22 @@ def apparier_photos(racine: str | Path) -> Appariement:
     dates = {image: _date_de_prise_de_vue(image) for image in images}
     images, tri, sans_date = _trier(images, dates)
 
+    if sans_contre:
+        return Appariement(
+            bouteilles=[PhotosBouteille(etiquette=image) for image in images],
+            tri=tri,
+            sans_date=[c.name for c in sans_date],
+            dates=dates,
+        )
+
     if len(images) % 2:
         raise PhotosInvalides(
             f"{len(images)} photos dans {racine} : nombre IMPAIR. Chaque bouteille "
             f"demande une étiquette ET une contre-étiquette, prises dans l'ordre "
             f"(decisions.md 0023). Aucun appariement n'est tenté : il faudrait "
             f"deviner quelle photo manque ou est en trop. Ordre utilisé : {tri}. "
-            f"Vérifier le dossier puis relancer."
+            f"Vérifier le dossier puis relancer — ou, s'il ne contient que des "
+            f"étiquettes, relancer avec --sans-contre."
         )
 
     bouteilles = [

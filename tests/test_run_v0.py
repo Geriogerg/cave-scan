@@ -483,3 +483,33 @@ def test_une_option_remplacee_dit_par_quoi_la_remplacer(options, capsys):
     assert code == 2
     assert "--inventaire ID" in erreur
     assert "unrecognized arguments" not in erreur
+
+
+# --- étiquettes seules : --sans-contre (decisions.md 0108) ---------------------------------
+
+
+def test_sans_contre_une_photo_par_bouteille_de_bout_en_bout(tmp_path, monkeypatch, capsys):
+    """Un dossier d'étiquettes seules, en nombre impair : une bouteille par photo,
+    le modèle ne reçoit aucune contre-étiquette, l'export a une ligne par photo."""
+    photos = generer_photos_fictives(tmp_path / "photos", 2)
+    (photos / "bouteille_02_contre.jpg").unlink()
+    base, sortie = tmp_path / "cave.db", tmp_path / "l.xlsx"
+    recues = []
+
+    class Espion(FixtureExtractor):
+        def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
+            recues.append(contre_etiquette)
+            return super().extraire_brut(etiquette, contre_etiquette, autres)
+
+    source = fixtures()
+    brancher(monkeypatch, Espion(source._charges, source.config))
+
+    code = lancer("--photos", photos, "--sans-contre", "--base", base, "--sortie", sortie)
+
+    assert code == 0
+    assert "(sans contre-étiquette)" in capsys.readouterr().out
+    assert recues == [None, None, None]
+    assert requete(base, "SELECT count(*) FROM bouteille WHERE photo_contre_id IS NULL") == [(3,)]
+    assert len(colonne_excel(sortie, "id")) == 3
+    assert inventaire.main(["fiche", "1", "1", "--base", str(base)]) == 0
+    assert "(pas de contre-étiquette)" in capsys.readouterr().out

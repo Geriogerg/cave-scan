@@ -122,7 +122,8 @@ def _fiche(session: Session, arguments: argparse.Namespace) -> None:
         f"Bouteille n°{bouteille.position} — {bouteille.identifiant} — {bouteille.statut} — "
         f"inventaire n°{bouteille.inventaire.id} « {bouteille.inventaire.nom} »"
     )
-    print(f"Photos : {bouteille.photo_etiquette.nom_origine} + {bouteille.photo_contre.nom_origine}\n")
+    contre = bouteille.photo_contre.nom_origine if bouteille.photo_contre else "(pas de contre-étiquette)"
+    print(f"Photos : {bouteille.photo_etiquette.nom_origine} + {contre}\n")
 
     print(f"  {'champ':<18} {'lu par le modèle':<34} valeur courante")
     for champ in champs_corrigeables(config):

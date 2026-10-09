@@ -119,7 +119,11 @@ def extraire_bouteille(
     try:
         sortie = extracteur.extraire_brut(
             etiquette=chemin_stocke(stockage, bouteille.photo_etiquette.chemin),
-            contre_etiquette=chemin_stocke(stockage, bouteille.photo_contre.chemin),
+            contre_etiquette=(
+                chemin_stocke(stockage, bouteille.photo_contre.chemin)
+                if bouteille.photo_contre is not None
+                else None  # inventaire d'étiquettes seules (0108)
+            ),
         )
     except Exception as erreur:  # `extraire_brut` ne lève que pour une panne systématique
         bouteille.extractions.append(

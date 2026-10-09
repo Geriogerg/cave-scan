@@ -179,3 +179,29 @@ def test_une_paire_incoherente_surligne_la_ligne():
         else:
             charge[colonne.cle] = "Texte lu"
     assert a_relire(from_tool_input(charge, config), config)
+
+
+# --- étiquettes seules (decisions.md 0108) ----------------------------------------
+
+
+def test_sans_contre_chaque_photo_est_une_bouteille(tmp_path):
+    from src.extract.fixture_extract import generer_photos_fictives
+
+    dossier = generer_photos_fictives(tmp_path / "photos", 2)
+    (dossier / "bouteille_02_contre.jpg").unlink()  # 3 photos : impair, accepté ici
+
+    appariement = apparier_photos(dossier, sans_contre=True)
+
+    assert [vues.contre_etiquette for vues in appariement.bouteilles] == [None, None, None]
+    assert [vues.etiquette.name for vues in appariement.bouteilles] == [
+        "bouteille_01_etiquette.jpg", "bouteille_01_contre.jpg", "bouteille_02_etiquette.jpg",
+    ]
+
+
+def test_un_nombre_impair_suggere_sans_contre(tmp_path):
+    from src.extract.fixture_extract import generer_photos_fictives
+
+    dossier = generer_photos_fictives(tmp_path / "photos", 2)
+    (dossier / "bouteille_02_contre.jpg").unlink()
+    with pytest.raises(PhotosInvalides, match="--sans-contre"):
+        apparier_photos(dossier)
