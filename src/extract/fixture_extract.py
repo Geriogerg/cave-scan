@@ -15,8 +15,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from src.extract.base import CheminPhoto
-from src.extract.schema import Bouteille, from_tool_input
+from src.extract.base import CheminPhoto, SortieModele, bouteille_depuis_sortie
+from src.extract.consignes import version_prompt
+from src.extract.schema import Bouteille, schema_extraction
 
 if TYPE_CHECKING:
     from src.config.maison import ConfigMaison
@@ -52,10 +53,16 @@ class FixtureExtractor:
     désérialisation, pas un raccourci.
     """
 
+    # Aucun modèle n'est appelé : le nom le dit dans la trace des extractions.
+    modele = "fixtures"
+
     def __init__(self, charges: Sequence[dict], config: ConfigMaison | None = None) -> None:
         self._charges = list(charges)
         self.config = config
         self._index = 0
+        # La demande qui AURAIT été envoyée : même version qu'un vrai modèle pour
+        # la même maison.
+        self.version_prompt = version_prompt(schema_extraction(config))
 
     @classmethod
     def depuis_json(cls, chemin: str | Path, config: ConfigMaison | None = None) -> FixtureExtractor:
@@ -68,16 +75,16 @@ class FixtureExtractor:
     def __len__(self) -> int:
         return len(self._charges)
 
-    def extract(
+    def extraire_brut(
         self,
         etiquette: CheminPhoto,
         contre_etiquette: CheminPhoto | None = None,
         autres: Sequence[CheminPhoto] | None = None,
-    ) -> Bouteille:
-        """Renvoie la fixture suivante. Les photos passées sont ignorées.
+    ) -> SortieModele:
+        """Rend la fixture suivante comme réponse brute. Les photos sont ignorées.
 
         L'ordre d'appel fait foi, comme l'alignement ligne à ligne du reste de
-        la v0 (decisions.md 0010).
+        la v0 (decisions.md 0010). Aucun token n'est consommé : non mesuré.
         """
         if self._index >= len(self._charges):
             raise IndexError(
@@ -86,4 +93,14 @@ class FixtureExtractor:
             )
         charge = self._charges[self._index]
         self._index += 1
-        return from_tool_input(charge, self.config)
+        return SortieModele(brut=dict(charge), modele=self.modele, version_prompt=self.version_prompt)
+
+    def extract(
+        self,
+        etiquette: CheminPhoto,
+        contre_etiquette: CheminPhoto | None = None,
+        autres: Sequence[CheminPhoto] | None = None,
+    ) -> Bouteille:
+        return bouteille_depuis_sortie(
+            self.extraire_brut(etiquette, contre_etiquette, autres), self.config
+        )

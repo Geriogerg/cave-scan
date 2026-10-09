@@ -10,6 +10,8 @@ format de message.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 TYPES_MEDIA = {
@@ -59,6 +61,27 @@ INSTRUCTION_FINALE = (
     "et dis-le dans photos_meme_bouteille. Relève les champs de catalogage "
     "lisibles et abstiens-toi sur les autres."
 )
+
+
+def version_prompt(schema: dict) -> str:
+    """Empreinte de TOUT ce qui part au modèle : consignes, libellés, schéma.
+
+    Deux extractions de même version ont reçu exactement la même demande ; dès
+    qu'un mot du prompt ou une colonne de la config change, la version change
+    (decisions.md 0076). Les deux fournisseurs reçoivent la même demande, donc
+    la même version pour une même maison.
+    """
+    contenu = json.dumps(
+        {
+            "systeme": SYSTEM_PROMPT,
+            "libelles": [LIBELLE_ETIQUETTE, LIBELLE_CONTRE_ETIQUETTE, LIBELLE_AUTRE],
+            "instruction": INSTRUCTION_FINALE,
+            "schema": schema,
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+    return hashlib.sha256(contenu.encode("utf-8")).hexdigest()[:12]
 
 
 def type_media(chemin: Path) -> str:

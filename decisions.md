@@ -571,6 +571,23 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   renommé à la fin — une coupure en pleine copie ne laisse jamais une photo
   tronquée sous un nom valide.
 
+- 0092 — Gemini : délai dépassé, connexion coupée (erreurs réseau que le SDK
+  n'enveloppe PAS dans ses erreurs d'API) et code 408 sont des pannes
+  PASSAGÈRES, réessayées à délai croissant — sans ce classement, un simple
+  délai dépassé aurait arrêté tout l'inventaire comme une clé invalide.
+  Anthropic : le SDK réessaie lui-même ; le nombre de tentatives (3) est fixé
+  explicitement plutôt que laissé au défaut.
+
+- 0093 — À la relance, une bouteille restée `en_cours` est une extraction
+  interrompue (coupure, arrêt brutal) : elle est refaite. Une relance forcée sur
+  une bouteille validée la remet à relire, et c'est tracé dans l'historique
+  (auteur « relance forcée (modèle) »).
+
+- 0094 — L'extracteur de fixtures se déclare comme modèle « fixtures », avec des
+  tokens NON MESURÉS (vides) — jamais un faux coût qui fausserait le coût par
+  bouteille ; sa version de prompt est celle qu'aurait reçue un vrai modèle
+  pour la même maison.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

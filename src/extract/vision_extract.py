@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 import anthropic
 
-from src.extract.base import CheminPhoto
+from src.extract.base import CheminPhoto, SortieModele, bouteille_depuis_sortie
 from src.extract.consignes import (
     INSTRUCTION_FINALE,
     LIBELLE_AUTRE,
@@ -25,14 +25,18 @@ from src.extract.consignes import (
     LIBELLE_ETIQUETTE,
     SYSTEM_PROMPT,
     lire_photo,
+    version_prompt,
 )
-from src.extract.schema import Bouteille, from_tool_input, schema_extraction
+from src.extract.schema import Bouteille, schema_extraction
 
 if TYPE_CHECKING:
     from src.config.maison import ConfigMaison
 
 MODELE_DEFAUT = "claude-opus-5"
 VARIABLE_MODELE = "CAVE_SCAN_MODEL"
+
+# Nouvelles tentatives du SDK sur panne passagère, à délai croissant.
+NOUVELLES_TENTATIVES = 3
 
 # Pannes qui se répéteront à l'identique sur chaque bouteille : les avaler
 # produirait 200 lignes vides en facturant 200 appels (decisions.md 0045).
@@ -101,26 +105,36 @@ def construire_contenu(
     return contenu
 
 
-def bouteille_depuis_reponse(reponse: Any, config: ConfigMaison | None = None) -> Bouteille:
-    """Extrait la `Bouteille` de la réponse, en s'abstenant si le modèle n'a rien rendu.
+def sortie_depuis_reponse(reponse: Any, modele: str = "", version: str = "") -> SortieModele:
+    """La réponse Anthropic, TELLE QUELLE, avec les tokens facturés.
 
-    Un refus ou une réponse sans appel d'outil ne doit pas casser une campagne
-    d'extraction : on renvoie une bouteille entièrement en abstention, avec la
-    raison dans `notes` pour qu'elle soit visible en relecture.
+    Appel d'outil -> son contenu est la réponse brute. Sinon (refus, réponse en
+    texte libre), on garde quand même ce que le modèle a dit, et `erreur` dit
+    pourquoi ce n'est pas exploitable (decisions.md 0078).
     """
+    usage = getattr(reponse, "usage", None)
+    trace = {
+        "modele": modele,
+        "version_prompt": version,
+        "tokens_entree": getattr(usage, "input_tokens", None),
+        "tokens_sortie": getattr(usage, "output_tokens", None),
+    }
     for bloc in reponse.content:
         if bloc.type == "tool_use":
-            return from_tool_input(dict(bloc.input), config)
+            return SortieModele(brut=dict(bloc.input), **trace)
 
     motif = "aucun appel d'outil dans la réponse"
     if getattr(reponse, "stop_reason", None) == "refusal":
         details = getattr(reponse, "stop_details", None)
         motif = f"refus du modèle ({getattr(details, 'category', None) or 'sans catégorie'})"
+    textes = [bloc.text for bloc in reponse.content if getattr(bloc, "type", None) == "text"]
+    brut = {"stop_reason": getattr(reponse, "stop_reason", None), "texte": textes}
+    return SortieModele(brut=brut, erreur=motif, **trace)
 
-    return Bouteille(
-        champs_a_verifier=["tous"],
-        notes=f"Extraction sans résultat : {motif}.",
-    )
+
+def bouteille_depuis_reponse(reponse: Any, config: ConfigMaison | None = None) -> Bouteille:
+    """La `Bouteille` d'une réponse — même chemin que `extract()`, sans l'appel."""
+    return bouteille_depuis_sortie(sortie_depuis_reponse(reponse), config)
 
 
 class VisionExtractor:
@@ -134,13 +148,42 @@ class VisionExtractor:
         config: ConfigMaison | None = None,
     ) -> None:
         # Le client résout ses identifiants seul (ANTHROPIC_API_KEY, profil ant).
-        self.client = client or anthropic.Anthropic()
+        # Pannes passagères (débit, délai, surcharge, 5xx) : le SDK réessaie
+        # lui-même, à délai croissant (decisions.md 0079).
+        self.client = client or anthropic.Anthropic(max_retries=NOUVELLES_TENTATIVES)
         self.modele = modele or os.environ.get(VARIABLE_MODELE) or MODELE_DEFAUT
         self.max_tokens = max_tokens
         # Le schéma suit la config de la maison (guide, étape 4.2) : colonnes
         # expert et système jamais envoyées.
         self.config = config
         self._outil = schema_extraction(config)
+        self.version_prompt = version_prompt(self._outil)
+
+    def extraire_brut(
+        self,
+        etiquette: CheminPhoto,
+        contre_etiquette: CheminPhoto | None = None,
+        autres: Sequence[CheminPhoto] | None = None,
+    ) -> SortieModele:
+        """Une bouteille, un appel ; toutes ses vues dans le même message.
+
+        Panne SYSTÉMATIQUE (clé invalide, modèle inconnu, requête mal formée) :
+        remonte et arrête l'inventaire — la répéter 200 fois ne ferait que
+        produire 200 erreurs. Panne PASSAGÈRE, une fois les nouvelles tentatives
+        du SDK épuisées : rendue comme une donnée (decisions.md 0079).
+        """
+        try:
+            reponse = self._appeler(etiquette, contre_etiquette, autres)
+        except ERREURS_SYSTEMATIQUES:
+            raise
+        except anthropic.APIError as erreur:
+            return SortieModele(
+                brut=None,
+                modele=self.modele,
+                version_prompt=self.version_prompt,
+                erreur=f"{type(erreur).__name__} : {erreur}",
+            )
+        return sortie_depuis_reponse(reponse, self.modele, self.version_prompt)
 
     def extract(
         self,
@@ -148,24 +191,9 @@ class VisionExtractor:
         contre_etiquette: CheminPhoto | None = None,
         autres: Sequence[CheminPhoto] | None = None,
     ) -> Bouteille:
-        """Une bouteille, un appel. Toutes les vues partent dans le même message.
-
-        Politique d'erreur (decisions.md 0045) : une panne PASSAGÈRE sur une
-        bouteille produit une abstention tracée et la campagne continue ; une
-        panne SYSTÉMATIQUE (clé invalide, modèle inconnu, requête malformée)
-        remonte et arrête tout — la répéter 200 fois ne ferait que produire
-        200 lignes vides en facturant chaque échec.
-        """
-        try:
-            reponse = self._appeler(etiquette, contre_etiquette, autres)
-        except ERREURS_SYSTEMATIQUES:
-            raise
-        except anthropic.APIError as erreur:
-            return Bouteille(
-                champs_a_verifier=["tous"],
-                notes=f"Extraction échouée ({type(erreur).__name__}) : {erreur}",
-            )
-        return bouteille_depuis_reponse(reponse, self.config)
+        return bouteille_depuis_sortie(
+            self.extraire_brut(etiquette, contre_etiquette, autres), self.config
+        )
 
     def _appeler(
         self,

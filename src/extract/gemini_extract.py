@@ -17,16 +17,16 @@ score produit ici (decisions.md 0050) :
 
 from __future__ import annotations
 
-import json
 import os
 import time
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
+import httpx
 from google import genai
 from google.genai import errors, types
 
-from src.extract.base import CheminPhoto
+from src.extract.base import CheminPhoto, SortieModele, bouteille_depuis_sortie
 from src.extract.consignes import (
     INSTRUCTION_FINALE,
     LIBELLE_AUTRE,
@@ -34,8 +34,16 @@ from src.extract.consignes import (
     LIBELLE_ETIQUETTE,
     SYSTEM_PROMPT,
     lire_photo,
+    version_prompt,
 )
-from src.extract.schema import Bouteille, from_tool_input, schema_extraction
+from src.extract.schema import Bouteille, schema_extraction
+
+try:  # le SDK passe par httpx ou par son fork httpx2, dont les erreurs ne sont pas des httpx
+    import httpx2
+
+    ERREURS_RESEAU: tuple[type[Exception], ...] = (httpx.TransportError, httpx2.TransportError)
+except ImportError:  # pragma: no cover
+    ERREURS_RESEAU = (httpx.TransportError,)
 
 if TYPE_CHECKING:
     from src.config.maison import ConfigMaison
@@ -47,6 +55,10 @@ VARIABLE_MODELE = "CAVE_SCAN_GEMINI_MODEL"
 # Codes qui se reproduiront à l'identique sur chaque bouteille (clé invalide,
 # modèle inexistant, requête malformée) : inutile de les répéter 200 fois.
 CODES_SYSTEMATIQUES = {400, 401, 403, 404}
+
+# Codes passagers qui valent une nouvelle tentative : délai dépassé, limite de
+# débit. Les 5xx (serveur surchargé ou en erreur) aussi, via `ServerError`.
+CODES_PASSAGERS = {408, 429}
 
 # Le palier gratuit tourne autour de 15 requêtes/minute. Un 429 n'y est donc
 # PAS un incident, c'est le régime nominal : on espace les appels et on
@@ -84,17 +96,19 @@ class GeminiExtractor:
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
         self._dernier_appel = 0.0
+        self.version_prompt = version_prompt(schema_extraction(config))
 
-    def extract(
+    def extraire_brut(
         self,
         etiquette: CheminPhoto,
         contre_etiquette: CheminPhoto | None = None,
         autres: Sequence[CheminPhoto] | None = None,
-    ) -> Bouteille:
+    ) -> SortieModele:
         """Une bouteille, un appel. Même politique d'erreur que le backend payant.
 
-        Panne PASSAGÈRE → abstention tracée, la campagne continue.
-        Panne SYSTÉMATIQUE → remonte et arrête tout (decisions.md 0045).
+        Panne SYSTÉMATIQUE -> remonte et arrête l'inventaire. Panne PASSAGÈRE,
+        une fois les nouvelles tentatives épuisées -> rendue comme une donnée
+        (decisions.md 0079).
         """
         contenu = construire_contenu(etiquette, contre_etiquette, autres)
         try:
@@ -102,25 +116,43 @@ class GeminiExtractor:
         except errors.APIError as erreur:
             if _est_systematique(erreur):
                 raise
-            return Bouteille(
-                champs_a_verifier=["tous"],
-                notes=f"Extraction échouée ({type(erreur).__name__}) : {erreur}",
-            )
-        return bouteille_depuis_reponse(reponse, self.config)
+            return self._sortie_en_erreur(erreur)
+        except ERREURS_RESEAU as erreur:  # délai dépassé, connexion coupée
+            return self._sortie_en_erreur(erreur)
+        return sortie_depuis_reponse(reponse, self.modele, self.version_prompt)
+
+    def extract(
+        self,
+        etiquette: CheminPhoto,
+        contre_etiquette: CheminPhoto | None = None,
+        autres: Sequence[CheminPhoto] | None = None,
+    ) -> Bouteille:
+        return bouteille_depuis_sortie(
+            self.extraire_brut(etiquette, contre_etiquette, autres), self.config
+        )
+
+    def _sortie_en_erreur(self, erreur: Exception) -> SortieModele:
+        return SortieModele(
+            brut=None,
+            modele=self.modele,
+            version_prompt=self.version_prompt,
+            erreur=f"{type(erreur).__name__} : {erreur}",
+        )
 
     def _appeler(self, contenu: list[Any]) -> Any:
-        """Appelle le modèle en respectant le quota, avec reprise sur 429."""
+        """Appelle le modèle en respectant le quota ; nouvelles tentatives à délai
+        croissant sur panne passagère (decisions.md 0079)."""
         for tentative in range(1, self.tentatives_max + 1):
             self._respecter_le_quota()
             try:
                 return self.client.models.generate_content(
                     model=self.modele, contents=contenu, config=self._config
                 )
-            except errors.APIError as erreur:
+            except (errors.APIError, *ERREURS_RESEAU) as erreur:
                 dernier = tentative == self.tentatives_max
-                if _est_systematique(erreur) or not _merite_reprise(erreur) or dernier:
+                if not _merite_reprise(erreur) or dernier:
                     raise
-                # Attente croissante : 5 s, 10 s, 20 s.
+                # Attente croissante : 9 s, 18 s, 36 s avec la pause par défaut.
                 time.sleep(self.pause_s * (2**tentative))
         raise AssertionError("inatteignable")  # pragma: no cover
 
@@ -134,18 +166,22 @@ class GeminiExtractor:
         self._dernier_appel = time.monotonic()
 
 
-def _code(erreur: errors.APIError) -> int | None:
+def _code(erreur: Exception) -> int | None:
     return getattr(erreur, "code", None)
 
 
-def _est_systematique(erreur: errors.APIError) -> bool:
+def _est_systematique(erreur: Exception) -> bool:
     return _code(erreur) in CODES_SYSTEMATIQUES
 
 
-def _merite_reprise(erreur: errors.APIError) -> bool:
-    """429 (quota) et 5xx (panne serveur) valent une nouvelle tentative."""
-    code = _code(erreur)
-    return code == 429 or isinstance(erreur, errors.ServerError)
+def _merite_reprise(erreur: Exception) -> bool:
+    """Panne passagère : limite de débit, délai dépassé, serveur surchargé ou en
+    erreur, connexion coupée. Jamais une panne systématique."""
+    if isinstance(erreur, ERREURS_RESEAU):
+        return True
+    if _est_systematique(erreur):
+        return False
+    return _code(erreur) in CODES_PASSAGERS or isinstance(erreur, errors.ServerError)
 
 
 def construire_contenu(
@@ -178,34 +214,33 @@ def construire_contenu(
     return contenu
 
 
-def bouteille_depuis_reponse(reponse: Any, config: ConfigMaison | None = None) -> Bouteille:
-    """Lit le JSON contraint, en s'abstenant si le modèle n'a rien rendu.
+def sortie_depuis_reponse(reponse: Any, modele: str = "", version: str = "") -> SortieModele:
+    """La réponse Gemini, TELLE QUELLE : son texte JSON n'est pas relu ici.
 
-    Une réponse bloquée ou vide ne doit pas casser une campagne : on renvoie
-    une bouteille entièrement en abstention, motif dans `notes`.
+    S'il est illisible, il est quand même enregistré, et c'est l'interprétation
+    qui échouera (decisions.md 0078). Tokens de sortie = réponse + réflexion :
+    les deux sont facturés (decisions.md 0076).
     """
+    usage = getattr(reponse, "usage_metadata", None)
+    reponse_tokens = getattr(usage, "candidates_token_count", None)
+    reflexion = getattr(usage, "thoughts_token_count", None)
+    trace = {
+        "modele": modele,
+        "version_prompt": version,
+        "tokens_entree": getattr(usage, "prompt_token_count", None),
+        "tokens_sortie": None
+        if reponse_tokens is None and reflexion is None
+        else (reponse_tokens or 0) + (reflexion or 0),
+    }
     texte = getattr(reponse, "text", None)
     if not texte:
-        return Bouteille(
-            champs_a_verifier=["tous"],
-            notes=f"Extraction sans résultat : {_motif_vide(reponse)}.",
-        )
+        return SortieModele(brut=None, erreur=_motif_vide(reponse), **trace)
+    return SortieModele(brut=texte, **trace)
 
-    try:
-        charge = json.loads(texte)
-    except json.JSONDecodeError as erreur:
-        return Bouteille(
-            champs_a_verifier=["tous"],
-            notes=f"Réponse non lisible en JSON malgré le schéma imposé : {erreur}.",
-        )
 
-    if not isinstance(charge, dict):
-        return Bouteille(
-            champs_a_verifier=["tous"],
-            notes=f"Réponse JSON inattendue : {type(charge).__name__} au lieu d'un objet.",
-        )
-
-    return from_tool_input(charge, config)
+def bouteille_depuis_reponse(reponse: Any, config: ConfigMaison | None = None) -> Bouteille:
+    """La `Bouteille` d'une réponse — même chemin que `extract()`, sans l'appel."""
+    return bouteille_depuis_sortie(sortie_depuis_reponse(reponse), config)
 
 
 def _motif_vide(reponse: Any) -> str:

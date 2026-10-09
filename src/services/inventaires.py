@@ -128,6 +128,18 @@ def charger_inventaire(session: Session, inventaire_id: int) -> Inventaire:
     return inventaire
 
 
+def actualiser_statut(inventaire: Inventaire) -> None:
+    """`valide` quand TOUTES les bouteilles le sont, `ouvert` sinon (decisions.md 0083).
+
+    Une bouteille en erreur ne pouvant pas être validée, un inventaire qui en
+    contient une ne passe jamais à `valide`.
+    """
+    toutes_validees = bool(inventaire.bouteilles) and all(
+        bouteille.statut == "validee" for bouteille in inventaire.bouteilles
+    )
+    inventaire.statut = "valide" if toutes_validees else "ouvert"
+
+
 def config_figee(inventaire: Inventaire) -> ConfigMaison:
     """La config de l'inventaire, telle qu'à sa création — jamais le fichier actuel
     (decisions.md 0073)."""
