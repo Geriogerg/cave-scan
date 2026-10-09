@@ -1,8 +1,8 @@
-# ROADMAP — stratégie et suites (hors v0)
+# ROADMAP — stratégie et feuille de route
 
-> Claude Code n'a PAS besoin de lire ce fichier pour coder la v0. Il garde la
-> trace des décisions stratégiques et de ce qui vient après, pour nous deux. On
-> ne construit rien d'ici tant que la v0 n'a pas livré son tableau de scores.
+> Claude Code n'a PAS besoin de lire ce fichier pour coder. Il garde la trace
+> de la stratégie et de la séquence des sessions, pour nous deux. On ne construit
+> que ce que le guide de la session en cours demande.
 
 ## Positionnement
 
@@ -23,19 +23,54 @@
 3. Notation d'état (niveau, étiquette, capsule, bouchon). Best-effort en v1,
    fiabilisée ensuite. Niveau = candling requis ; bouchon quasi invisible.
 
-## Après la v0 (ordre indicatif)
+## Feuille de route vers le pilote
 
-1. Sur données réelles : câbler load_manual() + la vraie config maison, lancer
-   l'extraction, lire les scores.
-2. Écrire la couche de normalisation en regardant les vrais écarts + rattachement
-   LWIN pour les entités (déterministe, préféré au few-shot).
-3. Few-shot en contexte seulement pour le flou de convention irréductible, avec
-   exemples réels tenus hors du set d'éval. Fine-tuning au frigo tant que ce
-   chemin n'a pas plafonné.
-4. v1 : assistant de lotting livré à une maison pilote, externe/asynchrone,
-   colonne état best-effort. Estimation toujours exclue de la photo.
-5. Plus tard : estimation conditionnelle à l'état, regroupement de lots, visuels
-   de catalogue, intégration SI (nécessite de sortir du mode side project).
+Une session Claude Code = un guide dans `docs/sessions/`, écrit au moment de la
+faire, à partir de l'état réel du code.
+
+- [x] v0 : extraction VLM + export + comparaison au listing manuel (résultats
+      concluants sur données réelles).
+- [x] Session 1 : config par maison (JSON versionné, codes stables + libellés,
+      sources modele / best effort / expert / système), une ligne = une bouteille,
+      appariement des photos par ordre.
+- [ ] Session 2 : bibliothèque + base de données (extraction immuable,
+      corrections séparées, config figée par inventaire, coût par bouteille).
+- [ ] Session 3 : tâches de fond (extraction en parallèle, reprises après
+      erreur) + API.
+- [ ] Session 4 : application web, écran de dépôt des photos (utilisable sur
+      téléphone).
+- [ ] Session 5 : écran de relecture (pièce maîtresse : paire de photos +
+      champs, incertitudes surlignées, correction en un clic, clavier).
+- [ ] Session 6 : export depuis les données validées + rédaction des
+      descriptions dans le style de la maison.
+- [ ] Session 7 : connexion, hébergement UE, RGPD, sauvegardes, journal
+      d'erreurs. Vérifier les conditions de traitement des données de l'API.
+- [ ] Session 8 : protocole du pilote (temps par lot avant/après, taux de
+      corrections, champs les plus corrigés).
+
+Choix techniques prévus pour l'application : FastAPI + pages HTML côté serveur
+(HTMX), SQLite puis PostgreSQL, photos sur disque puis stockage objet en Europe,
+worker simple pour les tâches de fond.
+
+## Après le pilote (ou en parallèle quand les données arrivent)
+
+- Normalisation + rattachement LWIN, écrits à partir des corrections réelles de
+  l'expert enregistrées en base (pas au jugé).
+- Few-shot seulement pour le flou de convention irréductible, exemples réels hors
+  du set d'éval. Fine-tuning au frigo.
+- Estimation par comparables : clé LWIN + millésime + format, fourchette avec
+  ventes sourcées et datées. Source à choisir (historique de la maison pilote,
+  cotes publiques, API payantes). Jamais depuis la photo.
+- Lotting automatique, mode hors ligne dans l'application, éditeur de config dans
+  l'interface, intégration aux logiciels métier (e-auction, Exeve).
+
+## Concurrence
+
+- Start (appstart.fr) : généraliste photo → fiche de lot pour commissaires-
+  priseurs, clients sérieux (Millon, Ader, Giquello...), 79 à 199 € HT/mois.
+  Valide le marché et la volonté de payer. Notre angle : la profondeur vin
+  (LWIN, millésime, format, état, comparables), là où un généraliste reste en
+  surface.
 
 ## Pièges stratégiques
 

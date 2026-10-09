@@ -30,12 +30,34 @@ Champs pilote ajoutés :
 
 ## Le pipeline
 
-photos → **extraction VLM** (sortie contrainte) → **normalisation** (identité en
-v0) → **export Excel** (format maison, piloté par config) → **comparaison** au
-listing manuel → tableau de scores.
+photos → **extraction VLM** (sortie contrainte) → **normalisation** (identité pour
+l'instant) → **stockage en base** (extraction + corrections de l'expert) →
+**export Excel** (format maison, piloté par config) → **comparaison** au listing
+manuel → tableau de scores.
 
 Doit tourner **hors ligne en `--dry-run`** (fixtures, sans clé API) pour valider
-la plomberie sans les vraies photos.
+la plomberie sans les vraies photos. La ligne de commande reste un point d'entrée
+valide à chaque session, même quand l'application web existera.
+
+**Travail par sessions** : chaque session a son guide dans `docs/sessions/`. Il
+précise le périmètre de la session ; ce fichier-ci donne les règles permanentes.
+
+## Données et persistance (règles permanentes)
+
+- **La sortie brute du modèle est immuable.** Une correction de l'expert est un
+  enregistrement séparé (champ, ancienne valeur, nouvelle valeur, auteur, date),
+  jamais un écrasement. Valeur affichée = modèle, remplacée par la dernière
+  correction.
+- **Un inventaire est lié à une version figée de la config** : modifier le JSON
+  ne change jamais l'export d'un inventaire existant.
+- **Les images restent sur disque**, dans un stockage géré par l'outil (nommées
+  par leur hash). La base ne stocke que les chemins et les empreintes.
+- **Chaque extraction trace** le modèle, la version du prompt, les tokens et la
+  durée : c'est la base du coût par bouteille.
+- **Le schéma de base évolue par migrations versionnées**, jamais par
+  suppression-recréation : on ne perd jamais les données d'un inventaire.
+- Logique métier dans des **fonctions de service** sans état caché ; la ligne de
+  commande et la future application web ne font que les appeler.
 
 ## Contraintes dures (ne jamais violer)
 
@@ -48,7 +70,9 @@ la plomberie sans les vraies photos.
   par défaut (illisible sur un gros plan d'étiquette). **couleur_source** :
   observee | inferee | non_lisible, pour distinguer lu et déduit.
 - Le modèle liste ses incertitudes dans `champs_a_verifier` (file de relecture).
-- **Colonne estimation : existe mais reste VIDE.** Le modèle ne produit aucun prix.
+- **Estimation : jamais remplie par le modèle.** Elle est vide à l'extraction et
+  seul l'expert peut la saisir (comme toute colonne de source `expert`). Le
+  modèle ne produit aucun prix.
 - **Colonnes de source `expert` ou `systeme` : jamais envoyées au modèle.**
 - **À l'export**, `non_lisible` et `non_determinable` s'affichent en case vide
   et la ligne est surlignée.
@@ -96,8 +120,11 @@ Objectif : pouvoir remplacer une brique sans casser le reste. Il vient d'abord d
 - Une tâche, un commit. **Rien ne se merge sans repasser la comparaison / les
   tests.** On raisonne en score, jamais à l'œil.
 - `non_lisible` / `non_determinable` ne sont pas des bugs à faire disparaître.
-- Ne remplis pas la colonne estimation. N'écris pas de règles de normalisation.
-  Pas de few-shot. Si tu dois changer le contrat de `Bouteille`, arrête-toi et
-  demande.
+- Ne fais jamais remplir l'estimation par le modèle. N'écris pas de règles de normalisation
+  tant qu'une session ne le demande pas. Pas de few-shot. Si tu dois changer le
+  contrat de `Bouteille` ou le schéma de base, arrête-toi et demande.
+- Ne modifie jamais un test pour le faire passer sans accord, et n'affaiblis
+  jamais un test qui vérifie une contrainte dure.
+- Ne construis que le périmètre du guide de session en cours.
 - Toute décision technique tranchée en cours de route → une ligne dans
   `decisions.md`.
