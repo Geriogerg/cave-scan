@@ -760,6 +760,19 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   l'inventaire, réservation et horodatage de vie des bouteilles, table
   `limite_debit`. Le contrat `Bouteille` ne change pas.
 
+- 0122 — Backend `factice` (`worker.py --backend factice --latence N`) : sans
+  réseau ni clé, une latence réglable et une réponse plausible mais fausse —
+  pour développer et tester le worker sans quota. Il journalise chaque appel
+  (début, fin, processus) : c'est ce journal qui prouve, même entre processus et
+  après un arrêt brutal, qu'aucune photo n'est appelée deux fois en même temps.
+
+- 0123 — Worker : l'extracteur est créé PAR BOUTEILLE avec la config figée de son
+  inventaire (pas de cache en mémoire) ; la clé est vérifiée au démarrage. Une
+  erreur imprévue (base, disque) rend la bouteille à la file au lieu de la
+  bloquer « en cours ». `--jusqu-a-vide` s'arrête quand plus rien n'est à
+  extraire dans un inventaire lancé NI en cours nulle part — il attend donc la
+  reprise des bouteilles abandonnées avant de conclure.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
