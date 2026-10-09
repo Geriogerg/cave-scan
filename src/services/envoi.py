@@ -1,0 +1,192 @@
+"""Photos par l'API : réception d'un envoi, diffusion sans métadonnées.
+
+Réception (decisions.md 0116) : chaque fichier est réellement OUVERT pour
+vérifier que c'est une image, sa taille et le nombre de fichiers sont bornés,
+son nom est nettoyé ; puis l'inventaire est créé par `creer_inventaire`, tel
+quel — appariement, nombre impair, doublons : mêmes garde-fous qu'en ligne de
+commande, mêmes messages.
+
+Diffusion (0117) : une photo n'est servie que si elle appartient à
+l'inventaire demandé, rotation EXIF appliquée, et toujours RÉENCODÉE sans
+aucune métadonnée — l'EXIF peut porter la position GPS de la cave du client.
+Le fichier stocké, lui, reste intact.
+"""
+
+from __future__ import annotations
+
+import io
+import re
+import shutil
+import tempfile
+from collections.abc import Iterable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import BinaryIO
+
+from PIL import Image, ImageOps, UnidentifiedImageError
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from src.config.maison import ConfigInvalide, empreinte_config, lire_config, plier
+from src.donnees.modeles import ConfigVersion, Maison, Photo
+from src.donnees.stockage import chemin_stocke
+from src.services.inventaires import InventaireCree, charger_inventaire, creer_inventaire
+
+TAILLE_MAX_OCTETS = 30 * 1024 * 1024  # par photo : large pour un téléphone récent
+NOMBRE_MAX = 800  # par inventaire : au moins 600 photos = 300 bouteilles (guide)
+FORMATS_ACCEPTES = {"JPEG": "JPEG", "MPO": "JPEG", "PNG": "PNG"}  # MPO : JPEG de certains téléphones
+TAILLE_REDUITE = 1600  # côté le plus long, pour l'affichage
+
+
+class EnvoiRefuse(ValueError):
+    """L'envoi ne peut pas être accepté. Le message dit pourquoi, pour l'expert."""
+
+
+class PhotoIntrouvable(LookupError):
+    pass
+
+
+# --- maisons et configs disponibles ---------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ConfigDisponible:
+    maison: str
+    fichier: str
+    version_declaree: int | None
+    config_numero: int | None  # version enregistrée en base qui a ce contenu ; None = jamais utilisée
+    erreur: str | None = None
+
+
+def configs_disponibles(session: Session, dossier_configs: Path) -> list[ConfigDisponible]:
+    """Les maisons qu'on peut choisir pour un nouvel inventaire, avec la version de
+    leur config ACTIVE : celle du fichier aujourd'hui."""
+    disponibles = []
+    for fichier in sorted(Path(dossier_configs).glob("*.json")):
+        try:
+            config, texte = lire_config(fichier)
+        except ConfigInvalide as erreur:
+            disponibles.append(ConfigDisponible("?", fichier.name, None, None, str(erreur)))
+            continue
+        numero = session.scalar(
+            select(ConfigVersion.numero)
+            .join(Maison, Maison.id == ConfigVersion.maison_id)
+            .where(Maison.nom == config.maison, ConfigVersion.empreinte == empreinte_config(texte))
+        )
+        disponibles.append(ConfigDisponible(config.maison, fichier.name, config.version, numero))
+    return disponibles
+
+
+def config_de_la_maison(dossier_configs: Path, maison: str) -> Path:
+    for fichier in sorted(Path(dossier_configs).glob("*.json")):
+        try:
+            config, _ = lire_config(fichier)
+        except ConfigInvalide:
+            continue
+        if plier(config.maison) == plier(maison):
+            return fichier
+    raise EnvoiRefuse(f"Aucune config pour la maison « {maison} » : ajouter son fichier dans config/maisons/.")
+
+
+# --- réception -----------------------------------------------------------------------------
+
+
+def creer_inventaire_depuis_envoi(
+    session: Session,
+    maison: str,
+    nom: str,
+    fichiers: Iterable[tuple[str, BinaryIO]],
+    stockage: Path,
+    dossier_configs: Path,
+    sans_contre: bool = False,
+    taille_max: int | None = None,
+    nombre_max: int | None = None,
+) -> InventaireCree:
+    """Crée un inventaire à partir de fichiers envoyés (nom d'origine, contenu)."""
+    taille_max = taille_max or TAILLE_MAX_OCTETS
+    nombre_max = nombre_max or NOMBRE_MAX
+    if not nom.strip():
+        raise EnvoiRefuse("Donner un nom à l'inventaire.")
+    fichiers = list(fichiers)
+    if not fichiers:
+        raise EnvoiRefuse("Aucune photo envoyée.")
+    if len(fichiers) > nombre_max:
+        raise EnvoiRefuse(f"{len(fichiers)} photos envoyées : {nombre_max} au maximum par inventaire.")
+    config_path = config_de_la_maison(dossier_configs, maison)
+
+    with tempfile.TemporaryDirectory(prefix="cave-scan-envoi-") as temporaire:
+        dossier = Path(temporaire)
+        noms_pris: set[str] = set()
+        for nom_origine, flux in fichiers:
+            cible = dossier / _nom_sur(nom_origine, noms_pris)
+            _copier_borne(flux, cible, taille_max, nom_origine)
+            _verifier_image(cible, nom_origine)
+        return creer_inventaire(
+            session, maison, config_path, dossier, nom.strip(), stockage, sans_contre=sans_contre
+        )
+
+
+def _nom_sur(nom_origine: str, noms_pris: set[str]) -> str:
+    """Le nom du fichier sans aucun chemin ni caractère exotique. Il reste
+    significatif : l'appariement peut trier par nom (photos sans date EXIF)."""
+    nom = Path(str(nom_origine).replace("\\", "/")).name
+    nom = re.sub(r"[^\w .()\-]", "_", nom).strip(" .") or "photo"
+    if nom.casefold() in noms_pris:
+        raise EnvoiRefuse(f"Deux photos portent le même nom : « {nom} ». Renommer l'une d'elles.")
+    noms_pris.add(nom.casefold())
+    return nom
+
+
+def _copier_borne(flux: BinaryIO, cible: Path, taille_max: int, nom_origine: str) -> None:
+    copie = 0
+    with open(cible, "wb") as sortie:
+        while bloc := flux.read(1024 * 1024):
+            copie += len(bloc)
+            if copie > taille_max:
+                raise EnvoiRefuse(
+                    f"« {nom_origine} » dépasse {taille_max // (1024 * 1024)} Mo : trop lourde pour une photo d'étiquette."
+                )
+            sortie.write(bloc)
+
+
+def _verifier_image(chemin: Path, nom_origine: str) -> None:
+    """Le fichier est-il vraiment une image JPEG ou PNG ? On l'OUVRE pour le savoir."""
+    if chemin.suffix.lower() in (".heic", ".heif"):
+        raise EnvoiRefuse(
+            f"« {nom_origine} » est au format HEIC, pas encore lu par l'outil. Sur l'iPhone : "
+            f"Réglages > Appareil photo > Formats > « Le plus compatible », ou envoyer en JPEG."
+        )
+    try:
+        with Image.open(chemin) as image:
+            format_lu = image.format
+            image.verify()
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
+        raise EnvoiRefuse(f"« {nom_origine} » n'est pas une image lisible (JPEG ou PNG attendu).") from None
+    if format_lu not in FORMATS_ACCEPTES:
+        raise EnvoiRefuse(f"« {nom_origine} » est au format {format_lu} : JPEG ou PNG attendu.")
+    attendue = ".png" if FORMATS_ACCEPTES[format_lu] == "PNG" else ".jpg"
+    if chemin.suffix.lower() not in (".jpg", ".jpeg", ".png"):
+        # Extension absente ou trompeuse : on la corrige, l'appariement ne lit
+        # que les extensions d'image reconnues.
+        shutil.move(chemin, chemin.with_name(chemin.name + attendue))
+
+
+# --- diffusion ----------------------------------------------------------------------------
+
+
+def photo_a_servir(
+    session: Session, stockage: Path, inventaire_id: int, photo_id: int, reduite: bool = True
+) -> bytes:
+    """La photo en JPEG, rotation appliquée, SANS aucune métadonnée."""
+    charger_inventaire(session, inventaire_id)
+    photo = session.get(Photo, photo_id)
+    if photo is None or photo.inventaire_id != inventaire_id:
+        raise PhotoIntrouvable(f"Aucune photo n°{photo_id} dans l'inventaire n°{inventaire_id}.")
+    with Image.open(chemin_stocke(stockage, photo.chemin)) as originale:
+        image = ImageOps.exif_transpose(originale).convert("RGB")
+    if reduite:
+        image.thumbnail((TAILLE_REDUITE, TAILLE_REDUITE))
+    sortie = io.BytesIO()
+    # Ni `exif=` ni `icc_profile=` ni XMP : Pillow n'écrit alors aucune métadonnée.
+    image.save(sortie, "JPEG", quality=85 if reduite else 95)
+    return sortie.getvalue()
