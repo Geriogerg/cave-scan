@@ -538,6 +538,27 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   stockage) est exercé hors ligne, et la base de l'utilisateur n'est jamais
   touchée. Les tests isolent de même base et stockage.
 
+- 0086 — Dates en base : UTC, sans fuseau — SQLite ne stocke pas de fuseau ; une
+  seule convention évite de mélanger heure locale et UTC selon le poste.
+
+- 0087 — Contraintes NOMMÉES par convention (Alembic ne sait modifier sous SQLite
+  que des contraintes nommées, sinon la première évolution du schéma bloque).
+  Clés étrangères VÉRIFIÉES à chaque connexion SQLite (désactivées par défaut :
+  une bouteille orpheline passait), mais PAS pendant les migrations (le mode
+  batch recopie les tables, ce qu'elles feraient échouer). Les tests tournent
+  sur une base modèle construite UNE fois par les vraies migrations puis copiée
+  — jamais `create_all`, qui testerait un autre schéma.
+
+- 0088 — L'immuabilité est posée sur le modèle de données lui-même (événements
+  SQLAlchemy) : modifier la sortie brute, le modèle, la version du prompt ou les
+  tokens d'une extraction, ou la supprimer, lève une erreur ; seule `erreur`
+  peut être complétée après coup (0078). Une correction n'est jamais modifiée
+  ni supprimée. Limite connue : du SQL écrit à la main contournerait ces gardes
+  — tout le code passe par l'ORM.
+
+- 0089 — Dépendances : SQLAlchemy et Alembic ajoutés. Restent : google-genai,
+  anthropic, openpyxl, pillow, python-dotenv, pytest.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

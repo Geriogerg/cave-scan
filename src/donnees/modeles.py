@@ -1,0 +1,247 @@
+"""Modèle de données de la bibliothèque (guide de session 2 ; decisions.md 0072-0075).
+
+Une seule règle domine ce fichier : **on ne perd jamais la sortie du modèle**.
+La réponse brute d'une extraction est stockée telle que reçue, et le modèle de
+données lui-même refuse qu'on la modifie ou qu'on la supprime ; une correction
+de l'expert est un enregistrement à part, lui aussi intouchable une fois écrit.
+
+Le schéma n'est jamais créé à partir d'ici (`create_all`) : il l'est par les
+migrations Alembic de `migrations/` (decisions.md 0075). Un test vérifie que les
+migrations et ces classes décrivent exactement le même schéma.
+
+Les images ne sont jamais dans la base : seulement leur chemin dans le
+stockage géré et leur empreinte (decisions.md 0074).
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from typing import Any
+
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    MetaData,
+    String,
+    Text,
+    UniqueConstraint,
+    event,
+    inspect,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+STATUTS_BOUTEILLE = ("a_extraire", "en_cours", "extraite", "erreur", "validee")
+STATUTS_INVENTAIRE = ("ouvert", "valide")
+
+# Noms de contraintes déterministes : Alembic ne sait modifier sous SQLite que
+# des contraintes nommées (mode « batch »). Sans cette convention, la première
+# évolution du schéma pendant le pilote bloquerait.
+CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_N_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
+
+def maintenant() -> datetime:
+    """L'instant présent, en UTC sans fuseau : SQLite ne stocke pas de fuseau,
+    la convention est donc « toute date en base est en UTC » (decisions.md 0086)."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+class Base(DeclarativeBase):
+    metadata = MetaData(naming_convention=CONVENTION)
+
+
+class Maison(Base):
+    __tablename__ = "maison"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nom: Mapped[str] = mapped_column(String(200), unique=True)
+
+
+class ConfigVersion(Base):
+    """Copie figée d'une config de maison (decisions.md 0073).
+
+    Un inventaire pointe vers UNE version : modifier le fichier JSON ensuite ne
+    change jamais son export.
+    """
+
+    __tablename__ = "config_version"
+    __table_args__ = (
+        UniqueConstraint("maison_id", "empreinte"),
+        UniqueConstraint("maison_id", "numero"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    maison_id: Mapped[int] = mapped_column(ForeignKey("maison.id"))
+    numero: Mapped[int]  # compteur propre à la maison : 1, 2, 3…
+    version_declaree: Mapped[int]  # le « version » écrit dans le JSON
+    contenu: Mapped[str] = mapped_column(Text)  # le fichier, tel quel
+    empreinte: Mapped[str] = mapped_column(String(64))  # SHA-256 du JSON canonique
+    fichier_source: Mapped[str] = mapped_column(String(255))
+    cree_le: Mapped[datetime] = mapped_column(DateTime, default=maintenant)
+
+    maison: Mapped[Maison] = relationship()
+
+
+class Inventaire(Base):
+    __tablename__ = "inventaire"
+    __table_args__ = (
+        CheckConstraint(
+            "statut IN ('" + "', '".join(STATUTS_INVENTAIRE) + "')", name="statut"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    maison_id: Mapped[int] = mapped_column(ForeignKey("maison.id"))
+    config_version_id: Mapped[int] = mapped_column(ForeignKey("config_version.id"))
+    nom: Mapped[str] = mapped_column(String(200))
+    cree_le: Mapped[datetime] = mapped_column(DateTime, default=maintenant)
+    statut: Mapped[str] = mapped_column(String(20), default="ouvert")
+    dossier_source: Mapped[str | None] = mapped_column(Text)
+
+    maison: Mapped[Maison] = relationship()
+    config_version: Mapped[ConfigVersion] = relationship()
+    bouteilles: Mapped[list[FicheBouteille]] = relationship(
+        back_populates="inventaire", order_by="FicheBouteille.position"
+    )
+    photos: Mapped[list[Photo]] = relationship(order_by="Photo.ordre")
+
+
+class Photo(Base):
+    """Une photo déposée. Le fichier est dans le stockage, pas dans la base."""
+
+    __tablename__ = "photo"
+    __table_args__ = (
+        UniqueConstraint("inventaire_id", "empreinte"),  # même photo deux fois : refusée
+        UniqueConstraint("inventaire_id", "ordre"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    inventaire_id: Mapped[int] = mapped_column(ForeignKey("inventaire.id"))
+    chemin: Mapped[str] = mapped_column(String(255))  # relatif au stockage
+    empreinte: Mapped[str] = mapped_column(String(64))  # SHA-256 du contenu
+    nom_origine: Mapped[str] = mapped_column(String(255))
+    prise_de_vue: Mapped[datetime | None] = mapped_column(DateTime)
+    ordre: Mapped[int]
+
+
+class FicheBouteille(Base):
+    """Une bouteille physique de l'inventaire, avec son cycle de vie.
+
+    Nommée `FicheBouteille` pour ne pas se confondre avec `Bouteille`, le
+    contrat des VALEURS (src/extract/schema.py) : ici le statut, la position,
+    les photos ; là, ce qui a été lu.
+    """
+
+    __tablename__ = "bouteille"
+    __table_args__ = (
+        UniqueConstraint("inventaire_id", "identifiant"),
+        UniqueConstraint("inventaire_id", "position"),
+        CheckConstraint(
+            "statut IN ('" + "', '".join(STATUTS_BOUTEILLE) + "')", name="statut"
+        ),
+        CheckConstraint("quantite >= 1", name="quantite"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    inventaire_id: Mapped[int] = mapped_column(ForeignKey("inventaire.id"))
+    identifiant: Mapped[str] = mapped_column(String(20))  # « B-… », decisions.md 0065
+    photo_etiquette_id: Mapped[int] = mapped_column(ForeignKey("photo.id"))
+    photo_contre_id: Mapped[int] = mapped_column(ForeignKey("photo.id"))
+    position: Mapped[int]
+    quantite: Mapped[int] = mapped_column(default=1)
+    statut: Mapped[str] = mapped_column(String(20), default="a_extraire")
+
+    inventaire: Mapped[Inventaire] = relationship(back_populates="bouteilles")
+    photo_etiquette: Mapped[Photo] = relationship(foreign_keys=[photo_etiquette_id])
+    photo_contre: Mapped[Photo] = relationship(foreign_keys=[photo_contre_id])
+    extractions: Mapped[list[Extraction]] = relationship(order_by="Extraction.id")
+    corrections: Mapped[list[Correction]] = relationship(order_by="Correction.id")
+
+
+class Extraction(Base):
+    """Un appel au modèle, et sa réponse brute — immuable (decisions.md 0072, 0076).
+
+    Une bouteille peut en avoir plusieurs (relance) : la dernière réussie fait foi.
+    """
+
+    __tablename__ = "extraction"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    bouteille_id: Mapped[int] = mapped_column(ForeignKey("bouteille.id"))
+    # Ce que le modèle a répondu, tel quel : objet (appel d'outil), texte (JSON pas
+    # encore interprété), ou NULL s'il n'a rien renvoyé.
+    sortie_brute: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    modele: Mapped[str] = mapped_column(String(100))
+    version_prompt: Mapped[str] = mapped_column(String(32))
+    tokens_entree: Mapped[int | None]
+    tokens_sortie: Mapped[int | None]
+    duree_ms: Mapped[int]
+    cree_le: Mapped[datetime] = mapped_column(DateTime, default=maintenant)
+    erreur: Mapped[str | None] = mapped_column(Text)
+
+
+class Correction(Base):
+    """Une action de l'expert sur une bouteille — jamais modifiée ni supprimée.
+
+    Une correction de valeur, ou un changement de statut (validation, remise à
+    relire) sous le champ « statut » (decisions.md 0083).
+    """
+
+    __tablename__ = "correction"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    bouteille_id: Mapped[int] = mapped_column(ForeignKey("bouteille.id"))
+    champ: Mapped[str] = mapped_column(String(100))
+    ancienne_valeur: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    nouvelle_valeur: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    auteur: Mapped[str] = mapped_column(String(200))
+    cree_le: Mapped[datetime] = mapped_column(DateTime, default=maintenant)
+
+
+# --- garde-fous : la sortie du modèle et l'historique ne bougent jamais ---------------
+
+
+class EnregistrementImmuable(Exception):
+    """Tentative de modifier ou de supprimer ce qui ne doit jamais l'être."""
+
+
+@event.listens_for(Extraction, "before_update")
+def _sortie_brute_immuable(_mapper: Any, _connexion: Any, extraction: Extraction) -> None:
+    # Seule `erreur` peut être complétée après coup (interprétation impossible,
+    # decisions.md 0078) ; la réponse du modèle, jamais.
+    etat = inspect(extraction)
+    for champ in ("sortie_brute", "modele", "version_prompt", "tokens_entree", "tokens_sortie", "bouteille_id"):
+        if etat.attrs[champ].history.has_changes():
+            raise EnregistrementImmuable(
+                f"Extraction n°{extraction.id} : « {champ} » ne se modifie jamais — "
+                f"la sortie du modèle est immuable (decisions.md 0072)."
+            )
+
+
+@event.listens_for(Extraction, "before_delete")
+def _extraction_jamais_supprimee(_mapper: Any, _connexion: Any, extraction: Extraction) -> None:
+    raise EnregistrementImmuable(
+        f"Extraction n°{extraction.id} : une extraction ne se supprime jamais (decisions.md 0072)."
+    )
+
+
+@event.listens_for(Correction, "before_update")
+def _correction_immuable(_mapper: Any, _connexion: Any, correction: Correction) -> None:
+    raise EnregistrementImmuable(
+        f"Correction n°{correction.id} : l'historique ne se réécrit pas — une nouvelle "
+        f"correction s'ajoute, l'ancienne reste (decisions.md 0072)."
+    )
+
+
+@event.listens_for(Correction, "before_delete")
+def _correction_jamais_supprimee(_mapper: Any, _connexion: Any, correction: Correction) -> None:
+    raise EnregistrementImmuable(
+        f"Correction n°{correction.id} : l'historique ne se supprime pas (decisions.md 0072)."
+    )
