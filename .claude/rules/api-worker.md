@@ -14,6 +14,7 @@ paths:
 # Règles : API et tâches de fond
 
 - Route = valider l'entrée, appeler un service, mettre en forme la réponse.
+  Aucune logique métier dans les routes ni dans le worker.
 - File d'attente en base ; aucun état en mémoire. Une bouteille « en cours »
   abandonnée après un arrêt brutal est remise à extraire.
 - Réservation atomique : une bouteille n'est jamais extraite deux fois en même
@@ -22,7 +23,8 @@ paths:
   tentatives avec délai croissant puis erreur sur la bouteille ; réponse
   inexploitable → erreur sur la bouteille.
 - Photos servies uniquement par une route qui vérifie l'inventaire ; jamais de
-  dossier statique ; jamais de métadonnées EXIF dans les réponses.
+  dossier statique ; jamais de métadonnées EXIF dans les réponses (elles peuvent
+  porter la position GPS de la cave du client).
 - Serveur en local par défaut ; écoute réseau local seulement via une option de
   développement explicite, avec avertissement.
 - Format d'erreur unique : code, message en français, détail éventuel.

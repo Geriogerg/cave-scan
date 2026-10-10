@@ -21,5 +21,11 @@ paths:
   « enregistré / erreur » est visible ; pas de validation en masse, chaque
   bouteille est vue par l'expert. « Valider l'inventaire » ne fait que
   constater que toutes les bouteilles ont été validées une par une.
+- Photos affichées uniquement par la route qui vérifie leur inventaire (jamais
+  de dossier statique), toujours sans métadonnées EXIF (position GPS de la cave
+  du client).
+- Relecture : les doutes du modèle (`champs_a_verifier`) sont mis en évidence ;
+  une abstention s'affiche « à remplir », jamais comme une valeur. Raccourcis à
+  une lettre désactivés pendant la saisie dans un champ.
 - Textes courts, orientés action ; chaque état visible (en cours, enregistré,
   refusé avec la raison).
