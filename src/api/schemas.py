@@ -275,3 +275,105 @@ class CorrectionDemandee(BaseModel):
 
 class QuantiteDemandee(BaseModel):
     quantite: int = Field(ge=1, examples=[2])
+
+
+# --- dépôt des photos (session 4) ------------------------------------------------------------
+
+
+class BrouillonDemande(BaseModel):
+    nom: str = Field(min_length=1, examples=["Vente de printemps"])
+    maison: str = Field(examples=["Maison Test"])
+    sans_contre: bool = Field(False, description="Étiquettes seules : une photo par bouteille.")
+
+
+class BrouillonReponse(BaseModel):
+    id: int
+    config_numero: int
+    nouvelle_config: bool
+    avertissements: list[str]
+
+
+class PhotoRecueReponse(BaseModel):
+    photo_id: int
+    position: int
+    nom: str
+    deja_recue: bool = Field(description="Déjà reçue : rien n'a été ajouté.")
+    datee: bool = Field(description="Une date de prise de vue est connue (sa valeur n'est jamais renvoyée).")
+
+
+class SignaturesDemande(BaseModel):
+    signatures: list[str] = Field(max_length=2000)
+
+
+class SignaturesReponse(BaseModel):
+    deja_recues: list[str]
+
+
+class DeplacementDemande(BaseModel):
+    position: int = Field(ge=1, description="1 = la première photo.")
+
+
+class PhotoApercu(BaseModel):
+    id: int
+    position: int
+    nom: str
+    datee: bool
+    miniature: str
+
+
+class PaireApercu(BaseModel):
+    numero: int
+    etiquette: PhotoApercu
+    contre_etiquette: PhotoApercu | None
+
+
+class ApercuReponse(BaseModel):
+    inventaire_id: int
+    statut: str
+    sans_contre: bool
+    tri: str
+    nb_photos: int
+    peut_lancer: bool
+    anomalies: list[str]
+    paires: list[PaireApercu]
+
+
+def depuis_photo_recue(recue) -> PhotoRecueReponse:
+    return PhotoRecueReponse(
+        photo_id=recue.photo_id,
+        position=recue.position,
+        nom=recue.nom,
+        deja_recue=recue.deja_recue,
+        datee=recue.prise_de_vue is not None,
+    )
+
+
+def depuis_apercu(apercu) -> ApercuReponse:
+    inventaire_id = apercu.inventaire.id
+
+    def photo(p) -> PhotoApercu | None:
+        if p is None:
+            return None
+        return PhotoApercu(
+            id=p.id,
+            position=p.ordre,
+            nom=p.nom_origine,
+            datee=p.prise_de_vue is not None,
+            miniature=f"/inventaires/{inventaire_id}/photos/{p.id}?taille=miniature",
+        )
+
+    return ApercuReponse(
+        inventaire_id=inventaire_id,
+        statut=apercu.inventaire.statut,
+        sans_contre=apercu.inventaire.sans_contre,
+        tri=apercu.tri,
+        nb_photos=len(apercu.photos),
+        peut_lancer=apercu.peut_lancer,
+        anomalies=apercu.anomalies,
+        paires=[PaireApercu(numero=p.numero, etiquette=photo(p.etiquette), contre_etiquette=photo(p.contre_etiquette)) for p in apercu.paires],
+    )
+
+
+class Finalisation(BaseModel):
+    nb_bouteilles: int
+    progression: Progression

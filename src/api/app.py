@@ -15,7 +15,7 @@ from fastapi import Depends, FastAPI
 
 from src.api import erreurs
 from src.api.dependances import acces
-from src.api.routes import bouteilles, inventaires, maisons, photos
+from src.api.routes import bouteilles, depot, inventaires, maisons, photos
 from src.donnees.base import RACINE, creer_moteur, dossier_stockage, migrer, url_de_base
 
 DOSSIER_CONFIGS = RACINE / "config" / "maisons"
@@ -49,6 +49,6 @@ def creer_app(
     app.state.stockage = dossier_stockage(stockage)
     app.state.configs = Path(configs)
     erreurs.installer(app)
-    for module in (maisons, inventaires, bouteilles, photos):
+    for module in (maisons, inventaires, depot, bouteilles, photos):
         app.include_router(module.routeur, dependencies=[Depends(acces)])
     return app

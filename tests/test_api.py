@@ -334,7 +334,16 @@ ROUTES_DOCUMENTEES = {
     "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/corrections": {"post"},
     "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/quantite": {"put"},
     "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/valider": {"post"},
-    "/inventaires/{inventaire_id}/photos/{photo_id}": {"get"},
+    "/inventaires/{inventaire_id}/photos/{photo_id}": {"get", "delete"},
+    # Session 4 — dépôt des photos (ajouts approuvés le 2026-10-10).
+    "/brouillons": {"post"},
+    "/inventaires/{inventaire_id}/photos": {"post"},
+    "/inventaires/{inventaire_id}/photos/deja-recues": {"post"},
+    "/inventaires/{inventaire_id}/apercu": {"get"},
+    "/inventaires/{inventaire_id}/photos/{photo_id}/deplacer": {"post"},
+    "/inventaires/{inventaire_id}/paires/{numero}/inverser": {"post"},
+    "/inventaires/{inventaire_id}/retrier": {"post"},
+    "/inventaires/{inventaire_id}/finaliser": {"post"},
 }
 
 
