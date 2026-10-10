@@ -87,3 +87,33 @@ def test_dev_py_api_et_worker_extraient_un_inventaire(tmp_path, processus):
         message="le worker de dev.py a tout extrait",
     )
     assert httpx.get(f"{url}/inventaires/{inventaire_id}").json()["progression"]["par_statut"]["extraite"] == 3
+
+
+# --- réseau local : seulement sur option explicite, avec avertissement (decisions.md 0132) ---------
+
+
+def test_par_defaut_le_serveur_n_ecoute_qu_en_local(capsys):
+    assert serveur.analyseur().parse_args([]).reseau_local is False
+    assert serveur.annoncer(False, 8000) == "127.0.0.1"
+    assert "RÉSEAU LOCAL" not in capsys.readouterr().err
+
+
+def test_le_mode_reseau_local_avertit_et_donne_l_adresse_du_telephone(capsys, monkeypatch):
+    monkeypatch.setattr(serveur, "adresse_sur_le_reseau", lambda: "192.168.1.42")
+    assert serveur.annoncer(True, 8000) == "0.0.0.0"
+    avertissement = capsys.readouterr().err
+    assert "MODE RÉSEAU LOCAL" in avertissement and "jamais sur le réseau d'un client" in avertissement
+    assert "http://192.168.1.42:8000/" in avertissement
+
+
+@pytest.mark.parametrize("options, hote", [([], "127.0.0.1"), (["--reseau-local"], "0.0.0.0")])
+def test_serveur_et_dev_ecoutent_la_ou_on_le_demande(options, hote, monkeypatch, tmp_path):
+    import uvicorn
+
+    import dev
+
+    ecoutes = []
+    monkeypatch.setattr(uvicorn, "run", lambda app, host, port, log_level: ecoutes.append(host))
+    assert serveur.main(["--base", str(tmp_path / "a.db"), *options]) == 0
+    assert dev.main(["--base", str(tmp_path / "b.db"), "--backend", "factice", "--attente", "0.05", *options]) == 0
+    assert ecoutes == [hote, hote]

@@ -841,6 +841,14 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   au format téléphone), dépendance de test seulement : c'est le seul moyen de
   tester le JavaScript d'envoi (date lue avant réduction, reprise).
 
+- 0136 — Mesure de la réduction : `mesurer_reduction.py` extrait chaque photo en
+  original puis réduite (côté long N, JPEG 0,9, comme le navigateur) et compte,
+  champ par champ, les lectures PERDUES par rapport à l'original (référence :
+  la lecture de l'original, faute de listing de l'expert). Constat du
+  2026-10-10 : les 12 photos d'essai sont passées par WhatsApp (≤ 2048 px,
+  157 Ko en moyenne, AUCUNE date EXIF) — inutilisables pour cette mesure ; il
+  faut des originaux du téléphone. Taille retenue : à noter ici après la mesure.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

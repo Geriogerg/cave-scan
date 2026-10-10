@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-"""Pour le développement : l'API ET le worker, d'une seule commande (decisions.md 0119).
+"""Pour le développement : l'application ET le worker, d'une seule commande (decisions.md 0119).
 
     python dev.py                               (Gemini)
     python dev.py --backend factice --latence 2 (sans réseau ni quota)
+    python dev.py --backend factice --reseau-local   (depuis un téléphone, même Wi-Fi)
 
 Le worker tourne dans un thread de ce même processus : arrêter `dev.py`,
 même brutalement, arrête les deux — jamais de worker orphelin. En
@@ -18,7 +19,7 @@ from collections.abc import Sequence
 from datetime import timedelta
 
 import worker as commande_worker
-from serveur import HOTE, PORT_DEFAUT
+from serveur import PORT_DEFAUT, ajouter_option_reseau_local, annoncer
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -28,6 +29,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     analyseur = commande_worker._analyseur()
     analyseur.description = "API + worker dans un seul processus, pour le développement."
     analyseur.add_argument("--port", type=int, default=PORT_DEFAUT)
+    ajouter_option_reseau_local(analyseur)
     arguments = analyseur.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -60,9 +62,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         target=Worker(moteur, dossier_stockage(), fabrique, reglages).tourner, args=(arret,), daemon=True
     )
     travail.start()
-    print(f"API : http://{HOTE}:{arguments.port}/docs  — worker : backend {arguments.backend}  (Ctrl-C pour arrêter)")
+    hote = annoncer(arguments.reseau_local, arguments.port)
+    print(f"Worker : backend {arguments.backend}, {arguments.simultanees} extraction(s) simultanée(s).")
     try:
-        uvicorn.run(creer_app(url), host=HOTE, port=arguments.port, log_level="info")
+        uvicorn.run(creer_app(url), host=hote, port=arguments.port, log_level="info")
     finally:
         arret.set()  # les extractions commencées se terminent
         travail.join()

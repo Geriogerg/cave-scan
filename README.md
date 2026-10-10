@@ -115,7 +115,7 @@ Deux processus : le serveur API et le worker qui extrait. Pour développer, une
 commande lance les deux à la fois.
 
 ```
-python serveur.py                    (API sur http://127.0.0.1:8000, local uniquement)
+python serveur.py                    (écrans + API sur http://127.0.0.1:8000, local par défaut)
 python worker.py                     (Gemini, 4 extractions simultanées)
 python dev.py                        (les deux à la fois)
 python dev.py --backend factice      (sans réseau ni quota : réponses fausses, pour développer)
@@ -141,6 +141,54 @@ Les actions de l'expert (corriger, valider) demandent l'en-tête `X-Auteur`.
   inventaire réel.** Il faut une clé payante (Gemini ou `--backend anthropic`).
 - `run_v0.py` et `inventaire.py` continuent de fonctionner, sur les mêmes
   fonctions et la même base.
+
+## Écrans : déposer les photos depuis un téléphone
+
+L'application web (pages dans la même application que l'API) :
+
+```
+python dev.py --backend factice                     sur l'ordinateur : http://127.0.0.1:8000/
+python dev.py --backend factice --reseau-local      depuis un téléphone sur le même Wi-Fi
+```
+
+Avec `--reseau-local`, le démarrage affiche un avertissement et l'adresse à
+ouvrir sur le téléphone, par exemple `http://192.168.1.189:8000/`. Sans
+connexion (prévue en session 7), **tout appareil du réseau y a accès** : à
+utiliser chez vous, jamais sur le réseau d'un client. Windows peut demander
+d'autoriser Python dans le pare-feu (« Réseaux privés »).
+
+Le parcours de l'expert :
+
+1. **Nouvel inventaire** : le nom de la vente et la maison. Cochez « je n'ai que
+   les étiquettes » s'il n'y a pas de contre-étiquette.
+2. **Ajouter les photos**, avec « Choisir dans la galerie » ou « Prendre une
+   photo ».
+   - Les photos partent une par une.
+   - Une coupure de réseau n'en perd aucune : l'envoi reprend tout seul, et une
+     photo déjà reçue n'est pas renvoyée.
+   - Un fichier refusé est affiché avec sa raison.
+   - Gardez la page ouverte pendant l'envoi.
+3. **Vérifier l'ordre** : les paires sont affichées en miniatures numérotées.
+   - Vous pouvez inverser une paire, avancer ou reculer une photo, la retirer.
+   - Les photos sont classées par date de prise de vue, puis par nom, puis par
+     ordre d'arrivée.
+4. **Lancer l'analyse**. C'est impossible tant que le nombre de photos est
+   impair, et le serveur le vérifie aussi. Ensuite, les photos ne bougent plus.
+5. **Suivi** : la progression se met à jour seule. On peut relancer les erreurs,
+   puis télécharger l'Excel une fois l'analyse terminée.
+
+**La réduction des photos avant l'envoi est désactivée par défaut**, tant que
+son effet sur la lecture n'est pas mesuré. Avec des crédits API et de **vraies
+photos originales du téléphone**, pas passées par WhatsApp (qui les réduit et
+efface leur date) :
+
+```
+python mesurer_reduction.py --photos dossier_photos_originales --tailles 1600,2000,2500,3000
+```
+
+Il fait (1 + nombre de tailles) appels par photo. Notez le tableau et la taille
+retenue dans `decisions.md`, puis activez la réduction dans `src/web/pages.py`
+(`REDUCTION_PAR_DEFAUT`, `TAILLE_REDUCTION`).
 
 ## Où sont les données
 
@@ -181,8 +229,10 @@ aucun test ne peut appeler un vrai modèle.
 | `run_v0.py`, `inventaire.py`   | lignes de commande : elles appellent les services et affichent      |
 | `serveur.py`, `worker.py`, `dev.py` | API JSON (local), worker d'extraction, les deux pour développer |
 | `src/api/`                     | API FastAPI : routes fines, format d'erreur unique                  |
+| `src/web/`                     | écrans : pages Jinja2 + HTMX, script d'envoi des photos, style      |
+| `mesurer_reduction.py`, `src/mesure/` | mesure de l'effet de la réduction des photos sur l'extraction |
 | `src/worker.py`                | boucle du worker : réserver, extraire en parallèle, signes de vie   |
-| `src/services/`                | inventaires, extraction, file d'attente, pilotage, débit, relecture, consultation, envoi des photos, restitution |
+| `src/services/`                | inventaires, dépôt (brouillons), extraction, file d'attente, pilotage, débit, relecture, consultation, envoi des photos, restitution |
 | `src/donnees/`                 | modèles SQLAlchemy, ouverture et migration de la base, stockage des photos |
 | `src/extract/`                 | contrat `Bouteille`, extracteurs Gemini, Anthropic et fixtures      |
 | `src/config/`                  | config par maison, lecture de `.env`                                |
