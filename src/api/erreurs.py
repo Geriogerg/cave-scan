@@ -18,12 +18,18 @@ from starlette.exceptions import HTTPException
 
 from src.config.maison import ConfigInvalide
 from src.io.photos import PhotosInvalides
+from src.services.cas_particuliers import ActionRefusee
 from src.services.depot import DepotFerme, ModificationRefusee
 from src.services.envoi import EnvoiRefuse, PhotoIntrouvable
 from src.services.extraction import BouteilleIntrouvable, BouteilleOccupee
 from src.services.inventaires import InventaireIntrouvable
 from src.services.pilotage import LancementRefuse
-from src.services.relecture import CorrectionRefusee, ValidationRefusee
+from src.services.relecture import (
+    CorrectionRefusee,
+    ModificationConcurrente,
+    SaisiesRefusees,
+    ValidationRefusee,
+)
 
 journal = logging.getLogger("cave_scan.api")
 
@@ -32,8 +38,11 @@ TRADUCTIONS: list[tuple[type[Exception], int, str]] = [
     (EnvoiRefuse, 422, "envoi_refuse"),
     (PhotosInvalides, 422, "photos_invalides"),
     (CorrectionRefusee, 422, "saisie_refusee"),
+    (SaisiesRefusees, 422, "saisie_refusee"),
     (ConfigInvalide, 422, "config_invalide"),
     (ValidationRefusee, 409, "validation_refusee"),
+    (ModificationConcurrente, 409, "modification_concurrente"),
+    (ActionRefusee, 409, "action_refusee"),
     (LancementRefuse, 409, "lancement_refuse"),
     (DepotFerme, 409, "depot_ferme"),
     (ModificationRefusee, 422, "modification_refusee"),
@@ -69,7 +78,9 @@ def installer(app: FastAPI, page_erreur: PageErreur | None = None) -> None:
     for classe, statut, code in TRADUCTIONS:
 
         def gerer(request: Request, exception: Exception, statut: int = statut, code: str = code):
-            return repondre(request, statut, code, str(exception).strip("'\""))
+            # Refus par champ (validation) ou liste des changements faits ailleurs.
+            detail = getattr(exception, "refus", None) or getattr(exception, "changements", None)
+            return repondre(request, statut, code, str(exception).strip("'\""), detail)
 
         app.add_exception_handler(classe, gerer)
 

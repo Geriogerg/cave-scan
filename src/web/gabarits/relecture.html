@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% set f = fiche %}{% set b = f.bouteille %}{% set i = f.inventaire.id %}
+{% block titre %}Bouteille {{ b.position }} / {{ f.compteurs.total }} — {{ f.inventaire.nom }}{% endblock %}
+{% block classe %}relecture{% endblock %}
+{% block tete %}
+  {#- Photos de la bouteille suivante, chargées d'avance : passer à la suivante est immédiat. #}
+  {% for photo_id in f.a_precharger %}
+  <link rel="prefetch" href="/inventaires/{{ i }}/photos/{{ photo_id }}?taille=reduite">
+  {% endfor %}
+{% endblock %}
+{% block fil %}
+  <a class="fil" href="/app/inventaires/{{ i }}/suivi">{{ f.inventaire.nom }}</a>
+  <span class="auteur-ecran">Corrections au nom de « {{ auteur_des_ecrans() }} »</span>
+  <span id="indicateur" class="indicateur" role="status" aria-live="polite">Tout est enregistré</span>
+{% endblock %}
+{% block contenu %}
+<div class="barre-relecture">
+  <div class="position" title="Position dans l'inventaire"><strong>{{ b.position }}</strong> / {{ f.compteurs.total }}</div>
+  {% include "_compteurs.html" %}
+  <nav class="navigation-relecture" aria-label="Navigation entre les bouteilles">
+    {% if adresse_precedente %}
+      <a class="bouton petit" id="precedente" data-navigation href="{{ adresse_precedente }}">← Précédente <kbd>J</kbd></a>
+    {% else %}
+      <span class="bouton petit inactif" aria-disabled="true">← Précédente</span>
+    {% endif %}
+    {% if adresse_suivante %}
+      <a class="bouton petit" id="suivante" data-navigation href="{{ adresse_suivante }}">Suivante <kbd>K</kbd> →</a>
+    {% else %}
+      <span class="bouton petit inactif" aria-disabled="true">Suivante →</span>
+    {% endif %}
+    <a class="filtre{% if f.filtre %} actif{% endif %}" data-navigation href="{{ adresse_filtre }}"
+       role="switch" aria-checked="{{ 'true' if f.filtre else 'false' }}">Seulement les bouteilles à vérifier</a>
+    <a data-navigation href="/app/inventaires/{{ i }}/recapitulatif">Récapitulatif</a>
+    <button type="button" class="lien" data-aide>Raccourcis <kbd>?</kbd></button>
+  </nav>
+</div>
+
+<div class="relecture-grille" data-relecture tabindex="-1"
+     data-precedente="{{ adresse_precedente or '' }}" data-suivante="{{ adresse_suivante or '' }}">
+  <section class="photos" aria-label="Photos de la bouteille">
+    <div class="visionneuse" data-visionneuse>
+      <img id="photo-active" src="/inventaires/{{ i }}/photos/{{ b.photo_etiquette_id }}?taille=reduite"
+           data-originale="/inventaires/{{ i }}/photos/{{ b.photo_etiquette_id }}?taille=originale"
+           alt="Étiquette de la bouteille n°{{ b.position }}" draggable="false">
+    </div>
+    <div class="commandes-photo">
+      {% for role, libelle, photo_id in [("etiquette", "Étiquette", b.photo_etiquette_id), ("contre", "Contre-étiquette", b.photo_contre_id)] %}
+        {% if photo_id %}
+        <button type="button" class="vignette-photo{% if loop.first %} active{% endif %}" data-photo="{{ role }}" tabindex="-1"
+                data-reduite="/inventaires/{{ i }}/photos/{{ photo_id }}?taille=reduite"
+                data-originale="/inventaires/{{ i }}/photos/{{ photo_id }}?taille=originale"
+                data-libelle="{{ libelle }} de la bouteille n°{{ b.position }}">
+          <img src="/inventaires/{{ i }}/photos/{{ photo_id }}?taille=miniature" alt="">
+          <span>{{ libelle }}</span>
+        </button>
+        {% endif %}
+      {% endfor %}
+      <p class="aide-photo">
+        Molette, double-clic ou <kbd>Z</kbd> : zoom · glisser : déplacer{% if b.photo_contre_id %} · <kbd>E</kbd> : autre photo{% endif %}<br>
+        <a id="lien-original" href="/inventaires/{{ i }}/photos/{{ b.photo_etiquette_id }}?taille=originale" target="_blank" rel="noopener">Ouvrir l'original en pleine résolution</a>
+      </p>
+    </div>
+  </section>
+
+  <section class="fiche-relecture" aria-label="Champs de la bouteille">
+    <h1 class="titre-bouteille">Bouteille n°{{ b.position }} <span class="identifiant">{{ b.identifiant }}</span></h1>
+    {% include "_bandeau.html" %}
+    <div id="messages" class="messages" aria-live="polite">
+      {% if erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
+      {% if fait %}<p class="message ok">{{ fait }}</p>{% endif %}
+      {% if inversee and b.statut not in ("a_extraire", "en_cours") %}
+        <form class="proposition" method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/reanalyser" data-action>
+          {% include "_filtre_cache.html" %}
+          <span>Réanalyser la bouteille avec les photos dans le bon ordre ?</span>
+          <button class="bouton petit">Réanalyser maintenant</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <form id="fiche" class="fiche" method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/valider"
+          hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/valider" hx-sync="this:queue all"
+          hx-target="#messages" hx-swap="innerHTML">
+      {% include "_version.html" %}
+      {% include "_filtre_cache.html" %}
+      <input type="hidden" id="temps" name="_temps_ms" value="">
+      <div class="champs">
+        {% for c in f.champs %}{% include "_champ.html" %}{% endfor %}
+      </div>
+      <div class="actions-fiche">
+        <button type="submit" class="bouton principal" id="valider">
+          {% if b.statut == "validee" %}Déjà validée — passer à la suivante{% else %}Valider et passer à la suivante{% endif %}
+          <kbd>Ctrl+Entrée</kbd>
+        </button>
+      </div>
+    </form>
+
+    {% include "_actions_bouteille.html" %}
+
+    <details class="historique">
+      <summary>Historique de la bouteille</summary>
+      {% include "_historique.html" %}
+    </details>
+  </section>
+</div>
+{% include "_aide_clavier.html" %}
+{% endblock %}
+{% block scripts %}<script src="/static/relecture.js" defer></script>{% endblock %}

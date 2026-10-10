@@ -1,0 +1,25 @@
+{#- Un champ du formulaire de relecture. La saisie elle-même n'est JAMAIS remplacée
+    par l'enregistrement d'un autre champ ni par le sien : seuls son en-tête
+    (origine) et son pied (état, lecture du modèle) le sont. -#}
+{% set i = fiche.inventaire.id %}{% set b = fiche.bouteille %}
+<div class="champ{% if c.a_verifier %} douteux{% endif %}{% if c.a_remplir %} a-remplir{% endif %}" id="champ-{{ c.cle }}" data-cle="{{ c.cle }}" data-nom="{{ c.nom }}">
+  {% include "_champ_tete.html" %}
+  {% set enregistrement %}hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/champ/{{ c.cle }}" hx-trigger="change" hx-target="#pied-{{ c.cle }}" hx-swap="outerHTML" hx-sync="#fiche:queue all"{% endset %}
+  {% set lue %}{% if c.lue is not none and c.origine in ("corrigee", "saisie") %} title="Lu par le modèle : {{ c.lue }}"{% endif %}{% endset %}
+  {% if c.type == "liste" %}
+    {% set codes = c.options | map(attribute=0) | list %}
+    <select id="saisie-{{ c.cle }}" name="{{ c.cle }}" class="saisie" {{ enregistrement }}{{ lue }}>
+      {% if c.saisie == "" %}<option value="" selected>— à remplir —</option>{% endif %}
+      {% if c.saisie and c.saisie not in codes %}<option value="{{ c.saisie }}" selected>{{ c.saisie }} (hors liste)</option>{% endif %}
+      {% for code, libelle in c.options %}
+        <option value="{{ code }}"{% if code == c.saisie %} selected{% endif %}>{{ libelle }}</option>
+      {% endfor %}
+    </select>
+  {% elif c.cle == "quantite" %}
+    <input type="number" id="saisie-{{ c.cle }}" name="{{ c.cle }}" class="saisie" value="{{ c.saisie }}" min="1" step="1" inputmode="numeric" {{ enregistrement }}>
+  {% else %}
+    <input type="text" id="saisie-{{ c.cle }}" name="{{ c.cle }}" class="saisie" value="{{ c.saisie }}" autocomplete="off" spellcheck="false"
+           placeholder="{% if c.a_remplir %}à remplir{% elif c.origine == 'vide' %}à saisir{% endif %}" {{ enregistrement }}{{ lue }}>
+  {% endif %}
+  {% include "_champ_pied.html" %}
+</div>

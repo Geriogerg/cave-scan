@@ -1,0 +1,7 @@
+<ol id="historique" class="liste-historique"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% for ligne in fiche.historique | reverse %}
+    <li><time>{{ ligne.le | horodatage }}</time> <span class="qui">{{ ligne.auteur }}</span> — {{ ligne.texte }}</li>
+  {% else %}
+    <li class="vide">Rien pour l'instant.</li>
+  {% endfor %}
+</ol>

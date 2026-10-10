@@ -897,6 +897,35 @@ un renvoi d'une ligne à leur place.
   parcours de l'API → validation bouteille par bouteille, puis constat ; Excel
   toujours identique à la ligne de commande.
 
+- 0150 — Auteur des corrections faites depuis les écrans : `CAVE_SCAN_AUTEUR`
+  (défaut « Expert »), affiché en tête de la relecture, en attendant la
+  connexion (session 7). L'API garde l'en-tête `X-Auteur` — écarté : demander
+  un nom à chaque ouverture (sans connexion, rien ne le vérifierait).
+
+- 0151 — Écran de relecture : une PAGE par bouteille (adresse propre, retour
+  arrière du navigateur), champs dans l'ordre de la config. Chaque champ est
+  enregistré à sa sortie par HTMX, en file d'attente sur le formulaire
+  (`hx-sync … queue all` : la requête suivante part avec la version renvoyée
+  par la précédente) ; la réponse ne remplace JAMAIS la saisie, seulement
+  l'en-tête (origine) et le pied (état) du champ — une frappe en cours n'est
+  jamais écrasée. Valider soumet tout le formulaire (fonctionne aussi sans
+  JavaScript), puis la bouteille suivante à relire s'ouvre, ou le
+  récapitulatif. Un refus (422) ou une modification faite ailleurs (409) est
+  une réponse à afficher, pas une panne.
+
+- 0152 — `relecture.js`, seulement ce que le navigateur impose : raccourcis
+  (J = précédente, K = suivante, dans l'ordre du guide ; aucun raccourci à une
+  lettre ni flèche dans un champ, Échap pour en sortir) ; zoom à la molette, au
+  double-clic ou Z, déplacement au glisser, l'original pleine résolution
+  chargé dès qu'on zoome ; E pour l'autre photo ; état de l'enregistrement,
+  nouvel essai après une coupure (1 s, 2 s, 4 s… 30 s), changement de bouteille
+  bloqué tant qu'une saisie n'est pas enregistrée ; temps actif. Tab depuis la
+  page va au premier champ, contenu sélectionné.
+
+- 0153 — Préchargement : `<link rel="prefetch">` des photos réduites de la
+  bouteille suivante (servies avec un cache navigateur d'une heure) — écarté :
+  précharger la page HTML suivante (elle change à chaque validation).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

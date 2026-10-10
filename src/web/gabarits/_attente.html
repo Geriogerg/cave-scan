@@ -1,0 +1,4 @@
+<div id="attente" class="message attention" role="status"
+     hx-get="/app/inventaires/{{ inventaire_id }}/relecture/{{ bouteille.id }}/attente" hx-trigger="every 2s" hx-swap="outerHTML">
+  Réanalyse en attente du modèle{% if bouteille.statut == "en_cours" %} (en cours){% endif %}… La page se mettra à jour toute seule.
+</div>

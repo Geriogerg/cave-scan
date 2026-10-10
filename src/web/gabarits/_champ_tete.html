@@ -1,0 +1,5 @@
+<div class="champ-tete" id="tete-{{ c.cle }}"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <label for="saisie-{{ c.cle }}">{{ c.nom }}</label>
+  <span class="origine origine-{{ c.origine }}">{{ c.origine_en_clair }}</span>
+  {% if c.a_verifier %}<span class="doute" title="Le modèle a signalé un doute sur ce champ">doute du modèle</span>{% endif %}
+</div>

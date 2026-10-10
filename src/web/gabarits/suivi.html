@@ -9,6 +9,6 @@
 {% block actions %}
 <nav class="barre-actions">
   <a class="bouton" href="/app">Inventaires</a>
-  <span class="bouton inactif" aria-disabled="true" title="Bientôt disponible">Relecture — bientôt disponible</span>
+  <a class="bouton" href="/app/inventaires/{{ inventaire.id }}/recapitulatif">Récapitulatif</a>
 </nav>
 {% endblock %}

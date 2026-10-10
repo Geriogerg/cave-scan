@@ -20,12 +20,18 @@
     <p class="aide">Temps écoulé : {{ etat.ecoule_s | duree }} · temps restant estimé : {{ etat.restant_estime_s | duree }}</p>
   {% endif %}
   <div class="actions-suivi">
+    {#- La relecture commence dès la première bouteille analysée (guide de session 5, §1). #}
+    {% if faites + etat.par_statut.erreur %}
+      <a class="bouton principal" href="/app/inventaires/{{ inventaire.id }}/relecture">Relire les bouteilles</a>
+    {% else %}
+      <span class="bouton inactif" aria-disabled="true">Relecture — dès la première bouteille analysée</span>
+    {% endif %}
     {% if etat.par_statut.erreur or etat.extraction == "arretee" %}
       <button class="bouton" hx-post="/app/inventaires/{{ inventaire.id }}/relancer-erreurs"
               hx-target="#progression" hx-swap="outerHTML">Relancer les erreurs</button>
     {% endif %}
     {% if etat.terminee %}
-      <a class="bouton principal" href="/inventaires/{{ inventaire.id }}/export" download>Télécharger l'Excel</a>
+      <a class="bouton" href="/inventaires/{{ inventaire.id }}/export" download>Télécharger l'Excel</a>
     {% endif %}
   </div>
 </section>

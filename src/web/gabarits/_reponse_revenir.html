@@ -1,0 +1,12 @@
+{#- Réponse à « Revenir à la valeur du modèle » : le champ entier (la saisie prend
+    la valeur lue), puis ce qui en découle ailleurs dans la page. -#}
+{% set c = champ %}
+{% include "_champ.html" %}
+{% if etat == "enregistre" %}
+  {% with oob = True %}
+    {% include "_version.html" %}
+    {% include "_compteurs.html" %}
+    {% include "_bandeau.html" %}
+    {% include "_historique.html" %}
+  {% endwith %}
+{% endif %}

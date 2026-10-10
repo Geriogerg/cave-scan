@@ -6,8 +6,9 @@
   <title>{% block titre %}cave-scan{% endblock %} — cave-scan</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/htmx.min.js" defer></script>
+  {% block tete %}{% endblock %}
 </head>
-<body>
+<body class="{% block classe %}{% endblock %}">
   <header class="entete">
     <a href="/app" class="marque">cave-scan</a>
     {% block fil %}{% endblock %}

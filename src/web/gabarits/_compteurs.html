@@ -1,0 +1,11 @@
+{% set c = fiche.compteurs %}
+<div id="compteurs-relecture" class="avancement"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <progress max="{{ c.total or 1 }}" value="{{ c.validees }}" aria-label="Bouteilles validées"></progress>
+  <span class="chiffres-relecture">
+    <strong>{{ c.validees }}</strong> validée(s) sur {{ c.total }} · <strong>{{ c.a_relire }}</strong> à relire
+    {%- if c.a_verifier %} (dont {{ c.a_verifier }} avec un doute){% endif %}
+    {%- if c.en_erreur %} · <span class="alerte-texte">{{ c.en_erreur }} en erreur</span>{% endif %}
+    {%- if c.signalees %} · {{ c.signalees }} signalée(s){% endif %}
+    {%- if c.pas_encore_extraites %} · {{ c.pas_encore_extraites }} pas encore analysée(s), sautée(s) pour l'instant{% endif %}
+  </span>
+</div>

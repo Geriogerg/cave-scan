@@ -1,0 +1,44 @@
+{% set f = fiche %}{% set b = f.bouteille %}{% set i = f.inventaire.id %}
+<div id="bandeau" class="bandeau"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% if b.statut == "validee" %}
+    <p class="message ok">Bouteille validée. Modifier un champ la remettra à relire.</p>
+  {% elif f.en_attente %}
+    {% with inventaire_id = i, bouteille = b %}{% include "_attente.html" %}{% endwith %}
+  {% elif b.statut == "erreur" %}
+    <div class="message alerte" role="alert">
+      <p><strong>Analyse en échec.</strong> {{ f.erreur }}</p>
+      <p>Réanalysez la bouteille, ou saisissez ses champs à la main : ils sont gardés, mais elle ne
+         pourra être validée qu'après une analyse réussie.</p>
+      <form method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/reanalyser" data-action>
+        {% include "_filtre_cache.html" %}
+        <button class="bouton petit">Réanalyser cette bouteille</button>
+      </form>
+    </div>
+  {% endif %}
+  {% if b.paire_signalee %}
+    <div class="message alerte">
+      Problème de paire signalé : cette bouteille ne peut pas être validée.
+      <form class="en-ligne" method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/lever-signalement" data-action>
+        {% include "_filtre_cache.html" %}
+        <button class="lien">Lever le signalement</button>
+      </form>
+    </div>
+  {% elif f.doute_paire %}
+    <p class="message attention">Le modèle doute que les deux photos montrent la même bouteille : comparez-les.
+      Au besoin, « Signaler un problème de paire » (autres actions, en bas).</p>
+  {% endif %}
+  {% if f.separee_de %}
+    <p class="message info">Née de la séparation de la bouteille n°{{ f.separee_de.position }} ({{ f.separee_de.identifiant }}) : mêmes photos.</p>
+  {% elif f.liees %}
+    <p class="message info">Séparée : {% for autre in f.liees %}n°{{ autre.position }} ({{ autre.identifiant }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>
+  {% endif %}
+  {% if f.fusionnee_avec %}
+    <p class="message attention">Identique à {{ f.fusionnee_avec | join(", ") }} sur les colonnes de regroupement de la
+      maison ({{ f.regroupement | join(", ") }}) : l'export les fusionnera en une seule ligne. Modifiez l'une de ces
+      colonnes pour garder deux lignes.</p>
+  {% endif %}
+  {% if f.notes_modele %}<p class="message info">Note du modèle : {{ f.notes_modele }}</p>{% endif %}
+  {% if f.doutes_ailleurs %}
+    <p class="message info">Le modèle doute aussi de : {{ f.doutes_ailleurs | join(", ") }} (non repris dans les colonnes de la maison).</p>
+  {% endif %}
+</div>

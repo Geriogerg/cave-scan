@@ -10,7 +10,7 @@ page, en français, jamais comme un message technique.
 from __future__ import annotations
 
 import mimetypes
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -18,7 +18,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from src.api.dependances import SessionBase, Stockage
+from src.api.dependances import SessionBase, Stockage, auteur_des_ecrans
 from src.api.erreurs import TRADUCTIONS
 from src.services.consultation import tableau_des_inventaires
 from src.services.depot import (
@@ -69,8 +69,15 @@ def _date(valeur: datetime | None) -> str:
     return valeur.strftime("%d/%m/%Y") if valeur else "—"
 
 
+def _horodatage(valeur: datetime | None) -> str:
+    """Une date de la base (UTC sans fuseau, decisions.md 0086) à l'heure du poste."""
+    return valeur.replace(tzinfo=UTC).astimezone().strftime("%d/%m %H:%M") if valeur else "—"
+
+
 gabarits.env.filters["duree"] = _duree
 gabarits.env.filters["date"] = _date
+gabarits.env.filters["horodatage"] = _horodatage
+gabarits.env.globals["auteur_des_ecrans"] = auteur_des_ecrans
 
 
 def page(request: Request, gabarit: str, statut: int = 200, **contexte) -> HTMLResponse:

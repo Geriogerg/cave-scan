@@ -1,0 +1,24 @@
+{#- Réponse à l'enregistrement d'un champ : son pied (état), puis, s'il a été
+    enregistré, ce qui en découle ailleurs dans la page. -#}
+{% set c = champ %}
+{% if c %}
+  {% include "_champ_pied.html" %}
+{% else %}
+  <div class="champ-pied" id="pied-{{ cle }}" data-etat="{{ etat }}">
+    {% if message %}<span class="etat-champ refuse" role="alert">Refusé : {{ message }}</span>{% endif %}
+  </div>
+{% endif %}
+{% if etat == "enregistre" %}
+  {% with oob = True %}
+    {% if c %}{% include "_champ_tete.html" %}{% endif %}
+    {% include "_version.html" %}
+    {% include "_compteurs.html" %}
+    {% include "_bandeau.html" %}
+    {% include "_historique.html" %}
+  {% endwith %}
+  {% if remise_a_relire %}
+    <div id="messages" hx-swap-oob="innerHTML">
+      <p class="message attention">Cette bouteille était validée : cette modification la remet à relire.</p>
+    </div>
+  {% endif %}
+{% endif %}

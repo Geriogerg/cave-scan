@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% set r = recap %}{% set i = r.inventaire.id %}{% set c = r.compteurs %}{% set s = r.stats %}
+{% block titre %}Récapitulatif — {{ r.inventaire.nom }}{% endblock %}
+{% block classe %}relecture{% endblock %}
+{% block fil %}<a class="fil" href="/app/inventaires/{{ i }}/suivi">{{ r.inventaire.nom }}</a>{% endblock %}
+{% block contenu %}
+<div class="recapitulatif">
+  <h1>Récapitulatif de la relecture</h1>
+  {% if r.termine %}
+    <p class="message ok">Toutes les bouteilles sont validées : l'inventaire est validé.</p>
+  {% else %}
+    <p class="message attention">{{ c.validees }} bouteille(s) validée(s) sur {{ c.total }}. Il reste :</p>
+    <ul class="restes">
+      {% if r.restantes %}
+        <li><strong>{{ r.restantes | length }}</strong> à relire —
+          <a href="/app/inventaires/{{ i }}/relecture">reprendre la relecture</a></li>
+      {% endif %}
+      {% if r.en_erreur %}
+        <li><strong>{{ r.en_erreur | length }}</strong> en erreur d'analyse :
+          {% for e in r.en_erreur %}<a href="/app/inventaires/{{ i }}/relecture/{{ e.id }}">n°{{ e.position }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</li>
+      {% endif %}
+      {% if r.signalees %}
+        <li><strong>{{ r.signalees | length }}</strong> avec un problème de paire signalé :
+          {% for e in r.signalees %}<a href="/app/inventaires/{{ i }}/relecture/{{ e.id }}">n°{{ e.position }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</li>
+      {% endif %}
+      {% if r.pas_encore_extraites %}
+        <li><strong>{{ r.pas_encore_extraites | length }}</strong> pas encore analysée(s) — elles apparaîtront dans la relecture dès qu'elles le seront.</li>
+      {% endif %}
+    </ul>
+  {% endif %}
+
+  <h2>Chiffres</h2>
+  <dl class="chiffres-recap">
+    <dt>Bouteilles</dt><dd>{{ c.total }} (dont {{ s.nb_separees }} née(s) d'une séparation)</dd>
+    <dt>Corrections</dt><dd>{{ s.nb_corrections }} sur {{ s.nb_bouteilles_corrigees }} bouteille(s)</dd>
+    <dt>Champs les plus corrigés</dt>
+    <dd>{% for nom, nombre in r.champs_corriges[:6] %}{{ nom }} ({{ nombre }}){% if not loop.last %}, {% endif %}{% else %}aucun{% endfor %}</dd>
+    <dt>Temps de relecture</dt>
+    <dd>{% if s.bouteilles_chronometrees %}{{ (s.temps_relecture_total_ms / 1000) | duree }} au total,
+        {{ (s.temps_relecture_moyen_ms / 1000) | duree }} par bouteille en moyenne ({{ s.bouteilles_chronometrees }} chronométrée(s), absences exclues)
+        {% else %}pas encore mesuré{% endif %}</dd>
+    <dt>Réanalysées</dt><dd>{{ s.nb_reanalysees }}</dd>
+    <dt>Signalées</dt><dd>{{ s.nb_signalees }}</dd>
+  </dl>
+
+  <nav class="actions-recap">
+    <a class="bouton principal" href="/inventaires/{{ i }}/export" download>Télécharger l'Excel</a>
+    {% if not r.termine %}<a class="bouton" href="/app/inventaires/{{ i }}/relecture">Reprendre la relecture</a>{% endif %}
+    <a class="bouton" href="/app/inventaires/{{ i }}/suivi">Suivi de l'analyse</a>
+  </nav>
+</div>
+{% endblock %}

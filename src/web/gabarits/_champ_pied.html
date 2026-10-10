@@ -1,0 +1,23 @@
+{% set i = fiche.inventaire.id %}{% set b = fiche.bouteille %}
+<div class="champ-pied" id="pied-{{ c.cle }}" data-etat="{{ etat or '' }}"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% if c.lue is not none and c.origine in ("corrigee", "saisie") %}
+    <span class="lue">Lu par le modèle : {{ c.lue }}</span>
+  {% endif %}
+  {% if c.peut_revenir %}
+    <button type="button" class="lien" tabindex="-1"
+            hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/champ/{{ c.cle }}/revenir"
+            hx-target="#champ-{{ c.cle }}" hx-swap="outerHTML" hx-sync="#fiche:queue all">Revenir à la valeur du modèle</button>
+  {% endif %}
+  {% if etat == "enregistre" %}
+    <span class="etat-champ ok">Enregistré</span>
+  {% elif etat == "refuse" %}
+    <span class="etat-champ refuse" role="alert">Refusé : {{ message }}</span>
+  {% elif etat == "conflit" %}
+    <span class="etat-champ conflit" role="alert" data-conflit>
+      Modifiée ailleurs depuis l'ouverture de la page : {{ changements | join(" ; ") }}.
+      <button type="button" class="lien" tabindex="-1" hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/champ/{{ c.cle }}"
+              hx-vals='{"_forcer": "1"}' hx-target="#pied-{{ c.cle }}" hx-swap="outerHTML" hx-sync="#fiche:queue all">Enregistrer quand même</button>
+      ou <a href="" data-recharger>recharger la bouteille</a>.
+    </span>
+  {% endif %}
+</div>

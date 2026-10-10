@@ -82,12 +82,14 @@ def test_parcours_brouillon_depot_ordre_lancement_suivi_export(api):
     assert lance.status_code == 204 and lance.headers["HX-Redirect"] == f"/app/inventaires/{inventaire_id}/suivi"
 
     suivi = api.get(f"/app/inventaires/{inventaire_id}/suivi")
-    assert suivi.status_code == 200 and "Relecture — bientôt disponible" in suivi.text
+    # La relecture (session 5) s'ouvre dès la première bouteille analysée.
+    assert suivi.status_code == 200 and "Relecture — dès la première bouteille analysée" in suivi.text
     assert 'hx-trigger="every 3s"' in suivi.text  # se met à jour toute seule
 
     extraire_en_arriere_plan_deja_lance(api, inventaire_id, ExtracteurFactice(charger_config(CONFIG_TEST)))
     fin = api.get(f"/app/inventaires/{inventaire_id}/progression").text
     assert "Analyse terminée" in fin and f"/inventaires/{inventaire_id}/export" in fin
+    assert "Relire les bouteilles" in fin and f"/app/inventaires/{inventaire_id}/relecture" in fin
     assert 'hx-trigger="every 3s"' not in fin  # plus de rafraîchissement une fois terminée
     export = api.get(f"/inventaires/{inventaire_id}/export")
     assert export.status_code == 200

@@ -1,0 +1,29 @@
+{#- Validation refusée : la raison dans la zone des messages ; chaque saisie
+    refusée l'est aussi à côté de son champ. Après une modification faite
+    ailleurs, rien n'a été écrit : l'expert choisit. -#}
+{% set i = fiche.inventaire.id %}{% set b = fiche.bouteille %}
+{% if changements %}
+  <div class="message alerte" role="alert" data-conflit>
+    <p>Cette bouteille a été modifiée ailleurs depuis que vous l'avez ouverte (autre onglet ?) :</p>
+    <ul>{% for changement in changements %}<li>{{ changement }}</li>{% endfor %}</ul>
+    <p>Rien n'a été enregistré.
+      <a class="bouton petit" href="" data-recharger>Recharger la bouteille</a>
+      <button type="button" class="bouton petit" hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/valider"
+              hx-include="#fiche" hx-vals='{"_forcer": "1"}' hx-target="#messages" hx-swap="innerHTML"
+              hx-sync="#fiche:queue all">Valider quand même</button>
+      — l'historique garde toutes les corrections.</p>
+  </div>
+{% else %}
+  <p class="message alerte" role="alert">{{ message }}</p>
+  {% with oob = True %}
+    {% for c in fiche.champs %}
+      {% with etat = "refuse" if c.cle in refus else "", message = refus.get(c.cle) %}
+        {% include "_champ_pied.html" %}
+      {% endwith %}
+    {% endfor %}
+    {% include "_version.html" %}
+    {% include "_compteurs.html" %}
+    {% include "_bandeau.html" %}
+    {% include "_historique.html" %}
+  {% endwith %}
+{% endif %}
