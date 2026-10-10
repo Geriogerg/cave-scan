@@ -943,7 +943,9 @@ un renvoi d'une ligne à leur place.
   `dev.py`, extracteur factice, aucune pause fixe) : 10 bouteilles uniquement
   au clavier (liste, texte, quantité, refus, raccourcis tapés dans un champ,
   navigation, export, auteur, temps) ; deux onglets (avertissement,
-  « enregistrer quand même », historique) ; 300 bouteilles — passage à la
+  « enregistrer quand même », historique) ; une coupure de réseau (« erreur,
+  nouvel essai », changement de bouteille bloqué, rien de perdu) ; 300
+  bouteilles — passage à la
   suivante mesuré à 170 ms en médiane (seuil du test : 500 ms), photos de la
   suivante préchargées pendant la relecture de la courante.
 
@@ -960,3 +962,7 @@ un renvoi d'une ligne à leur place.
   backend payant, ou modèle local.
 - Le téléphone de l'expert est-il un iPhone réglé en HEIC ? Si oui : réglage
   « Le plus compatible », ou ajout de pillow-heif + conversion JPEG (0070).
+- Bouteille en erreur d'analyse saisie entièrement à la main par l'expert : elle
+  reste non validable (0083, test existant), si bien qu'un modèle qui échoue
+  toujours sur une photo empêche l'inventaire d'être validé. Faut-il permettre
+  de la valider une fois saisie (avec une trace « saisie manuelle ») ?

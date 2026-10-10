@@ -233,6 +233,42 @@ def test_deux_onglets_sur_la_meme_bouteille(application, ordinateur, tmp_path):
     assert [h["nouvelle_valeur"] for h in historique if h["champ"] == "millesime"] == ["2001", "1990"]
 
 
+def test_une_coupure_reseau_est_signalee_rattrapee_et_bloque_le_changement_de_bouteille(application, ordinateur, tmp_path):
+    """« Erreur, nouvel essai » : rien n'est perdu, et on ne passe pas à la suivante
+    tant que la correction n'est pas enregistrée (guide, §4)."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 2)
+    premiere = ids(application, inventaire_id)[0]
+    page = ordinateur.new_page()
+    coupures = {"restantes": 2}
+
+    def reseau_instable(route):
+        if route.request.method == "POST" and coupures["restantes"] > 0:
+            coupures["restantes"] -= 1
+            route.abort("internetdisconnected")
+        else:
+            route.continue_()
+
+    page.route("**/champ/*", reseau_instable)
+    page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{premiere}")
+    page.keyboard.press("Tab")
+    page.keyboard.press("Tab")
+    page.keyboard.type("Domaine du réseau coupé")
+    page.keyboard.press("Escape")
+    page.wait_for_function("document.getElementById('indicateur').textContent.startsWith('Erreur d\\'enregistrement')",
+                           timeout=10_000)
+    page.keyboard.press("k")  # bloqué tant que ce n'est pas enregistré
+    page.wait_for_selector("#messages .message.alerte", timeout=5_000)
+    assert "pas encore enregistré" in page.inner_text("#messages")
+    assert page.url.endswith(f"/relecture/{premiere}")
+
+    tout_est_enregistre(page)  # nouvel essai automatique
+    assert coupures["restantes"] == 0
+    fiche = httpx.get(f"{application}/inventaires/{inventaire_id}/bouteilles/{premiere}").json()
+    assert fiche["valeurs_courantes"]["domaine"] == "Domaine du réseau coupé"
+    page.keyboard.press("k")
+    page.wait_for_url(f"**/relecture/{ids(application, inventaire_id)[1]}*", timeout=10_000)
+
+
 @pytest.fixture
 def trois_cents(tmp_path):
     """300 bouteilles extraites, préparées en base avant le démarrage du serveur."""

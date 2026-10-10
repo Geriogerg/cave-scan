@@ -105,8 +105,9 @@ python inventaire.py exporter 1 --sortie out/cave_dupont.xlsx
 - Le score de `run_v0.py --manual` mesure **le modèle seul**, sans les
   corrections. Les corrections se comptent dans `stats`.
 - Une bouteille corrigée après validation repasse à relire. Un inventaire est
-  `valide` quand toutes ses bouteilles le sont ; une bouteille en erreur ne peut
-  pas être validée.
+  `valide` quand toutes ses bouteilles le sont, validées une par une : il n'y a
+  pas de validation en masse. Une bouteille en erreur, ou dont la paire de
+  photos est signalée, ne peut pas être validée.
 - `stats` donne les tokens consommés par bouteille : c'est la base du coût réel.
 
 ## API et extraction en arrière-plan
@@ -124,10 +125,16 @@ python dev.py --backend factice      (sans réseau ni quota : réponses fausses,
 La documentation interactive est sur http://127.0.0.1:8000/docs. On peut y :
 - créer un inventaire en envoyant ses photos (`POST /inventaires`) ;
 - lancer l'extraction, suivre la progression, annuler, relancer les erreurs ;
-- lister et consulter les bouteilles, les corriger, les valider ;
-- télécharger l'Excel.
+- lister et consulter les bouteilles, les corriger, les valider une par une ;
+- revenir à la valeur du modèle, réanalyser une bouteille, inverser ses photos,
+  signaler un problème de paire, séparer des exemplaires d'état différent ;
+- lire le récapitulatif de la relecture et télécharger l'Excel.
 
-Les actions de l'expert (corriger, valider) demandent l'en-tête `X-Auteur`.
+Les actions de l'expert demandent l'en-tête `X-Auteur`. La fiche d'une bouteille
+porte une `version` : la renvoyer avec une correction ou une validation fait
+refuser (409) l'enregistrement si la bouteille a été modifiée ailleurs entre-temps.
+`POST /inventaires/{id}/valider` ne valide aucune bouteille : il constate que
+toutes l'ont été.
 
 - **Rien n'est perdu.** Le travail en attente vit dans la base. Si le worker est
   arrêté (Ctrl-C), il termine les extractions commencées. S'il est tué, un
@@ -175,7 +182,8 @@ Le parcours de l'expert :
 4. **Lancer l'analyse**. C'est impossible tant que le nombre de photos est
    impair, et le serveur le vérifie aussi. Ensuite, les photos ne bougent plus.
 5. **Suivi** : la progression se met à jour seule. On peut relancer les erreurs,
-   puis télécharger l'Excel une fois l'analyse terminée.
+   télécharger l'Excel une fois l'analyse terminée, et **relire** dès la première
+   bouteille analysée (voir ci-dessous).
 
 **La réduction des photos avant l'envoi est désactivée par défaut**, tant que
 son effet sur la lecture n'est pas mesuré. Avec des crédits API et de **vraies
@@ -189,6 +197,69 @@ python mesurer_reduction.py --photos dossier_photos_originales --tailles 1600,20
 Il fait (1 + nombre de tailles) appels par photo. Notez le tableau et la taille
 retenue dans `decisions.md`, puis activez la réduction dans `src/web/pages.py`
 (`REDUCTION_PAR_DEFAUT`, `TAILLE_REDUCTION`).
+
+## Écran de relecture (ordinateur, clavier)
+
+Depuis le suivi, « Relire les bouteilles » ouvre la première bouteille non
+validée. La relecture peut commencer pendant que l'analyse continue : les
+bouteilles pas encore analysées sont sautées et comptées à part.
+
+- **À gauche, les photos** : molette, double-clic ou `Z` pour zoomer (l'original
+  pleine résolution se charge dès qu'on zoome), glisser pour se déplacer, `E`
+  pour passer de l'étiquette à la contre-étiquette, « Ouvrir l'original » dans
+  un nouvel onglet. Les photos de la bouteille suivante sont préchargées.
+- **À droite, les champs**, dans l'ordre de la config de la maison. Chacun dit
+  d'où vient sa valeur : lue, déduite, proposée (à vérifier), corrigée ou saisie
+  par l'expert. Une valeur non lisible s'affiche « à remplir », jamais comme une
+  valeur. Les doutes du modèle sont surlignés. Au survol d'un champ corrigé, la
+  lecture du modèle ; « Revenir à la valeur du modèle » la remet.
+- **Rien à enregistrer à la main.** Chaque champ est enregistré dès qu'on le
+  quitte. L'indicateur en haut dit « Tout est enregistré » ou « Erreur
+  d'enregistrement, nouvel essai… » ; on ne passe pas à une autre bouteille tant
+  qu'une saisie n'est pas enregistrée. Une saisie refusée est expliquée à côté
+  du champ et bloque la validation.
+- **Deux onglets sur la même bouteille** : enregistrer par-dessus une
+  modification faite ailleurs est d'abord signalé (« Enregistrer quand même »
+  ou recharger). L'historique garde toutes les corrections.
+
+| Touche                           | Action                                                   |
+|----------------------------------|----------------------------------------------------------|
+| `Entrée` (hors champ texte)      | valider et passer à la suivante                          |
+| `Ctrl` + `Entrée` (partout)      | valider et passer à la suivante                          |
+| `←` `→` ou `J` `K`               | bouteille précédente / suivante                          |
+| `Tab`                            | champ suivant (`Maj` + `Tab` : précédent)                |
+| `Entrée` dans un champ texte     | enregistrer le champ                                     |
+| `Échap`                          | quitter le champ (il est enregistré)                     |
+| `Z` / `E`                        | zoom / autre photo                                       |
+| `?`                              | aide des raccourcis                                      |
+
+Les raccourcis à une lettre et les flèches ne fonctionnent pas pendant la saisie
+dans un champ : `Échap` pour en sortir.
+
+**Les cas particuliers** (« Autres actions », sous les champs) :
+- **Réanalyser** : la bouteille repasse par le modèle (le worker doit tourner).
+  L'ancienne lecture est gardée ; vos corrections restent prioritaires.
+- **Inverser les photos** : étiquette et contre-étiquette interverties, puis la
+  page propose de réanalyser.
+- **Signaler un problème de paire** : les deux photos ne vont pas ensemble. La
+  bouteille ne peut plus être validée tant que le signalement n'est pas levé.
+- **Séparer** : 5 bonnes et 1 abîmée ? Indiquez d'abord la quantité totale (6),
+  puis séparez 1 exemplaire. Une seconde bouteille apparaît juste après, avec
+  les mêmes photos et les mêmes valeurs ; ajustez son état et sa description.
+  Si les deux restent identiques sur les colonnes de regroupement de la maison,
+  l'écran prévient qu'elles seront fusionnées en une ligne à l'export.
+- **Bouteille en erreur d'analyse** : la raison est affichée en clair, avec
+  « Réanalyser ». On peut saisir ses champs à la main, mais elle ne pourra être
+  validée qu'après une analyse réussie.
+
+Le **récapitulatif** (lien en haut, et à la fin) donne ce qui reste à relire,
+les bouteilles en erreur ou signalées, et les chiffres : corrections par champ,
+temps de relecture par bouteille (absences de plus d'une minute exclues),
+bouteilles réanalysées, séparées, signalées. Les mêmes chiffres sont dans
+`python inventaire.py stats 1`.
+
+Les corrections faites à l'écran sont signées « Expert », ou du nom indiqué par
+`CAVE_SCAN_AUTEUR` dans `.env`, en attendant la connexion.
 
 ## Où sont les données
 
@@ -222,10 +293,14 @@ python -m pytest
 Les tests tournent hors ligne, sur une base temporaire. Aucune clé n'est lue :
 aucun test ne peut appeler un vrai modèle.
 
-Le test de navigation (`tests/test_navigateur.py`) pilote un vrai Chromium au
-format téléphone, du dépôt des photos à l'Excel. Il demande une installation
-préalable : `python -m playwright install chromium`. Sans Chromium, il est
-ignoré.
+Les tests de navigation pilotent un vrai Chromium :
+- `tests/test_navigateur.py`, au format téléphone, du dépôt des photos à l'Excel ;
+- `tests/test_navigateur_relecture.py`, sur un écran d'ordinateur : 10 bouteilles
+  relues uniquement au clavier, deux onglets sur la même bouteille, une coupure
+  de réseau, et le passage d'une bouteille à la suivante sur 300 bouteilles.
+
+Ils demandent une installation préalable : `python -m playwright install
+chromium`. Sans Chromium, ils sont ignorés.
 
 ## Organisation du code
 
@@ -234,10 +309,10 @@ ignoré.
 | `run_v0.py`, `inventaire.py`   | lignes de commande : elles appellent les services et affichent      |
 | `serveur.py`, `worker.py`, `dev.py` | API JSON (local), worker d'extraction, les deux pour développer |
 | `src/api/`                     | API FastAPI : routes fines, format d'erreur unique                  |
-| `src/web/`                     | écrans : pages Jinja2 + HTMX, script d'envoi des photos, style      |
+| `src/web/`                     | écrans : pages Jinja2 + HTMX (dépôt, suivi, relecture), scripts d'envoi des photos et de relecture, style |
 | `mesurer_reduction.py`, `src/mesure/` | mesure de l'effet de la réduction des photos sur l'extraction |
 | `src/worker.py`                | boucle du worker : réserver, extraire en parallèle, signes de vie   |
-| `src/services/`                | inventaires, dépôt (brouillons), extraction, file d'attente, pilotage, débit, relecture, consultation, envoi des photos, restitution |
+| `src/services/`                | inventaires, dépôt (brouillons), extraction, file d'attente, pilotage, débit, relecture, cas particuliers, consultation, envoi des photos, restitution |
 | `src/donnees/`                 | modèles SQLAlchemy, ouverture et migration de la base, stockage des photos |
 | `src/extract/`                 | contrat `Bouteille`, extracteurs Gemini, Anthropic et fixtures      |
 | `src/config/`                  | config par maison, lecture de `.env`                                |
