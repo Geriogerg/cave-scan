@@ -18,9 +18,9 @@ paths:
   vue lue avant toute réduction ; ordre des paires visible et corrigeable avant
   le lancement.
 - Relecture : chaque modification est enregistrée immédiatement et l'état
-  « enregistré / erreur » est visible ; pas de validation en masse, chaque
-  bouteille est vue par l'expert. « Valider l'inventaire » ne fait que
-  constater que toutes les bouteilles ont été validées une par une.
+  « enregistré / erreur » est visible ; pas de validation en masse, et valider
+  une bouteille reste facultatif. « Clore l'inventaire » avertit de ce qui n'est
+  pas validé ; ensuite l'inventaire est en lecture seule.
 - Photos affichées uniquement par la route qui vérifie leur inventaire (jamais
   de dossier statique), toujours sans métadonnées EXIF (position GPS de la cave
   du client).
