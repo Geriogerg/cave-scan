@@ -148,7 +148,7 @@
     var refuse = document.querySelector('.champ-pied[data-etat="refuse"]');
     if (refuse) {
       var saisie = document.getElementById("saisie-" + refuse.id.replace("pied-", ""));
-      if (saisie) saisie.focus();
+      if (saisie) entrerDans(saisie);
     }
   }
 
@@ -204,7 +204,7 @@
   document.addEventListener("submit", function (evenement) {
     var formulaire = evenement.target;
     if (formulaire === fiche) {
-      champTemps.value = String(Math.round(tempsActif));
+      compterLeTemps();
       return;
     }
     if (!formulaire.hasAttribute("data-action") || formulaire.dataset.pret === "oui") return;
@@ -228,7 +228,7 @@
 
   function valider() {
     if (aide && aide.open) return;
-    champTemps.value = String(Math.round(tempsActif));
+    compterLeTemps();
     fiche.requestSubmit();  // tout le formulaire part : rien de ce qui est affiché n'est perdu
   }
 
@@ -446,11 +446,15 @@
     document.addEventListener(nom, function () { derniereActivite = Date.now(); }, { passive: true });
   });
 
-  setInterval(function () {
+  // Appelé chaque seconde, et juste avant une validation : une bouteille validée
+  // en moins d'une seconde a aussi son temps.
+  function compterLeTemps() {
     var maintenant = performance.now();
     var ecart = maintenant - dernierTic;
     dernierTic = maintenant;
     if (!document.hidden && Date.now() - derniereActivite < PAUSE_MS) tempsActif += ecart;
     champTemps.value = String(Math.round(tempsActif));
-  }, 1000);
+  }
+
+  setInterval(compterLeTemps, 1000);
 })();

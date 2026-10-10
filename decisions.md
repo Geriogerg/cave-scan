@@ -935,6 +935,18 @@ un renvoi d'une ligne à leur place.
   recapitulatif. Les chiffres de relecture sont dans les statistiques de
   `GET /inventaires/{id}` et de `inventaire.py stats`.
 
+- 0155 — Formulaire de relecture en `novalidate` : le navigateur ne bloque
+  rien en silence (un `min="1"` HTML empêchait l'envoi d'une quantité 0 sans
+  aucun message) ; le serveur juge chaque saisie et dit pourquoi il la refuse.
+
+- 0156 — Tests navigateur de la relecture (Playwright, Chromium 1440×900, vrai
+  `dev.py`, extracteur factice, aucune pause fixe) : 10 bouteilles uniquement
+  au clavier (liste, texte, quantité, refus, raccourcis tapés dans un champ,
+  navigation, export, auteur, temps) ; deux onglets (avertissement,
+  « enregistrer quand même », historique) ; 300 bouteilles — passage à la
+  suivante mesuré à 170 ms en médiane (seuil du test : 500 ms), photos de la
+  suivante préchargées pendant la relecture de la courante.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
