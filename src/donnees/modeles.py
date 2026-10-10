@@ -40,6 +40,9 @@ STATUTS_INVENTAIRE = ("brouillon", "ouvert", "valide")
 # Où en est l'extraction d'un inventaire : le worker ne réserve que dans un
 # inventaire « lancee » (decisions.md 0111).
 ETATS_EXTRACTION = ("non_lancee", "lancee", "annulee", "arretee")
+# Ce que l'expert fait à une bouteille pendant la relecture, hors valeurs de
+# champ (celles-là sont des corrections) — decisions.md 0139.
+TYPES_EVENEMENT = ("reanalyse", "inversion_photos", "signalement_paire", "signalement_leve", "separation")
 
 # Noms de contraintes déterministes : Alembic ne sait modifier sous SQLite que
 # des contraintes nommées (mode « batch »). Sans cette convention, la première
@@ -183,12 +186,20 @@ class FicheBouteille(Base):
     reservee_par: Mapped[str | None] = mapped_column(String(100))
     reservee_le: Mapped[datetime | None] = mapped_column(DateTime)
     vu_le: Mapped[datetime | None] = mapped_column(DateTime)
+    # Relecture (session 5, decisions.md 0139) : paire de photos signalée par
+    # l'expert (la bouteille ne peut plus être validée), bouteille née d'une
+    # séparation (elle lit la réponse du modèle de sa source tant qu'elle n'a
+    # pas la sienne), temps de relecture cumulé, absences longues exclues.
+    paire_signalee: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    separee_de_id: Mapped[int | None] = mapped_column(ForeignKey("bouteille.id"))
+    temps_relecture_ms: Mapped[int] = mapped_column(default=0, server_default="0")
 
     inventaire: Mapped[Inventaire] = relationship(back_populates="bouteilles")
     photo_etiquette: Mapped[Photo] = relationship(foreign_keys=[photo_etiquette_id])
     photo_contre: Mapped[Photo | None] = relationship(foreign_keys=[photo_contre_id])
     extractions: Mapped[list[Extraction]] = relationship(order_by="Extraction.id")
     corrections: Mapped[list[Correction]] = relationship(order_by="Correction.id")
+    evenements: Mapped[list[EvenementBouteille]] = relationship(order_by="EvenementBouteille.id")
 
 
 class LimiteDebit(Base):
@@ -246,6 +257,25 @@ class Correction(Base):
     cree_le: Mapped[datetime] = mapped_column(DateTime, default=maintenant)
 
 
+class EvenementBouteille(Base):
+    """Une action de l'expert qui n'est pas une valeur de champ : réanalyse,
+    inversion des photos, signalement de paire (et sa levée), séparation
+    (decisions.md 0139). Comme l'historique des corrections : jamais modifié ni
+    supprimé."""
+
+    __tablename__ = "evenement_bouteille"
+    __table_args__ = (
+        CheckConstraint("type IN ('" + "', '".join(TYPES_EVENEMENT) + "')", name="type"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    bouteille_id: Mapped[int] = mapped_column(ForeignKey("bouteille.id"))
+    type: Mapped[str] = mapped_column(String(30))
+    auteur: Mapped[str] = mapped_column(String(200))
+    cree_le: Mapped[datetime] = mapped_column(DateTime, default=maintenant)
+    detail: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+
+
 # --- garde-fous : la sortie du modèle et l'historique ne bougent jamais ---------------
 
 
@@ -285,4 +315,18 @@ def _correction_immuable(_mapper: Any, _connexion: Any, correction: Correction) 
 def _correction_jamais_supprimee(_mapper: Any, _connexion: Any, correction: Correction) -> None:
     raise EnregistrementImmuable(
         f"Correction n°{correction.id} : l'historique ne se supprime pas (decisions.md 0072)."
+    )
+
+
+@event.listens_for(EvenementBouteille, "before_update")
+def _evenement_immuable(_mapper: Any, _connexion: Any, evenement: EvenementBouteille) -> None:
+    raise EnregistrementImmuable(
+        f"Événement n°{evenement.id} : l'historique ne se réécrit pas (decisions.md 0139)."
+    )
+
+
+@event.listens_for(EvenementBouteille, "before_delete")
+def _evenement_jamais_supprime(_mapper: Any, _connexion: Any, evenement: EvenementBouteille) -> None:
+    raise EnregistrementImmuable(
+        f"Événement n°{evenement.id} : l'historique ne se supprime pas (decisions.md 0139)."
     )

@@ -18,6 +18,7 @@ import io
 import re
 import shutil
 import tempfile
+import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -195,7 +196,9 @@ def photo_a_servir(
         raise PhotoIntrouvable(f"Aucune photo n°{photo_id} dans l'inventaire n°{inventaire_id}.")
     if taille == "miniature":
         return miniature(stockage, photo.chemin, photo.empreinte).read_bytes()
-    return _sans_metadonnees(chemin_stocke(stockage, photo.chemin), TAILLE_REDUITE if taille == "reduite" else None)
+    if taille == "reduite":
+        return reduite(stockage, photo.chemin, photo.empreinte).read_bytes()
+    return _sans_metadonnees(chemin_stocke(stockage, photo.chemin), None)
 
 
 TAILLE_MINIATURE = 480
@@ -204,12 +207,31 @@ TAILLE_MINIATURE = 480
 def miniature(stockage: Path, relatif: str, empreinte: str) -> Path:
     """La miniature d'une photo stockée, créée au besoin (decisions.md 0133) :
     préparée une fois, à la réception, puis servie telle quelle."""
-    chemin = Path(stockage) / "miniatures" / f"{empreinte}.jpg"
+    return _derivee(stockage, relatif, empreinte, "miniatures", TAILLE_MINIATURE, 80)
+
+
+def reduite(stockage: Path, relatif: str, empreinte: str) -> Path:
+    """La version d'affichage (relecture), préparée à la première demande puis
+    servie telle quelle : passer à la bouteille suivante ne réencode rien
+    (decisions.md 0148)."""
+    return _derivee(stockage, relatif, empreinte, "reduites", TAILLE_REDUITE, 85)
+
+
+def _derivee(stockage: Path, relatif: str, empreinte: str, dossier: str, cote_max: int, qualite: int) -> Path:
+    """Une version dérivée, SANS métadonnées, écrite une fois. Deux demandes
+    simultanées (préchargement et affichage) écrivent chacune leur fichier
+    partiel ; la première arrivée gagne, rien n'est jamais servi à moitié."""
+    chemin = Path(stockage) / dossier / f"{empreinte}.jpg"
     if not chemin.exists():
         chemin.parent.mkdir(parents=True, exist_ok=True)
-        partiel = chemin.with_suffix(".partiel")
-        partiel.write_bytes(_sans_metadonnees(chemin_stocke(stockage, relatif), TAILLE_MINIATURE, qualite=80))
-        partiel.replace(chemin)
+        partiel = chemin.with_name(f"{empreinte}.{uuid.uuid4().hex}.partiel")
+        partiel.write_bytes(_sans_metadonnees(chemin_stocke(stockage, relatif), cote_max, qualite=qualite))
+        try:
+            partiel.replace(chemin)
+        except OSError:  # Windows : la version déjà écrite par l'autre demande est en cours de lecture
+            partiel.unlink(missing_ok=True)
+            if not chemin.exists():
+                raise
     return chemin
 
 

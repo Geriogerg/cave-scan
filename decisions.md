@@ -832,6 +832,71 @@ un renvoi d'une ligne à leur place.
   (accord du 2026-10-10) — écarté : ne jamais fusionner une bouteille séparée
   (du code qui passe outre la config, contrainte 6).
 
+- 0141 — Services de l'écran de relecture : `cas_particuliers` (réanalyser,
+  inverser les photos, signaler une paire, séparer — chaque action tracée dans
+  `evenement_bouteille`), la lecture de l'écran dans `consultation` (fiche,
+  navigation, compteurs, récapitulatif), et `valeurs_courantes_de_l_inventaire`
+  qui calcule les 300 bouteilles en 3 requêtes, avec le même calcul que
+  `valeurs_courantes` (testé). Une bouteille en erreur montre une raison EN
+  CLAIR par catégorie (panne passagère, réponse illisible, refus, panne
+  systématique), jamais le message technique — écarté : une requête par
+  bouteille à chaque page (trop lent sur 300).
+
+- 0142 — Modification concurrente : la page porte la VERSION de la bouteille
+  affichée (dernière correction, dernière extraction, dernier événement).
+  Enregistrer sur une version périmée lève `ModificationConcurrente` (409), qui
+  dit ce qui a changé et par qui ; rien n'est écrit sans « enregistrer quand
+  même ». Une saisie identique à la valeur courante n'ajoute rien à
+  l'historique — écarté : un verrou sur la bouteille (un onglet oublié
+  bloquerait l'expert).
+
+- 0143 — Valider depuis l'écran renvoie TOUT le formulaire : le serveur
+  enregistre d'abord ce qui diffère de l'affichage (règles de `corriger`), garde
+  les saisies valides et refuse la validation si une saisie est invalide, avec
+  la raison par champ. Le garde-fou est côté serveur, pas seulement dans le
+  navigateur. Une abstention s'affiche VIDE (« à remplir ») et un champ resté
+  vide signifie « inchangé » : renvoyer un formulaire intact n'écrit rien —
+  écarté : n'envoyer que les champs modifiés (le navigateur seul déciderait).
+
+- 0144 — Séparer : nouvelle bouteille aux MÊMES photos, placée juste après sa
+  source (les suivantes reculent), identifiant « B-…-2 », « -3 »… ; elle lit
+  l'extraction de sa source tant qu'elle n'a pas la sienne (aucun nouvel appel)
+  et reprend ses corrections, pour partir des mêmes valeurs. Les quantités sont
+  réparties par des corrections, la somme est conservée ; seule une bouteille
+  analysée, de quantité ≥ 2, se sépare. Les corrections écrites par la
+  séparation sont listées dans son événement et exclues des statistiques de
+  corrections (sinon double compte) — écarté : une bouteille vierge (l'expert
+  devrait refaire ses corrections, et l'export divergerait).
+
+- 0145 — Paire signalée : colonne `paire_signalee` ; la bouteille ne peut plus
+  être validée, par aucune voie (écran, API, ligne de commande), et une
+  bouteille validée qu'on signale redevient à relire. Le signalement se lève
+  (erreur de l'expert), tracé. Elle n'est pas proposée par « suivante à
+  relire » : elle attend au récapitulatif.
+
+- 0146 — Temps de relecture : mesuré par l'écran (temps actif, onglet visible,
+  pause au-delà de 60 s sans clavier ni souris), envoyé avec la validation,
+  CUMULÉ par bouteille (une bouteille rouverte s'ajoute), borné à 1 h par envoi ;
+  une validation refusée n'enregistre rien, le temps reste compté dans la page.
+
+- 0147 — Réanalyser remet UNE bouteille « à extraire » : le worker l'extrait
+  (aucun appel au modèle depuis l'écran). Seulement si l'analyse de
+  l'inventaire est lancée (annulée ou arrêtée : la relancer depuis le suivi,
+  sinon toutes les bouteilles non commencées repartiraient). Validée, elle
+  redevient à relire, tracé ; l'ancienne extraction reste, les corrections
+  restent prioritaires.
+
+- 0148 — Version réduite des photos (affichage) préparée une fois sur disque
+  (`stockage/reduites`), comme les miniatures : passer d'une bouteille à la
+  suivante ne réencode rien. Écriture atomique dans un fichier partiel propre à
+  chaque demande — préchargement et affichage peuvent la demander en même temps.
+
+- 0149 — Tests adaptés (liste annoncée avec le plan de session 5, approuvée le
+  2026-10-10), chacun gardant son exigence : `test_valider_l_inventaire_…` →
+  refus tant qu'une bouteille n'est pas validée une par une, puis constat ;
+  parcours de l'API → validation bouteille par bouteille, puis constat ; Excel
+  toujours identique à la ligne de commande.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

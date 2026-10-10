@@ -1,4 +1,4 @@
-"""Pilotage d'un inventaire et limite de débit partagée (decisions.md 0111, 0114, 0120)."""
+"""Pilotage d'un inventaire et limite de débit partagée (decisions.md 0111, 0114, 0138)."""
 
 from __future__ import annotations
 
@@ -12,9 +12,9 @@ from src.extract.gemini_extract import GeminiExtractor
 from src.services.debit import LimiteDebitPartagee
 from src.services.extraction import extraire_inventaire, traiter_reservee
 from src.services.file_attente import reserver_bouteille
-from src.services.inventaires import creer_inventaire
+from src.services.inventaires import charger_inventaire, creer_inventaire
 from src.services.pilotage import annuler, avancement, lancer
-from src.services.relecture import ValidationRefusee, valider_inventaire
+from src.services.relecture import ValidationRefusee, valider, valider_inventaire
 from tests.conftest import CONFIG_TEST
 from tests.test_extraction import ExtracteurScenario
 
@@ -69,10 +69,20 @@ def test_le_temps_restant_suit_le_rythme_observe(session, inventaire_id, stockag
 # --- valider l'inventaire ----------------------------------------------------------------------
 
 
-def test_valider_l_inventaire_valide_toutes_les_bouteilles(session, inventaire_id, stockage):
+def test_valider_l_inventaire_ne_valide_aucune_bouteille_a_la_place_de_l_expert(session, inventaire_id, stockage):
+    """Pas de validation en masse (decisions.md 0138, qui remplace 0120) : tant
+    qu'une bouteille n'a pas été validée une par une, c'est refusé, avec ce qui
+    reste à faire ; une fois toutes validées, l'inventaire l'est."""
     extraire_inventaire(session, inventaire_id, ExtracteurScenario(), stockage)
+    with pytest.raises(ValidationRefusee, match=r"6 bouteille\(s\) à relire"):
+        valider_inventaire(session, inventaire_id, "expert")
+    assert avancement(session, inventaire_id).par_statut["validee"] == 0  # rien validé à sa place
+
+    for bouteille in charger_inventaire(session, inventaire_id).bouteilles:
+        valider(session, bouteille.id, "expert")
     assert valider_inventaire(session, inventaire_id, "expert") == 6
     assert avancement(session, inventaire_id).par_statut["validee"] == 6
+    assert charger_inventaire(session, inventaire_id).statut == "valide"
 
 
 def test_valider_l_inventaire_refuse_avec_un_message_pour_l_expert(session, inventaire_id, stockage):

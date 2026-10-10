@@ -19,7 +19,7 @@ from src.compare.compare_listings import (
     comparer,
     relever_signaux,
 )
-from src.donnees.modeles import STATUTS_BOUTEILLE, Correction, Extraction, FicheBouteille
+from src.donnees.modeles import STATUTS_BOUTEILLE, Correction, EvenementBouteille, Extraction, FicheBouteille
 from src.export.excel_writer import ecrire_excel
 from src.io.manual_listing import colonnes_toujours_vides, load_manual
 from src.services.inventaires import charger_inventaire, config_figee
@@ -85,6 +85,13 @@ class StatsInventaire:
     nb_corrections: int  # corrections de valeurs (changements de statut exclus)
     nb_bouteilles_corrigees: int
     champs_les_plus_corriges: list[tuple[str, int]]
+    # Relecture (guide de session 5, §6) : de quoi mesurer le gain réel du pilote.
+    corrections_par_bouteille: dict[str, int] = field(default_factory=dict)  # identifiant -> nombre
+    temps_relecture_total_ms: int = 0  # absences longues exclues, mesuré par l'écran
+    bouteilles_chronometrees: int = 0
+    nb_reanalysees: int = 0
+    nb_separees: int = 0  # bouteilles nées d'une séparation
+    nb_signalees: int = 0  # bouteilles dont la paire a été signalée au moins une fois
 
     @property
     def tokens_par_bouteille(self) -> tuple[float, float] | None:
@@ -103,21 +110,41 @@ class StatsInventaire:
             return None
         return self.duree_totale_ms / self.nb_extractions
 
+    @property
+    def temps_relecture_moyen_ms(self) -> float | None:
+        """Temps moyen de relecture par bouteille chronométrée."""
+        if not self.bouteilles_chronometrees:
+            return None
+        return self.temps_relecture_total_ms / self.bouteilles_chronometrees
 
 
 def stats_inventaire(session: Session, inventaire_id: int) -> StatsInventaire:
-    """Bouteilles par statut, coût total en tokens, champs les plus corrigés."""
+    """Bouteilles par statut, coût total en tokens, champs les plus corrigés,
+    et la relecture : temps, corrections par bouteille, réanalyses, séparations,
+    signalements."""
     inventaire = charger_inventaire(session, inventaire_id)
     ids = [bouteille.id for bouteille in inventaire.bouteilles]
 
     extractions = list(session.scalars(select(Extraction).where(Extraction.bouteille_id.in_(ids))))
     mesurees = [e for e in extractions if e.tokens_entree is not None or e.tokens_sortie is not None]
+    evenements = list(session.scalars(select(EvenementBouteille).where(EvenementBouteille.bouteille_id.in_(ids))))
+    # Les corrections écrites par une séparation (valeurs reprises, quantités
+    # réparties) ne sont pas des corrections de l'expert : la séparation se
+    # compte à part (decisions.md 0144).
+    de_separation = {
+        correction_id
+        for evenement in evenements
+        if evenement.type == "separation"
+        for correction_id in (evenement.detail or {}).get("corrections", [])
+    }
     corrections = [
         c
         for c in session.scalars(select(Correction).where(Correction.bouteille_id.in_(ids)))
-        if c.champ != CHAMP_STATUT
+        if c.champ != CHAMP_STATUT and c.id not in de_separation
     ]
     par_statut = Counter(bouteille.statut for bouteille in inventaire.bouteilles)
+    identifiants = {bouteille.id: bouteille.identifiant for bouteille in inventaire.bouteilles}
+    chronometrees = [b.temps_relecture_ms for b in inventaire.bouteilles if b.temps_relecture_ms]
 
     return StatsInventaire(
         inventaire_id=inventaire.id,
@@ -135,6 +162,15 @@ def stats_inventaire(session: Session, inventaire_id: int) -> StatsInventaire:
         nb_bouteilles_corrigees=len({c.bouteille_id for c in corrections}),
         champs_les_plus_corriges=Counter(c.champ for c in corrections).most_common(),
         bouteilles_mesurees=len({e.bouteille_id for e in mesurees}),
+        corrections_par_bouteille={
+            identifiants[bouteille_id]: nombre
+            for bouteille_id, nombre in Counter(c.bouteille_id for c in corrections).most_common()
+        },
+        temps_relecture_total_ms=sum(chronometrees),
+        bouteilles_chronometrees=len(chronometrees),
+        nb_reanalysees=len({e.bouteille_id for e in evenements if e.type == "reanalyse"}),
+        nb_separees=sum(1 for b in inventaire.bouteilles if b.separee_de_id is not None),
+        nb_signalees=len({e.bouteille_id for e in evenements if e.type == "signalement_paire"}),
     )
 
 

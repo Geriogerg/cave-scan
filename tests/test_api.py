@@ -105,6 +105,13 @@ def test_parcours_complet_et_excel_identique_a_la_ligne_de_commande(api, dossier
     assert corrigee.status_code == 200, corrigee.json()
     assert corrigee.json()["valeurs_courantes"]["millesime"] == "2001"
     assert corrigee.json()["valeurs_modele"]["millesime"] == "2018"  # le modèle, intact
+    # Pas de validation en masse (decisions.md 0138) : chaque bouteille se valide
+    # une par une ; valider l'inventaire ne fait que le constater.
+    refus = api.post(f"/inventaires/{inventaire_id}/valider", headers=AUTEUR)
+    assert refus.status_code == 409 and "6 bouteille(s) à relire" in refus.json()["message"]
+    for bouteille in page["bouteilles"]:
+        une = api.post(f"/inventaires/{inventaire_id}/bouteilles/{bouteille['id']}/valider", headers=AUTEUR)
+        assert une.status_code == 200, une.json()
     valide = api.post(f"/inventaires/{inventaire_id}/valider", headers=AUTEUR)
     assert valide.status_code == 200 and valide.json()["nombre"] == 6
     assert api.get(f"/inventaires/{inventaire_id}").json()["statut"] == "valide"
