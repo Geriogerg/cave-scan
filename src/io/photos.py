@@ -222,3 +222,9 @@ def _date_de_prise_de_vue(chemin: Path) -> datetime | None:
         return datetime.strptime(str(brute).strip().rstrip("\x00"), "%Y:%m:%d %H:%M:%S")
     except ValueError:
         return None
+
+
+# Publics pour le dépôt par l'application web (decisions.md 0128, 0129) : même
+# lecture de date et même ordre naturel que l'appariement d'un dossier.
+date_de_prise_de_vue = _date_de_prise_de_vue
+cle_naturelle = _cle_naturelle

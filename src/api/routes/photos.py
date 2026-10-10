@@ -24,7 +24,7 @@ def servir(
     photo_id: int,
     base: SessionBase,
     stockage: Stockage,
-    taille: Annotated[Literal["reduite", "originale"], Query()] = "reduite",
+    taille: Annotated[Literal["miniature", "reduite", "originale"], Query()] = "reduite",
 ):
-    contenu = photo_a_servir(base, stockage, inventaire_id, photo_id, reduite=taille == "reduite")
+    contenu = photo_a_servir(base, stockage, inventaire_id, photo_id, taille)
     return Response(contenu, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})

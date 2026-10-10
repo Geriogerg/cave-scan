@@ -150,8 +150,17 @@ def _copier_borne(flux: BinaryIO, cible: Path, taille_max: int, nom_origine: str
 
 
 def _verifier_image(chemin: Path, nom_origine: str) -> None:
-    """Le fichier est-il vraiment une image JPEG ou PNG ? On l'OUVRE pour le savoir."""
-    if chemin.suffix.lower() in (".heic", ".heif"):
+    attendue = verifier_image(chemin, nom_origine)
+    if chemin.suffix.lower() not in (".jpg", ".jpeg", ".png"):
+        # Extension absente ou trompeuse : on la corrige, l'appariement ne lit
+        # que les extensions d'image reconnues.
+        shutil.move(chemin, chemin.with_name(chemin.name + attendue))
+
+
+def verifier_image(chemin: Path, nom_origine: str) -> str:
+    """Le fichier est-il vraiment une image JPEG ou PNG ? On l'OUVRE pour le savoir.
+    Renvoie l'extension qui correspond à son contenu (« .jpg » ou « .png »)."""
+    if chemin.suffix.lower() in (".heic", ".heif") or Path(nom_origine).suffix.lower() in (".heic", ".heif"):
         raise EnvoiRefuse(
             f"« {nom_origine} » est au format HEIC, pas encore lu par l'outil. Sur l'iPhone : "
             f"Réglages > Appareil photo > Formats > « Le plus compatible », ou envoyer en JPEG."
@@ -164,29 +173,52 @@ def _verifier_image(chemin: Path, nom_origine: str) -> None:
         raise EnvoiRefuse(f"« {nom_origine} » n'est pas une image lisible (JPEG ou PNG attendu).") from None
     if format_lu not in FORMATS_ACCEPTES:
         raise EnvoiRefuse(f"« {nom_origine} » est au format {format_lu} : JPEG ou PNG attendu.")
-    attendue = ".png" if FORMATS_ACCEPTES[format_lu] == "PNG" else ".jpg"
-    if chemin.suffix.lower() not in (".jpg", ".jpeg", ".png"):
-        # Extension absente ou trompeuse : on la corrige, l'appariement ne lit
-        # que les extensions d'image reconnues.
-        shutil.move(chemin, chemin.with_name(chemin.name + attendue))
+    return ".png" if FORMATS_ACCEPTES[format_lu] == "PNG" else ".jpg"
 
 
 # --- diffusion ----------------------------------------------------------------------------
 
 
+TAILLES = ("miniature", "reduite", "originale")
+
+
 def photo_a_servir(
-    session: Session, stockage: Path, inventaire_id: int, photo_id: int, reduite: bool = True
+    session: Session, stockage: Path, inventaire_id: int, photo_id: int, taille: str = "reduite"
 ) -> bytes:
-    """La photo en JPEG, rotation appliquée, SANS aucune métadonnée."""
+    """La photo en JPEG, rotation appliquée, SANS aucune métadonnée : miniature
+    (préparée à la réception), réduite pour l'affichage, ou pleine taille."""
+    if taille not in TAILLES:
+        raise ValueError(f"taille inconnue : {taille}")
     charger_inventaire(session, inventaire_id)
     photo = session.get(Photo, photo_id)
     if photo is None or photo.inventaire_id != inventaire_id:
         raise PhotoIntrouvable(f"Aucune photo n°{photo_id} dans l'inventaire n°{inventaire_id}.")
-    with Image.open(chemin_stocke(stockage, photo.chemin)) as originale:
+    if taille == "miniature":
+        return miniature(stockage, photo.chemin, photo.empreinte).read_bytes()
+    return _sans_metadonnees(chemin_stocke(stockage, photo.chemin), TAILLE_REDUITE if taille == "reduite" else None)
+
+
+TAILLE_MINIATURE = 480
+
+
+def miniature(stockage: Path, relatif: str, empreinte: str) -> Path:
+    """La miniature d'une photo stockée, créée au besoin (decisions.md 0133) :
+    préparée une fois, à la réception, puis servie telle quelle."""
+    chemin = Path(stockage) / "miniatures" / f"{empreinte}.jpg"
+    if not chemin.exists():
+        chemin.parent.mkdir(parents=True, exist_ok=True)
+        partiel = chemin.with_suffix(".partiel")
+        partiel.write_bytes(_sans_metadonnees(chemin_stocke(stockage, relatif), TAILLE_MINIATURE, qualite=80))
+        partiel.replace(chemin)
+    return chemin
+
+
+def _sans_metadonnees(source: Path, cote_max: int | None, qualite: int | None = None) -> bytes:
+    with Image.open(source) as originale:
         image = ImageOps.exif_transpose(originale).convert("RGB")
-    if reduite:
-        image.thumbnail((TAILLE_REDUITE, TAILLE_REDUITE))
+    if cote_max:
+        image.thumbnail((cote_max, cote_max))
     sortie = io.BytesIO()
     # Ni `exif=` ni `icc_profile=` ni XMP : Pillow n'écrit alors aucune métadonnée.
-    image.save(sortie, "JPEG", quality=85 if reduite else 95)
+    image.save(sortie, "JPEG", quality=qualite or (85 if cote_max else 95))
     return sortie.getvalue()

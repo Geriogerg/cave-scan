@@ -17,9 +17,11 @@ from starlette.exceptions import HTTPException
 
 from src.config.maison import ConfigInvalide
 from src.io.photos import PhotosInvalides
+from src.services.depot import DepotFerme, ModificationRefusee
 from src.services.envoi import EnvoiRefuse, PhotoIntrouvable
 from src.services.extraction import BouteilleIntrouvable, BouteilleOccupee
 from src.services.inventaires import InventaireIntrouvable
+from src.services.pilotage import LancementRefuse
 from src.services.relecture import CorrectionRefusee, ValidationRefusee
 
 journal = logging.getLogger("cave_scan.api")
@@ -31,6 +33,9 @@ TRADUCTIONS: list[tuple[type[Exception], int, str]] = [
     (CorrectionRefusee, 422, "saisie_refusee"),
     (ConfigInvalide, 422, "config_invalide"),
     (ValidationRefusee, 409, "validation_refusee"),
+    (LancementRefuse, 409, "lancement_refuse"),
+    (DepotFerme, 409, "depot_ferme"),
+    (ModificationRefusee, 422, "modification_refusee"),
     (BouteilleOccupee, 409, "bouteille_occupee"),
     (InventaireIntrouvable, 404, "introuvable"),
     (BouteilleIntrouvable, 404, "introuvable"),

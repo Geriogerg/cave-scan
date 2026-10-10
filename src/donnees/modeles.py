@@ -20,6 +20,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -28,12 +29,14 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     event,
+    false,
     inspect,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 STATUTS_BOUTEILLE = ("a_extraire", "en_cours", "extraite", "erreur", "validee")
-STATUTS_INVENTAIRE = ("ouvert", "valide")
+# « brouillon » : photos en cours de dépôt, pas encore de bouteilles (decisions.md 0126).
+STATUTS_INVENTAIRE = ("brouillon", "ouvert", "valide")
 # Où en est l'extraction d'un inventaire : le worker ne réserve que dans un
 # inventaire « lancee » (decisions.md 0111).
 ETATS_EXTRACTION = ("non_lancee", "lancee", "annulee", "arretee")
@@ -115,6 +118,9 @@ class Inventaire(Base):
     )
     extraction_lancee_le: Mapped[datetime | None] = mapped_column(DateTime)
     motif_arret: Mapped[str | None] = mapped_column(Text)  # panne systématique
+    # Dépôt (session 4) : une photo par bouteille, et ordre corrigé à la main (0128).
+    sans_contre: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    ordre_manuel: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
     maison: Mapped[Maison] = relationship()
     config_version: Mapped[ConfigVersion] = relationship()
@@ -140,6 +146,9 @@ class Photo(Base):
     nom_origine: Mapped[str] = mapped_column(String(255))
     prise_de_vue: Mapped[datetime | None] = mapped_column(DateTime)
     ordre: Mapped[int]
+    # Signature du fichier d'ORIGINE (nom, taille, date) fournie par le navigateur :
+    # ne pas renvoyer une photo déjà reçue après une coupure (decisions.md 0127).
+    signature_envoi: Mapped[str | None] = mapped_column(String(300))
 
 
 class FicheBouteille(Base):

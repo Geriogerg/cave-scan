@@ -19,9 +19,18 @@ from src.donnees.modeles import STATUTS_BOUTEILLE, Extraction, FicheBouteille, m
 from src.services.inventaires import charger_inventaire
 
 
+class LancementRefuse(ValueError):
+    """Le lancement est refusé : le message dit quoi corriger."""
+
+
 def lancer(session: Session, inventaire_id: int) -> bool:
     """Ouvre l'inventaire au worker. Renvoie False s'il était déjà lancé."""
     inventaire = charger_inventaire(session, inventaire_id)
+    if inventaire.statut == "brouillon":
+        raise LancementRefuse(
+            "Cet inventaire est encore en brouillon : vérifiez l'ordre des photos puis "
+            "« Lancer l'analyse » (finaliser)."
+        )
     if inventaire.extraction == "lancee":
         return False
     inventaire.extraction = "lancee"
