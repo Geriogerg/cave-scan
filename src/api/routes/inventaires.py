@@ -8,7 +8,7 @@ from fastapi import APIRouter, File, Form, Request, Response, UploadFile
 
 from src.api import schemas
 from src.api.dependances import Auteur, SessionBase, Stockage
-from src.services.consultation import etat_inventaire, exporter_en_octets
+from src.services.consultation import etat_inventaire, exporter_en_octets, recapitulatif
 from src.services.envoi import creer_inventaire_depuis_envoi
 from src.services.inventaires import lister_inventaires
 from src.services.pilotage import annuler, avancement, lancer, relancer_erreurs
@@ -80,11 +80,24 @@ def relancer(inventaire_id: int, base: SessionBase):
 
 
 @routeur.post(
-    "/{inventaire_id}/valider", response_model=schemas.Action, summary="Valider toutes les bouteilles extraites"
+    "/{inventaire_id}/valider",
+    response_model=schemas.Action,
+    summary="Constater que toutes les bouteilles ont été validées une par une",
 )
 def valider(inventaire_id: int, base: SessionBase, auteur: Auteur):
+    """Ne valide AUCUNE bouteille (decisions.md 0138) : refusé (409), avec ce qui
+    reste à faire, tant qu'une bouteille n'a pas été validée après relecture."""
     nombre = valider_inventaire(base, inventaire_id, auteur)
     return _action(base, inventaire_id, nombre > 0, nombre)
+
+
+@routeur.get(
+    "/{inventaire_id}/recapitulatif",
+    response_model=schemas.RecapitulatifReponse,
+    summary="Récapitulatif de la relecture : ce qui reste, ce qui a été mesuré",
+)
+def recapituler(inventaire_id: int, base: SessionBase):
+    return schemas.depuis_recapitulatif(recapitulatif(base, inventaire_id))
 
 
 @routeur.get(

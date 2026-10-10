@@ -926,6 +926,15 @@ un renvoi d'une ligne à leur place.
   bouteille suivante (servies avec un cache navigateur d'une heure) — écarté :
   précharger la page HTML suivante (elle change à chaque validation).
 
+- 0154 — API de la relecture : les mêmes services que l'écran. `version`
+  FACULTATIVE sur une correction, un retour à la valeur du modèle, une
+  validation : périmée, 409 `modification_concurrente` avec les changements en
+  `detail` ; absente, aucune vérification (les clients de la session 3 restent
+  valides). Nouvelles routes : revenir, reanalyser, inverser-photos,
+  signalement (POST / DELETE), separer (201, la nouvelle bouteille),
+  recapitulatif. Les chiffres de relecture sont dans les statistiques de
+  `GET /inventaires/{id}` et de `inventaire.py stats`.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

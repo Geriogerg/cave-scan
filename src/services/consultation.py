@@ -19,7 +19,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.config.maison import COLONNE_QUANTITE, LIBELLE_NON_DETERMINABLE, Colonne, ConfigMaison
-from src.donnees.modeles import Correction, FicheBouteille, Inventaire
+from src.donnees.modeles import Correction, EvenementBouteille, FicheBouteille, Inventaire
 from src.export.excel_writer import a_relire, regrouper
 from src.extract.schema import DOUTE_PAIRE_PHOTOS, NON_DETERMINABLE, Bouteille, est_abstention
 from src.services.cas_particuliers import bouteilles_liees, evenements_de
@@ -162,6 +162,7 @@ class FicheComplete:
     precedente_id: int | None
     suivante_id: int | None
     version: str = ""
+    evenements: list[EvenementBouteille] = field(default_factory=list)
 
 
 def fiche_bouteille(session: Session, inventaire_id: int, bouteille_id: int) -> FicheComplete:
@@ -199,6 +200,7 @@ def fiche_bouteille(session: Session, inventaire_id: int, bouteille_id: int) -> 
         precedente_id=voisines_[0],
         suivante_id=voisines_[1],
         version=version_de(session, bouteille.id),
+        evenements=evenements_de(session, bouteille.id),
     )
 
 

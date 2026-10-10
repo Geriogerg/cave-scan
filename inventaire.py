@@ -215,6 +215,19 @@ def _stats(session: Session, arguments: argparse.Namespace) -> None:
         f"Corrections  : {stats.nb_corrections} sur {stats.nb_bouteilles_corrigees} bouteille(s)"
         + (f" — {champs}" if champs else "")
     )
+    # Relecture à l'écran (session 5) : de quoi mesurer le gain réel.
+    if stats.temps_relecture_moyen_ms is None:
+        print("Relecture    : temps pas encore mesuré (relecture à l'écran)")
+    else:
+        print(
+            f"Relecture    : {stats.temps_relecture_total_ms / 1000:.0f} s au total, "
+            f"{stats.temps_relecture_moyen_ms / 1000:.1f} s par bouteille "
+            f"({stats.bouteilles_chronometrees} chronométrée(s), absences exclues)"
+        )
+    print(
+        f"Cas particuliers : {stats.nb_reanalysees} réanalysée(s), {stats.nb_separees} née(s) d'une "
+        f"séparation, {stats.nb_signalees} paire(s) signalée(s)"
+    )
 
 
 def _exporter(session: Session, arguments: argparse.Namespace) -> None:

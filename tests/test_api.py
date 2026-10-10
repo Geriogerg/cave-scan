@@ -351,6 +351,13 @@ ROUTES_DOCUMENTEES = {
     "/inventaires/{inventaire_id}/paires/{numero}/inverser": {"post"},
     "/inventaires/{inventaire_id}/retrier": {"post"},
     "/inventaires/{inventaire_id}/finaliser": {"post"},
+    # Session 5 — relecture (ajouts approuvés avec le plan, le 2026-10-10).
+    "/inventaires/{inventaire_id}/recapitulatif": {"get"},
+    "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/revenir": {"post"},
+    "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/reanalyser": {"post"},
+    "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/inverser-photos": {"post"},
+    "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/signalement": {"post", "delete"},
+    "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/separer": {"post"},
 }
 
 

@@ -12,10 +12,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.services.consultation import EtatInventaire, FicheComplete, PageBouteilles
+from src.services.consultation import EtatInventaire, FicheComplete, PageBouteilles, Recapitulatif
 from src.services.envoi import ConfigDisponible
 from src.services.inventaires import InventaireCree
 from src.services.pilotage import Avancement
+from src.services.restitution import StatsInventaire
 
 
 class Erreur(BaseModel):
@@ -87,6 +88,13 @@ class Statistiques(BaseModel):
     nb_corrections: int
     nb_bouteilles_corrigees: int
     champs_les_plus_corriges: list[tuple[str, int]]
+    corrections_par_bouteille: dict[str, int] = Field(description="Identifiant -> corrections de l'expert.")
+    temps_relecture_total_ms: int = Field(description="Mesuré par l'écran, absences longues exclues.")
+    temps_relecture_moyen_ms: float | None
+    bouteilles_chronometrees: int
+    nb_reanalysees: int
+    nb_separees: int
+    nb_signalees: int
 
 
 class InventaireResume(BaseModel):
@@ -134,20 +142,30 @@ def depuis_avancement(a: Avancement) -> Progression:
 
 
 def depuis_etat(etat: EtatInventaire) -> InventaireDetail:
-    s = etat.stats
     return InventaireDetail(
         **depuis_inventaire(etat.inventaire).model_dump(),
         config_numero=etat.inventaire.config_version.numero,
         progression=depuis_avancement(etat.avancement),
-        statistiques=Statistiques(
-            nb_extractions=s.nb_extractions,
-            nb_extractions_en_erreur=s.nb_extractions_en_erreur,
-            tokens_par_bouteille=s.tokens_par_bouteille,
-            duree_par_extraction_ms=s.duree_par_extraction_ms,
-            nb_corrections=s.nb_corrections,
-            nb_bouteilles_corrigees=s.nb_bouteilles_corrigees,
-            champs_les_plus_corriges=s.champs_les_plus_corriges,
-        ),
+        statistiques=depuis_stats(etat.stats),
+    )
+
+
+def depuis_stats(s: StatsInventaire) -> Statistiques:
+    return Statistiques(
+        nb_extractions=s.nb_extractions,
+        nb_extractions_en_erreur=s.nb_extractions_en_erreur,
+        tokens_par_bouteille=s.tokens_par_bouteille,
+        duree_par_extraction_ms=s.duree_par_extraction_ms,
+        nb_corrections=s.nb_corrections,
+        nb_bouteilles_corrigees=s.nb_bouteilles_corrigees,
+        champs_les_plus_corriges=s.champs_les_plus_corriges,
+        corrections_par_bouteille=s.corrections_par_bouteille,
+        temps_relecture_total_ms=s.temps_relecture_total_ms,
+        temps_relecture_moyen_ms=s.temps_relecture_moyen_ms,
+        bouteilles_chronometrees=s.bouteilles_chronometrees,
+        nb_reanalysees=s.nb_reanalysees,
+        nb_separees=s.nb_separees,
+        nb_signalees=s.nb_signalees,
     )
 
 
@@ -195,6 +213,13 @@ class CorrectionHistorique(BaseModel):
     le: datetime
 
 
+class EvenementHistorique(BaseModel):
+    type: str = Field(description="reanalyse, inversion_photos, signalement_paire, signalement_leve, separation")
+    auteur: str
+    le: datetime
+    detail: Any = None
+
+
 class LiensPhotos(BaseModel):
     etiquette: str
     etiquette_originale: str
@@ -216,10 +241,15 @@ class BouteilleDetail(BaseModel):
     champs_a_verifier: list[str] = Field(description="Doutes signalés par le modèle.")
     notes: Any
     historique: list[CorrectionHistorique]
+    evenements: list[EvenementHistorique]
     nb_extractions: int
     photos: LiensPhotos
     precedente_id: int | None
     suivante_id: int | None
+    version: str = Field(description="L'état affiché : à renvoyer pour être prévenu d'une modification faite ailleurs.")
+    paire_signalee: bool
+    separee_de_id: int | None
+    temps_relecture_ms: int
 
 
 def depuis_fiche(fiche: FicheComplete) -> BouteilleDetail:
@@ -254,6 +284,9 @@ def depuis_fiche(fiche: FicheComplete) -> BouteilleDetail:
             )
             for c in fiche.historique
         ],
+        evenements=[
+            EvenementHistorique(type=e.type, auteur=e.auteur, le=e.cree_le, detail=e.detail) for e in fiche.evenements
+        ],
         nb_extractions=fiche.nb_extractions,
         photos=LiensPhotos(
             etiquette=lien(fiche.photo_etiquette_id, False),
@@ -263,13 +296,77 @@ def depuis_fiche(fiche: FicheComplete) -> BouteilleDetail:
         ),
         precedente_id=fiche.precedente_id,
         suivante_id=fiche.suivante_id,
+        version=fiche.version,
+        paire_signalee=b.paire_signalee,
+        separee_de_id=b.separee_de_id,
+        temps_relecture_ms=b.temps_relecture_ms,
     )
+
+
+VERSION = Field(None, description="Version lue avec la bouteille : refusé (409) si elle a changé depuis.")
 
 
 class CorrectionDemandee(BaseModel):
     champ: str = Field(examples=["millesime"])
     valeur: str | int | float | None = Field(
         examples=["2015"], description="Liste : code ou libellé. Nombre : « 13,5 » accepté."
+    )
+    version: str | None = VERSION
+
+
+class RetourDemande(BaseModel):
+    champ: str = Field(examples=["millesime"])
+    version: str | None = VERSION
+
+
+class ValidationDemandee(BaseModel):
+    version: str | None = VERSION
+    temps_ms: int | None = Field(None, ge=0, description="Temps passé sur la bouteille, absences exclues.")
+
+
+class SignalementDemande(BaseModel):
+    motif: str = Field("", max_length=500, examples=["contre-étiquette d'un autre vin"])
+
+
+class SeparationDemandee(BaseModel):
+    quantite: int = Field(ge=1, examples=[1], description="Exemplaires qui passent dans la nouvelle bouteille.")
+
+
+class EtatRelecture(BaseModel):
+    id: int
+    position: int
+    identifiant: str
+    statut: str
+
+
+class RecapitulatifReponse(BaseModel):
+    inventaire_id: int
+    statut: str
+    termine: bool
+    total: int
+    validees: int
+    restantes: list[EtatRelecture] = Field(description="À relire : extraites, non validées, non signalées.")
+    en_erreur: list[EtatRelecture]
+    signalees: list[EtatRelecture]
+    pas_encore_extraites: list[EtatRelecture]
+    statistiques: Statistiques
+
+
+def depuis_recapitulatif(recap: Recapitulatif) -> RecapitulatifReponse:
+    def etats(liste) -> list[EtatRelecture]:
+        return [EtatRelecture(id=e.id, position=e.position, identifiant=e.identifiant, statut=e.statut) for e in liste]
+
+    return RecapitulatifReponse(
+        inventaire_id=recap.inventaire.id,
+        statut=recap.inventaire.statut,
+        termine=recap.termine,
+        total=recap.compteurs.total,
+        validees=recap.compteurs.validees,
+        restantes=etats(recap.restantes),
+        en_erreur=etats(recap.en_erreur),
+        signalees=etats(recap.signalees),
+        pas_encore_extraites=etats(recap.pas_encore_extraites),
+        statistiques=depuis_stats(recap.stats),
     )
 
 

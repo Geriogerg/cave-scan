@@ -144,6 +144,20 @@ def test_stats_cout_et_corrections(base, capsys):
     assert "Corrections  : 1 sur 1 bouteille(s) — millesime 1" in sortie
 
 
+def test_stats_de_relecture(base, capsys):
+    """Les chiffres de la relecture à l'écran (guide de session 5, §6)."""
+    from src.services.cas_particuliers import signaler_paire
+    from src.services.relecture import valider
+
+    with session_de_base(base) as session:
+        valider(session, 1, "expert", temps_ms=12_000)
+        signaler_paire(session, 2, "expert")
+    code, sortie, _ = lancer(capsys, base, "stats", 1)
+    assert code == 0
+    assert "Relecture    : 12 s au total, 12.0 s par bouteille (1 chronométrée(s), absences exclues)" in sortie
+    assert "Cas particuliers : 0 réanalysée(s), 0 née(s) d'une séparation, 1 paire(s) signalée(s)" in sortie
+
+
 def test_inventaire_ou_bouteille_introuvable(base, capsys):
     code, _, erreur = lancer(capsys, base, "bouteilles", 99)
     assert code == 2 and "Aucun inventaire n°99" in erreur

@@ -38,12 +38,14 @@ def creer_app(
 
     app = FastAPI(
         title="cave-scan",
-        version="session 3",
+        version="session 5",
         lifespan=cycle_de_vie,
         description=(
             "Catalogage de bouteilles à partir de photos d'étiquettes : créer un inventaire "
             "avec ses photos, lancer l'extraction (exécutée par le worker), relire, corriger, "
-            "valider, exporter. Les actions de l'expert demandent l'en-tête `X-Auteur`."
+            "valider bouteille par bouteille, exporter. Les actions de l'expert demandent "
+            "l'en-tête `X-Auteur` ; renvoyer la `version` lue avec une bouteille prévient (409) "
+            "d'une modification faite ailleurs."
         ),
     )
     app.state.moteur = moteur
