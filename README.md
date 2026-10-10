@@ -222,6 +222,11 @@ python -m pytest
 Les tests tournent hors ligne, sur une base temporaire. Aucune clé n'est lue :
 aucun test ne peut appeler un vrai modèle.
 
+Le test de navigation (`tests/test_navigateur.py`) pilote un vrai Chromium au
+format téléphone, du dépôt des photos à l'Excel. Il demande une installation
+préalable : `python -m playwright install chromium`. Sans Chromium, il est
+ignoré.
+
 ## Organisation du code
 
 | Chemin                         | Rôle                                                                |
