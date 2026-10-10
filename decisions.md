@@ -2,7 +2,9 @@
 
 Décisions techniques qui cadrent la v0. Une ligne chacune :
 `NNNN — décision — raison — alternative écartée`. Les décisions stratégiques
-(marché, suite) sont dans ROADMAP.md, pas ici.
+(marché, suite) sont dans ROADMAP.md, pas ici. Seules les décisions EN VIGUEUR
+sont ici ; les décisions remplacées sont dans `docs/decisions-archive.md`, avec
+un renvoi d'une ligne à leur place.
 
 ---
 
@@ -21,9 +23,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - 0004 — `couleur_source` (observee | inferee | non_lisible) — la couleur est
   souvent déduite de l'appellation, pas lue ; l'expert doit le savoir en relisant.
 
-- 0005 — Colonne estimation présente mais VIDE, jamais remplie par le modèle — un
-  VLM sort un prix inventé, ce qui grille la crédibilité — l'estimation viendra
-  d'une couche données plus tard.
+- 0005 — archivée (règle devenue la contrainte dure n° 2 de CLAUDE.md ; colonne vide via 0020) → docs/decisions-archive.md
 
 - 0006 — Zero-shot en v0, aucun exemple dans le prompt — des exemples rendraient
   le score du plancher ininterprétable (modèle ou exemples ?) — écarté : few-shot
@@ -45,9 +45,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   simple et suffisant pour mesurer ; si l'ordre n'est pas garanti, appariement par
   clé (domaine + millésime) à ajouter.
 
-- 0011 — [format précisé par 0020 : JSON] Format de sortie piloté par config YAML par maison (fond/forme séparés) —
-  changer de maison = changer de config, pas de code — écarté : une sous-classe
-  formatter par maison.
+- 0011 — archivée (précisée par 0020 : config JSON) → docs/decisions-archive.md
 
 - 0012 — Doit tourner hors ligne en --dry-run sur fixtures — valider la plomberie
   sans clé API ni vraies photos, avant leur arrivée.
@@ -166,18 +164,11 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   `notes`) — ce sont des métadonnées produites par le modèle, l'expert n'en
   produit pas d'équivalent : les comparer n'aurait aucun sens.
 
-- 0035 — [remplacée par 0020] Colonne de config à `champ: null` = colonne vide — un seul mécanisme
-  générique couvre le lot ET l'estimation, plutôt qu'un cas particulier codé en
-  dur pour l'estimation (0005) — écarté : traiter l'estimation à part.
+- 0035 — archivée (remplacée par 0020) → docs/decisions-archive.md
 
-- 0036 — [remplacée par 0052] Une colonne de config qui référence un champ inexistant lève une erreur
-  au chargement — une faute de frappe doit s'arrêter là, pas livrer une colonne
-  silencieusement vide à une maison de vente.
+- 0036 — archivée (remplacée par 0052) → docs/decisions-archive.md
 
-- 0037 — [remplacée par 0023] Regroupement des photos : un sous-dossier par bouteille, « contre » dans
-  le nom de fichier = contre-étiquette, dossier plat = une image par bouteille —
-  convention v0 isolée dans `src/io/photos.py`, **à confirmer avec l'expert** ;
-  si la vraie arborescence diffère, un seul fichier change.
+- 0037 — archivée (remplacée par 0023) → docs/decisions-archive.md
 
 - 0038 — Le paquet `src/io` porte le nom d'un module stdlib : ne jamais ajouter
   `src/` au `sys.path` (seulement la racine) — sinon `src/io` masque le module
@@ -186,9 +177,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - 0039 — `sys.stdout` forcé en UTF-8 dans `run_v0` — la console Windows est en
   cp1252 et mutilait les accents du rapport, qui est le livrable.
 
-- 0040 — [remplacée par 0060] `requirements.txt` recentré sur la v0 (anthropic, openpyxl, pyyaml,
-  pytest) — `requests`, `beautifulsoup4` et `rapidfuzz` servaient au scraping et
-  au matching LWIN d'un périmètre antérieur, hors v0.
+- 0040 — archivée (remplacée par 0060, puis 0070) → docs/decisions-archive.md
 
 - 0041 — Effervescence = champ propre `effervescence` (tranquille | effervescent |
   non_determinable), orthogonal à `couleur` — un effervescent peut être blanc,
@@ -224,24 +213,11 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   échouer aussi sur un mapping partiel (l'expert a le droit de ne pas tout
   remplir), d'où l'avertissement plutôt que l'erreur dans ce cas.
 
-- 0045 — [remplacée par 0079] Politique d'erreur API en deux classes : panne PASSAGÈRE (429, 5xx,
-  réseau) → abstention tracée dans `notes`, la campagne continue ; panne
-  SYSTÉMATIQUE (401, 403, 404, 400) → remonte et arrête tout — répéter une clé
-  invalide 200 fois ne produirait que 200 lignes vides en facturant chaque
-  échec. La politique vit dans `vision_extract` pour que `run_v0` reste sans
-  dépendance au SDK — écarté : tout avaler (aurait masqué le risque 0029).
+- 0045 — archivée (remplacée par 0079) → docs/decisions-archive.md
 
-- 0046 — [remplacée par 0079] Journal `.jsonl` écrit au fil de l'eau + `--reprendre` — une campagne de
-  200 bouteilles interrompue à la 180e perdait 180 appels API déjà payés ; le
-  journal est aussi la trace brute des réponses, indépendante de l'Excel —
-  écarté : n'écrire qu'à la fin.
+- 0046 — archivée (remplacée par 0079) → docs/decisions-archive.md
 
-- 0047 — [remplacée par 0055] Option de config `abstention_vide` par colonne, activée sur les colonnes
-  numériques de l'exemple — « non lisible » dans une colonne de nombres casse le
-  tri et le filtre du commissaire-priseur. L'abstention reste visible par le
-  surlignage de la ligne et la colonne « À vérifier », donc rien n'est perdu
-  (compatible 0002) — écarté : masquer partout, ou n'offrir aucun réglage.
-  **À confirmer avec la maison.**
+- 0047 — archivée (remplacée par 0055) → docs/decisions-archive.md
 
 - 0048 — `_entier()` arrondit au lieu de lever (« 75.5 » → 76) — `int("75.5")`
   levait, si bien qu'un modèle ayant LU une contenance décimale s'abstenait
@@ -271,11 +247,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   (b) Google peut exploiter les entrées/sorties du palier gratuit, ce qui est à
   trancher avec la maison avant d'y envoyer les photos de ses lots.
 
-- 0051 — Sur Gemini, un 429 est le RÉGIME NOMINAL, pas un incident (~15
-  requêtes/minute en gratuit) : appels espacés de 4,5 s et jusqu'à 4 tentatives
-  avec attente croissante avant de renoncer — sans cela, la moitié d'une
-  campagne serait sortie en abstention et le score aurait été faux. La
-  distinction passager/systématique de 0045 est conservée à l'identique.
+- 0051 — archivée (rythme et tentatives repris par 0079 et 0114) → docs/decisions-archive.md
 
 ## Session 1 — config par maison
 
@@ -340,8 +312,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   lieu d'être rabattus sur l'enum v0 — écarté : une seule fonction de lecture
   (le modèle aurait pu fixer une quantité).
 
-- 0060 — [remplacée par 0070] Dépendances : pyyaml retiré avec l'ancienne config YAML. Restent
-  google-genai, anthropic, openpyxl, python-dotenv, pytest.
+- 0060 — archivée (remplacée par 0070) → docs/decisions-archive.md
 
 - 0061 — Schéma envoyé au modèle = champs v0 de CLAUDE.md (« Champs à
   extraire ») + colonnes `modele` / `modele_best_effort` de la config. Une
@@ -396,9 +367,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   valeur de l'autre — un test l'a révélé — écarté : fusionner sur les seules
   clés.
 
-- 0067 — [remplacée par 0082] Quantité « modifiable par l'expert » : stockée par bouteille (jamais
-  recalculée), 1 par défaut. En attendant une interface, elle se modifie dans le
-  journal puis `--auto` refait l'export ; le regroupement additionne.
+- 0067 — archivée (remplacée par 0082) → docs/decisions-archive.md
 
 - 0068 — Appariement des photos par ordre (0023), sans jamais deviner : tri
   par date de prise de vue EXIF si TOUTES les photos en ont une, sinon toutes
@@ -578,10 +547,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   Anthropic : le SDK réessaie lui-même ; le nombre de tentatives (3) est fixé
   explicitement plutôt que laissé au défaut.
 
-- 0093 — [remplacée par 0110] À la relance, une bouteille restée `en_cours` est une extraction
-  interrompue (coupure, arrêt brutal) : elle est refaite. Une relance forcée sur
-  une bouteille validée la remet à relire, et c'est tracé dans l'historique
-  (auteur « relance forcée (modèle) »).
+- 0093 — archivée (remplacée par 0110) → docs/decisions-archive.md
 
 - 0094 — L'extracteur de fixtures se déclare comme modèle « fixtures », avec des
   tokens NON MESURÉS (vides) — jamais un faux coût qui fausserait le coût par
@@ -666,17 +632,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   Windows, un fichier SQLite encore ouvert ne peut être ni déplacé ni supprimé —
   le dossier temporaire du dry-run).
 
-- 0107 — Tests du journal adaptés (liste approuvée), chacun gardant son exigence,
-  vérifiée en base : écrit au fil de l'eau -> chaque extraction en base dès son
-  retour ; interruption -> aucun appel payé perdu (Ctrl-C et panne
-  systématique) ; reprise du journal -> `--inventaire ID` ; journal réinitialisé
-  -> nouvel inventaire, l'ancien intact ; dry-run journalisé -> dry-run hors de
-  la base de l'utilisateur ; identifiant au journal -> identifiant en base et à
-  l'export ; doublons -> refusés par `creer_inventaire` avant tout client ;
-  dossier modifié refusé -> la reprise ne relit jamais le dossier d'origine ;
-  quantité au journal -> `inventaire.py corriger`. `bouteille_depuis_dict`
-  disparaît ; son test devient « un code de la maison n'est jamais perdu à la
-  relecture depuis la base ».
+- 0107 — archivée (liste d'adaptation de tests de la session 2, appliquée) → docs/decisions-archive.md
 
 - 0108 — Contre-étiquette facultative : `run_v0.py --photos DOSSIER --sans-contre`
   traite un dossier d'étiquettes seules, une photo par bouteille (nombre impair
@@ -752,9 +708,7 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
 - 0119 — Lancement : `python serveur.py` (API), `python worker.py` (worker),
   `python dev.py` (les deux, pour le développement).
 
-- 0120 — Valider un inventaire = valider d'un coup toutes ses bouteilles
-  extraites ; refusé, avec un message pour l'expert, s'il reste une bouteille en
-  erreur ou non extraite.
+- 0120 — archivée (remplacée par 0138 : pas de validation en masse) → docs/decisions-archive.md
 
 - 0121 — Migration 0003 (accord donné le 2026-10-09) : état d'extraction de
   l'inventaire, réservation et horodatage de vie des bouteilles, table
@@ -848,6 +802,35 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   2026-10-10 : les 12 photos d'essai sont passées par WhatsApp (≤ 2048 px,
   157 Ko en moyenne, AUCUNE date EXIF) — inutilisables pour cette mesure ; il
   faut des originaux du téléphone. Taille retenue : à noter ici après la mesure.
+
+## Session 5 — écran de relecture
+
+- 0137 — Contexte réorganisé : `CLAUDE.md` court (toujours chargé), règles par
+  domaine dans `.claude/rules/` avec des `paths` vérifiés sur les vrais fichiers
+  du repo (sinon la règle ne se charge jamais), guides passés dans
+  `docs/sessions/archive/`, décisions remplacées dans
+  `docs/decisions-archive.md` avec un renvoi d'une ligne — écarté : un seul
+  gros fichier relu à chaque session.
+
+- 0138 — [remplace 0120] Pas de validation en masse : « valider l'inventaire »
+  ne valide plus aucune bouteille, il CONSTATE que toutes ont été validées une
+  par une (sinon refus, avec le nombre restant) et passe l'inventaire à
+  « relu » — chaque bouteille doit avoir été vue par l'expert (règle web) —
+  écarté : supprimer l'action (on perd « reste-t-il du travail ? »), ou la
+  garder dans l'API seule (contradiction maintenue).
+
+- 0139 — Migration 0005 (accord donné le 2026-10-10) : table
+  `evenement_bouteille` (bouteille, type, auteur, date, détail) pour tracer
+  réanalyse, inversion, signalement et séparation ; colonnes de bouteille
+  `paire_signalee`, `separee_de_id`, `temps_relecture_ms`. Le contrat
+  `Bouteille` ne change pas — écarté : tout mettre dans les corrections (ce ne
+  sont pas des valeurs de champ).
+
+- 0140 — Bouteille séparée : le regroupement de l'export reste celui de la
+  config de la maison ; si les deux fiches sont identiques sur les clés de
+  regroupement, l'écran AVERTIT l'expert qu'elles seront fusionnées à l'export
+  (accord du 2026-10-10) — écarté : ne jamais fusionner une bouteille séparée
+  (du code qui passe outre la config, contrainte 6).
 
 ---
 
