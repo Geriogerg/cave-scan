@@ -779,6 +779,68 @@ Décisions techniques qui cadrent la v0. Une ligne chacune :
   `worker.py` restent deux processus. `serveur.py` n'a aucune option d'hôte :
   127.0.0.1 en dur jusqu'à la connexion (session 7).
 
+- 0125 — Validation réelle de la session 3 (2026-10-10, 12 étiquettes, Gemini
+  palier gratuit) : serveur, documentation, création par l'API, worker tué en
+  pleine extraction puis relancé — reprise sans doublon (exactement une
+  extraction par bouteille). Mais 10 bouteilles sur 12 en erreur 429 : le quota
+  gratuit (20 requêtes/jour) n'était pas renouvelé. Temps et coût réels par
+  bouteille NON mesurés : reportés au premier essai avec des crédits.
+
+---
+
+## Session 4 — dépôt des photos (écrans web)
+
+- 0126 — Inventaire en BROUILLON (migration 0004, accord donné le 2026-10-10) :
+  créé avec son nom et sa maison (config figée dès ce moment), il reçoit ses
+  photos une par une, en plusieurs fois. « Finaliser » vérifie les garde-fous,
+  forme les bouteilles et lance l'extraction ; ensuite, plus aucune modification
+  de photos. Le chemin « tout d'un coup » (ligne de commande, POST /inventaires)
+  est conservé.
+
+- 0127 — Envoi idempotent : par empreinte du CONTENU reçu (unique en base) ; et,
+  pour ne pas RENVOYER une photo déjà reçue après une coupure, par une signature
+  du fichier d'origine (nom, taille, date de modification) que le navigateur
+  demande au serveur avant d'envoyer. Pas d'empreinte SHA-256 dans le navigateur :
+  elle n'y est disponible qu'en HTTPS, pas sur le réseau local en HTTP.
+
+- 0128 — Ordre d'un brouillon : tri automatique par date de prise de vue, puis
+  nom (ordre naturel), puis ordre d'arrivée ; si une photo n'a pas de date,
+  toutes sont triées par nom (0068). Dès que l'expert corrige l'ordre à la main,
+  les photos ajoutées ensuite vont à la fin (et c'est signalé) ; « Retrier
+  automatiquement » revient au tri.
+
+- 0129 — Date de prise de vue : lue par le navigateur dans l'EXIF de l'ORIGINAL,
+  avant toute réduction, et envoyée à côté du fichier ; à défaut, le serveur la
+  lit dans le fichier reçu.
+
+- 0130 — Réduction avant envoi (navigateur, côté long 2 500 px, JPEG qualité
+  0,9) : implémentée mais DÉSACTIVÉE par défaut tant que son effet sur
+  l'extraction n'est pas mesuré (`mesurer_reduction.py`, à lancer avec des
+  crédits). L'option « envoyer les originaux » reste disponible.
+
+- 0131 — Écrans : pages générées côté serveur (Jinja2) + HTMX (fichier local, ni
+  CDN ni outil de build) + un seul fichier de JavaScript simple pour l'envoi. Les
+  pages vivent sous /app (« / » y mène), dans la même application que l'API, et
+  appellent les mêmes fonctions de service ; tout garde-fou est vérifié côté
+  serveur.
+
+- 0132 — [remplace en partie 0124] Écoute sur le réseau local seulement avec
+  l'option explicite `--reseau-local` (serveur.py, dev.py) : avertissement au
+  démarrage et adresse à ouvrir sur le téléphone. Sans elle : 127.0.0.1.
+
+- 0133 — Miniatures générées à la réception (stockage/miniatures/, rotation
+  appliquée, sans métadonnées) et servies par la route sécurisée des photos.
+  Supprimer une photo d'un brouillon ne supprime pas son fichier : le stockage
+  est adressé par contenu et peut être partagé.
+
+- 0134 — Envois simultanés : chaque modification d'un brouillon commence par
+  prendre le verrou d'écriture (sur la ligne de l'inventaire), pour que deux
+  photos arrivant en même temps reçoivent des positions distinctes.
+
+- 0135 — Test de navigation de bout en bout avec Playwright (Chromium, écran
+  au format téléphone), dépendance de test seulement : c'est le seul moyen de
+  tester le JavaScript d'envoi (date lue avant réduction, reprise).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

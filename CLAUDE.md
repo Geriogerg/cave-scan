@@ -81,7 +81,29 @@ précise le périmètre de la session ; ce fichier-ci donne les règles permanen
 - **Les photos ne sont jamais servies comme un dossier statique** : une route
   vérifie que la photo appartient à l'inventaire demandé. Les métadonnées EXIF
   (dont la position GPS de la cave du client) ne sont jamais renvoyées par l'API.
-- Tant que la connexion n'existe pas (session 7), le serveur n'écoute qu'en local.
+- Tant que la connexion n'existe pas (session 7), le serveur n'écoute qu'en local
+  par défaut. Seule exception : une option de développement explicite permet
+  l'écoute sur le réseau local pour tester depuis un téléphone. Elle n'est
+  jamais active par défaut et affiche un avertissement au démarrage.
+
+## Écrans web (règles permanentes)
+
+- **Pages générées côté serveur + HTMX**, dans la même application que l'API.
+  Pas de framework JavaScript (React, Vue…). Du JavaScript simple seulement là
+  où le navigateur l'impose : préparation des photos avant envoi, envoi fichier
+  par fichier, progression.
+- **Les pages appellent les fonctions de service**, comme l'API. Aucune logique
+  métier dans les gabarits ni dans le JavaScript : un garde-fou (nombre impair,
+  doublon, valeur hors liste) est toujours vérifié côté serveur, même s'il est
+  aussi affiché côté navigateur.
+- **Dépôt des photos pensé pour le téléphone** (une main, gros boutons, réseau
+  instable) ; **relecture pensée pour l'ordinateur** (clavier, grand écran).
+- **Interface en français, messages compréhensibles par l'expert**, jamais de
+  message technique brut affiché.
+- **Aucune photo n'est perdue en silence** : un envoi interrompu se reprend, un
+  fichier refusé est signalé avec la raison.
+- **L'ordre des photos est visible et corrigeable avant le lancement** : c'est le
+  seul moyen d'éviter un décalage de toutes les paires.
 
 ## Contraintes dures (ne jamais violer)
 

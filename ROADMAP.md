@@ -35,10 +35,10 @@ faire, à partir de l'état réel du code.
       appariement des photos par ordre.
 - [x] Session 2 : bibliothèque + base de données (extraction immuable,
       corrections séparées, config figée par inventaire, coût par bouteille).
-- [ ] Session 3 : tâches de fond (file d'attente en base, worker, extraction en
-      parallèle, reprise après arrêt) + API JSON (FastAPI). En cours.
+- [x] Session 3 : tâches de fond (file d'attente en base, worker, extraction en
+      parallèle, reprise après arrêt) + API JSON (FastAPI).
 - [ ] Session 4 : application web, écran de dépôt des photos (utilisable sur
-      téléphone).
+      téléphone), aperçu et correction de l'ordre des paires, suivi. En cours.
 - [ ] Session 5 : écran de relecture (pièce maîtresse : paire de photos +
       champs, incertitudes surlignées, correction en un clic, clavier).
 - [ ] Session 6 : export depuis les données validées + rédaction des
