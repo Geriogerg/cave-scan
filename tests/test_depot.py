@@ -135,10 +135,10 @@ def test_une_seule_photo_sans_date_fait_trier_toutes_par_nom(session, brouillon,
     "contenu, nom, raison",
     [
         (b"ceci n'est pas une photo", "note.jpg", "n'est pas une image lisible"),
-        (b"\x00\x00\x00\x18ftypheic", "IMG_0001.HEIC", "HEIC"),
+        (b"\x00\x00\x00\x18ftypheic", "IMG_0001.HEIC", "n'est pas une image lisible"),
     ],
 )
-def test_un_fichier_non_image_ou_heic_est_refuse_avec_sa_raison(session, brouillon, stockage, contenu, nom, raison):
+def test_un_fichier_non_image_ou_heic_illisible_est_refuse_avec_sa_raison(session, brouillon, stockage, contenu, nom, raison):
     with pytest.raises(EnvoiRefuse, match=raison):
         envoyer(session, brouillon, stockage, contenu, nom)
     assert apercu(session, brouillon).photos == []

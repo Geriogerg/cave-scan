@@ -28,7 +28,7 @@ def creer(
     request: Request,
     nom: Annotated[str, Form(description="Nom de l'inventaire.")],
     maison: Annotated[str, Form(description="Nom de la maison (voir /maisons).")],
-    photos: Annotated[list[UploadFile], File(description="Photos JPEG ou PNG, dans l'ordre de prise de vue.")],
+    photos: Annotated[list[UploadFile], File(description="Photos JPEG, PNG ou HEIC, dans l'ordre de prise de vue.")],
     sans_contre: Annotated[bool, Form(description="Étiquettes seules : une photo par bouteille.")] = False,
 ):
     cree = creer_inventaire_depuis_envoi(

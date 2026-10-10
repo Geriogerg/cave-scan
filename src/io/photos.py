@@ -9,8 +9,9 @@ reconstitue les paires, et refuse de deviner (decisions.md 0068) :
 - paires consécutives : 1re photo = étiquette, 2e = contre-étiquette ;
 - nombre impair -> arrêt, avec un message explicite : aucun appariement
   silencieux, il faudrait deviner quelle photo manque ;
-- photo dans un format que la chaîne ne lit pas (HEIC d'iPhone, TIFF, RAW...)
-  -> arrêt, jamais ignorée en silence ;
+- photo dans un format que la chaîne ne lit pas (TIFF, RAW...) -> arrêt,
+  jamais ignorée en silence ; le HEIC d'iPhone est lu (decisions.md 0158),
+  mais une photo HEIC illisible arrête aussi ;
 - photo rangée dans un sous-dossier -> arrêt (l'ancienne convention « un
   sous-dossier par bouteille » est remplacée par 0023).
 
@@ -25,11 +26,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-EXTENSIONS_IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+from src.io.heic import EXTENSIONS_HEIC, est_heic
+
+EXTENSIONS_IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".gif", *EXTENSIONS_HEIC}
 
 # Formats photo courants que la chaîne ne lit pas : signalés, jamais ignorés.
 EXTENSIONS_NON_LUES = {
-    ".heic", ".heif", ".avif", ".tif", ".tiff", ".bmp",
+    ".avif", ".tif", ".tiff", ".bmp",
     ".dng", ".raw", ".cr2", ".cr3", ".nef", ".arw",
 }
 
@@ -109,6 +112,7 @@ def apparier_photos(racine: str | Path, sans_contre: bool = False) -> Appariemen
             f"Aucune photo exploitable sous {racine} "
             f"(extensions reconnues : {', '.join(sorted(EXTENSIONS_IMAGE))})."
         )
+    _refuser_les_heic_illisibles(images)
 
     dates = {image: _date_de_prise_de_vue(image) for image in images}
     images, tri, sans_date = _trier(images, dates)
@@ -165,18 +169,33 @@ def _refuser_les_formats_non_lus(fichiers: list[Path]) -> None:
     if not non_lues:
         return
     apercu = ", ".join(non_lues[:5]) + (f" (+{len(non_lues) - 5})" if len(non_lues) > 5 else "")
-    heic = any(nom.lower().endswith((".heic", ".heif")) for nom in non_lues)
-    conseil = (
-        " Photos d'iPhone : les exporter en JPEG, ou régler l'appareil sur "
-        "Réglages > Appareil photo > Formats > « Le plus compatible »."
-        if heic
-        else " Les convertir en JPEG ou PNG."
-    )
     raise PhotosInvalides(
         f"{len(non_lues)} photo(s) dans un format non lu par la chaîne : {apercu}. "
         f"Formats lus : {', '.join(sorted(EXTENSIONS_IMAGE))}. Elles ne sont pas "
-        f"ignorées en silence : l'appariement par paires serait décalé.{conseil}"
+        f"ignorées en silence : l'appariement par paires serait décalé. Les convertir "
+        f"en JPEG ou PNG."
     )
+
+
+def _refuser_les_heic_illisibles(images: list[Path]) -> None:
+    """Une photo HEIC est convertie en JPEG pour le modèle : elle doit pouvoir être
+    décodée. Vérifié AVANT tout appel, comme le reste du dossier."""
+    from PIL import Image, UnidentifiedImageError
+
+    illisibles = []
+    for image in images:
+        if not est_heic(image):
+            continue
+        try:
+            with Image.open(image) as ouverte:
+                ouverte.verify()
+        except (OSError, UnidentifiedImageError, ValueError, SyntaxError):
+            illisibles.append(image.name)
+    if illisibles:
+        raise PhotosInvalides(
+            f"{len(illisibles)} photo(s) HEIC illisible(s) : {', '.join(illisibles[:5])}. "
+            f"Fichier abîmé ou incomplet : la recopier depuis le téléphone, ou l'exporter en JPEG."
+        )
 
 
 def _trier(

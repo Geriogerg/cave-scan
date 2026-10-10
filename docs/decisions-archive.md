@@ -83,3 +83,10 @@ Décisions remplacées ou devenues sans objet, retirées de `decisions.md`
 - 0120 — Valider un inventaire = valider d'un coup toutes ses bouteilles
   extraites ; refusé, avec un message pour l'expert, s'il reste une bouteille en
   erreur ou non extraite.
+
+- 0070 — [remplacée par 0158] Dépendances : Pillow ajouté (dates EXIF). pillow-heif NON ajouté —
+  Pillow seul ne lit pas le HEIC, qui est refusé avec un message clair et la
+  marche à suivre ; pillow-heif s'installe sans difficulté ici (vérifié, non
+  installé) mais il faudrait en plus convertir en JPEG avant l'envoi (Anthropic
+  n'accepte pas le HEIC) : à décider selon le téléphone de l'expert. Restent :
+  google-genai, anthropic, openpyxl, pillow, python-dotenv, pytest.

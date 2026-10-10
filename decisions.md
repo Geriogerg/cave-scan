@@ -388,12 +388,7 @@ un renvoi d'une ligne à leur place.
   photos montrent la même bouteille : l'affirmer aurait dissuadé le modèle de
   signaler une erreur d'appariement.
 
-- 0070 — Dépendances : Pillow ajouté (dates EXIF). pillow-heif NON ajouté —
-  Pillow seul ne lit pas le HEIC, qui est refusé avec un message clair et la
-  marche à suivre ; pillow-heif s'installe sans difficulté ici (vérifié, non
-  installé) mais il faudrait en plus convertir en JPEG avant l'envoi (Anthropic
-  n'accepte pas le HEIC) : à décider selon le téléphone de l'expert. Restent :
-  google-genai, anthropic, openpyxl, pillow, python-dotenv, pytest.
+- 0070 — archivée (remplacée par 0158) → docs/decisions-archive.md
 
 - 0071 — Sortie d'erreur aussi en UTF-8 (étend 0039) : les refus de config et
   de photos s'affichaient avec des accents mutilés, au moment précis où il faut
@@ -964,6 +959,19 @@ un renvoi d'une ligne à leur place.
   nous-mêmes et la passer à uvicorn (lancement testé à réécrire pour une
   fenêtre de concurrence négligeable).
 
+- 0158 — [remplace 0070 ; en partie 0068 et 0116 pour le HEIC] Photos HEIC
+  d'iPhone LUES : `pillow-heif` ajouté (inscrit auprès de Pillow par
+  `src/io/heic.py`, importé par tout module qui ouvre une photo). Au dépôt, le
+  contenu décide (un HEIC nommé .jpg est reconnu), le fichier est stocké TEL
+  QUEL ; miniature, version réduite et original servis en JPEG sans
+  métadonnées, comme les autres. Pour le modèle, conversion en JPEG
+  (qualité 95, orientée, SANS métadonnées) au moment de l'appel, dans
+  `lire_photo` : les deux fournisseurs reçoivent la même image et l'un
+  n'accepte pas le HEIC. En ligne de commande, un HEIC illisible arrête le run
+  AVANT tout appel — écarté : convertir à la réception (le fichier reçu ne
+  serait plus celui de l'expert) ; envoyer le HEIC tel quel à Gemini (les deux
+  backends ne liraient plus la même image).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
@@ -975,8 +983,6 @@ un renvoi d'une ligne à leur place.
 - La maison accepte-t-elle que les photos de ses lots transitent par un palier
   gratuit dont le fournisseur peut exploiter les données (0050) ? Si non :
   backend payant, ou modèle local.
-- Le téléphone de l'expert est-il un iPhone réglé en HEIC ? Si oui : réglage
-  « Le plus compatible », ou ajout de pillow-heif + conversion JPEG (0070).
 - Bouteille en erreur d'analyse saisie entièrement à la main par l'expert : elle
   reste non validable (0083, test existant), si bien qu'un modèle qui échoue
   toujours sur une photo empêche l'inventaire d'être validé. Faut-il permettre

@@ -14,6 +14,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from src.io.heic import en_jpeg, est_heic
+
 TYPES_MEDIA = {
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
@@ -96,8 +98,15 @@ def type_media(chemin: Path) -> str:
 
 
 def lire_photo(chemin: str | Path) -> tuple[bytes, str]:
-    """Octets et type MIME d'une photo, avec une erreur claire si elle manque."""
+    """Octets et type MIME d'une photo, avec une erreur claire si elle manque.
+
+    Une photo HEIC d'iPhone part en JPEG (converti ici, au moment de l'appel ;
+    le fichier stocké ne change pas) : même image pour les deux fournisseurs,
+    dont l'un n'accepte pas le HEIC (decisions.md 0158).
+    """
     chemin = Path(chemin)
     if not chemin.exists():
         raise FileNotFoundError(f"Photo introuvable : {chemin}")
+    if est_heic(chemin):
+        return en_jpeg(chemin), "image/jpeg"
     return chemin.read_bytes(), type_media(chemin)

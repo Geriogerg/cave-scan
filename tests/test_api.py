@@ -159,9 +159,21 @@ def test_un_fichier_qui_n_est_pas_une_image_est_refuse(api, dossier_photos):
     verifier_erreur(envoyer(api, dossier_photos), 422, "envoi_refuse", "n'est pas une image lisible")
 
 
-def test_heic_refuse_avec_la_marche_a_suivre(api, dossier_photos):
-    shutil.move(dossier_photos / "bouteille_06_contre.jpg", dossier_photos / "bouteille_06_contre.heic")
-    verifier_erreur(envoyer(api, dossier_photos), 422, "envoi_refuse", "Le plus compatible")
+def test_une_photo_heic_d_iphone_est_acceptee(api, dossier_photos):
+    """decisions.md 0158 : lue, stockée telle quelle, affichée en JPEG."""
+    from PIL import Image
+
+    jpeg = dossier_photos / "bouteille_06_contre.jpg"
+    with Image.open(jpeg) as image:
+        image.save(dossier_photos / "bouteille_06_contre.heic", format="HEIF")
+    jpeg.unlink()
+    reponse = envoyer(api, dossier_photos)
+    assert reponse.status_code == 201, reponse.text
+    inventaire_id = reponse.json()["id"]
+    bouteille = api.get(f"/inventaires/{inventaire_id}/bouteilles").json()["bouteilles"][-1]
+    fiche = api.get(f"/inventaires/{inventaire_id}/bouteilles/{bouteille['id']}").json()
+    affichee = api.get(fiche["photos"]["contre_etiquette"])
+    assert affichee.status_code == 200 and affichee.headers["content-type"] == "image/jpeg"
 
 
 def test_photos_en_double_refusees(api, dossier_photos):

@@ -29,13 +29,18 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.config.maison import ConfigInvalide, empreinte_config, lire_config, plier
+from src.io import heic  # noqa: F401 — rend le HEIC d'iPhone lisible par Pillow (0158)
 from src.donnees.modeles import ConfigVersion, Maison, Photo
 from src.donnees.stockage import chemin_stocke
 from src.services.inventaires import InventaireCree, charger_inventaire, creer_inventaire
 
 TAILLE_MAX_OCTETS = 30 * 1024 * 1024  # par photo : large pour un téléphone récent
 NOMBRE_MAX = 800  # par inventaire : au moins 600 photos = 300 bouteilles (guide)
-FORMATS_ACCEPTES = {"JPEG": "JPEG", "MPO": "JPEG", "PNG": "PNG"}  # MPO : JPEG de certains téléphones
+# Format lu par Pillow -> extension du fichier stocké. MPO : JPEG de certains
+# téléphones ; HEIF : HEIC d'iPhone, stocké tel quel (decisions.md 0158).
+FORMATS_ACCEPTES = {"JPEG": ".jpg", "MPO": ".jpg", "PNG": ".png", "HEIF": ".heic"}
+# Extension d'un nom de fichier -> extension correspondant à son contenu.
+FAMILLES = {".jpg": ".jpg", ".jpeg": ".jpg", ".png": ".png", ".heic": ".heic", ".heif": ".heic"}
 TAILLE_REDUITE = 1600  # côté le plus long, pour l'affichage
 
 
@@ -152,29 +157,26 @@ def _copier_borne(flux: BinaryIO, cible: Path, taille_max: int, nom_origine: str
 
 def _verifier_image(chemin: Path, nom_origine: str) -> None:
     attendue = verifier_image(chemin, nom_origine)
-    if chemin.suffix.lower() not in (".jpg", ".jpeg", ".png"):
+    if FAMILLES.get(chemin.suffix.lower()) != attendue:
         # Extension absente ou trompeuse : on la corrige, l'appariement ne lit
-        # que les extensions d'image reconnues.
+        # que les extensions d'image reconnues, et l'envoi au modèle se fie à
+        # l'extension pour convertir un HEIC.
         shutil.move(chemin, chemin.with_name(chemin.name + attendue))
 
 
 def verifier_image(chemin: Path, nom_origine: str) -> str:
-    """Le fichier est-il vraiment une image JPEG ou PNG ? On l'OUVRE pour le savoir.
-    Renvoie l'extension qui correspond à son contenu (« .jpg » ou « .png »)."""
-    if chemin.suffix.lower() in (".heic", ".heif") or Path(nom_origine).suffix.lower() in (".heic", ".heif"):
-        raise EnvoiRefuse(
-            f"« {nom_origine} » est au format HEIC, pas encore lu par l'outil. Sur l'iPhone : "
-            f"Réglages > Appareil photo > Formats > « Le plus compatible », ou envoyer en JPEG."
-        )
+    """Le fichier est-il vraiment une image JPEG, PNG ou HEIC ? On l'OUVRE pour le
+    savoir. Renvoie l'extension qui correspond à son contenu (« .jpg », « .png »
+    ou « .heic »)."""
     try:
         with Image.open(chemin) as image:
             format_lu = image.format
             image.verify()
     except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
-        raise EnvoiRefuse(f"« {nom_origine} » n'est pas une image lisible (JPEG ou PNG attendu).") from None
+        raise EnvoiRefuse(f"« {nom_origine} » n'est pas une image lisible (JPEG, PNG ou HEIC attendu).") from None
     if format_lu not in FORMATS_ACCEPTES:
-        raise EnvoiRefuse(f"« {nom_origine} » est au format {format_lu} : JPEG ou PNG attendu.")
-    return ".png" if FORMATS_ACCEPTES[format_lu] == "PNG" else ".jpg"
+        raise EnvoiRefuse(f"« {nom_origine} » est au format {format_lu} : JPEG, PNG ou HEIC attendu.")
+    return FORMATS_ACCEPTES[format_lu]
 
 
 # --- diffusion ----------------------------------------------------------------------------

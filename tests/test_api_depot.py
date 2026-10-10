@@ -128,9 +128,9 @@ def test_un_brouillon_ne_se_lance_pas_sans_etre_finalise(api, six):
 
 @pytest.mark.parametrize(
     "contenu, nom, raison",
-    [(b"pas une image", "note.jpg", "n'est pas une image lisible"), (b"\x00\x00\x00\x18ftypheic", "IMG_1.HEIC", "Le plus compatible")],
+    [(b"pas une image", "note.jpg", "n'est pas une image lisible"), (b"\x00\x00\x00\x18ftypheic", "IMG_1.HEIC", "n'est pas une image lisible")],
 )
-def test_non_image_et_heic_refuses_avec_une_raison_claire(api, contenu, nom, raison):
+def test_non_image_et_heic_illisible_refuses_avec_une_raison_claire(api, contenu, nom, raison):
     inventaire_id = brouillon(api)
     verifier_erreur(envoyer(api, inventaire_id, contenu, nom), 422, "envoi_refuse", raison)
     assert apercu(api, inventaire_id)["nb_photos"] == 0

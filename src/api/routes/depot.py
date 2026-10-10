@@ -52,7 +52,7 @@ def envoyer(
     inventaire_id: int,
     base: SessionBase,
     stockage: Stockage,
-    fichier: Annotated[UploadFile, File(description="La photo, JPEG ou PNG.")],
+    fichier: Annotated[UploadFile, File(description="La photo, JPEG, PNG ou HEIC.")],
     prise_de_vue: Annotated[
         datetime | None, Form(description="Date de prise de vue lue AVANT toute réduction (ISO 8601).")
     ] = None,

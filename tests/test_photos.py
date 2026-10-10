@@ -91,21 +91,27 @@ def test_nombre_impair_refuse(tmp_path):
         apparier_photos(tmp_path)
 
 
-def test_heic_signale_clairement_jamais_ignore(tmp_path):
-    """Photos d'iPhone : sans conversion, la chaîne ne les lit pas — on s'arrête,
-    on dit pourquoi et comment faire. Les ignorer décalerait toutes les paires."""
+def test_heic_d_iphone_lu_comme_les_autres_photos(tmp_path):
+    """Photos d'iPhone : lues (decisions.md 0158), et appariées comme les autres."""
     photo(tmp_path, "IMG_0001.jpg")
-    photo(tmp_path, "IMG_0002.jpg")
-    (tmp_path / "IMG_0003.HEIC").write_bytes(b"ftypheic")
-    with pytest.raises(PhotosInvalides) as capture:
+    Image.new("RGB", (8, 8), "red").save(tmp_path / "IMG_0002.HEIC", format="HEIF")
+    appariement = apparier_photos(tmp_path)
+    assert [(b.etiquette.name, b.contre_etiquette.name) for b in appariement.bouteilles] == [
+        ("IMG_0001.jpg", "IMG_0002.HEIC")
+    ]
+
+
+def test_heic_illisible_signale_jamais_ignore(tmp_path):
+    """Un HEIC abîmé ne pourrait pas être converti pour le modèle : on s'arrête
+    AVANT tout appel, on dit lequel. L'ignorer décalerait toutes les paires."""
+    photo(tmp_path, "IMG_0001.jpg")
+    (tmp_path / "IMG_0002.HEIC").write_bytes(b"ftypheic")
+    with pytest.raises(PhotosInvalides, match="HEIC illisible") as capture:
         apparier_photos(tmp_path)
-    message = str(capture.value)
-    assert "IMG_0003.HEIC" in message
-    assert "iPhone" in message and "Le plus compatible" in message
-    assert "pas ignorées en silence" in message
+    assert "IMG_0002.HEIC" in str(capture.value)
 
 
-@pytest.mark.parametrize("extension", [".tiff", ".dng", ".heif"])
+@pytest.mark.parametrize("extension", [".tiff", ".dng", ".avif"])
 def test_autres_formats_non_lus_signales(tmp_path, extension):
     photo(tmp_path, "a.jpg")
     photo(tmp_path, "b.jpg")
