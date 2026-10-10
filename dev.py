@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from datetime import timedelta
 
 import worker as commande_worker
-from serveur import PORT_DEFAUT, ajouter_option_reseau_local, annoncer
+from serveur import PortOccupe, ajouter_option_port, ajouter_option_reseau_local, annoncer, choisir_port, hote_d_ecoute
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -28,7 +28,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             flux.reconfigure(encoding="utf-8", errors="replace")
     analyseur = commande_worker._analyseur()
     analyseur.description = "API + worker dans un seul processus, pour le développement."
-    analyseur.add_argument("--port", type=int, default=PORT_DEFAUT)
+    ajouter_option_port(analyseur)
     ajouter_option_reseau_local(analyseur)
     arguments = analyseur.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -41,6 +41,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     from src.worker import ReglagesWorker, Worker
 
     environnement.charger_env()
+    # Le port d'abord : s'il est pris, rien ne démarre — surtout pas le worker,
+    # qui appellerait le modèle pour une application qui ne s'ouvrira pas.
+    hote = hote_d_ecoute(arguments.reseau_local)
+    try:
+        port = choisir_port(hote, arguments.port)
+    except PortOccupe as erreur:
+        print(erreur, file=sys.stderr)
+        return 2
     url = url_de_base(arguments.base)
     migrer(url)
     moteur = creer_moteur(url)
@@ -62,10 +70,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         target=Worker(moteur, dossier_stockage(), fabrique, reglages).tourner, args=(arret,), daemon=True
     )
     travail.start()
-    hote = annoncer(arguments.reseau_local, arguments.port)
+    annoncer(arguments.reseau_local, port)
     print(f"Worker : backend {arguments.backend}, {arguments.simultanees} extraction(s) simultanée(s).")
     try:
-        uvicorn.run(creer_app(url), host=hote, port=arguments.port, log_level="info")
+        uvicorn.run(creer_app(url), host=hote, port=port, log_level="info")
     finally:
         arret.set()  # les extractions commencées se terminent
         travail.join()

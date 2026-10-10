@@ -951,6 +951,21 @@ un renvoi d'une ligne à leur place.
 
 ---
 
+## Session 6 — configuration, groupes de photos, cycle de vie de l'inventaire
+
+- 0157 — Port au démarrage (serveur.py, dev.py) : sans `--port`, 8000, sinon
+  le premier port libre jusqu'à 8019, ANNONCÉ en français ; un `--port` imposé
+  et occupé n'est jamais remplacé en silence : arrêt (code 2) avec un message
+  en français. Vérifié AVANT tout démarrage : dev.py ne crée le worker qu'une
+  fois le port obtenu (le 2026-10-10, uvicorn échouait en anglais pendant que
+  le worker, déjà lancé, appelait Gemini). Vérification par une tentative
+  d'écoute aussitôt libérée ; un port réservé par Windows (« accès refusé »)
+  compte comme occupé — écarté : laisser uvicorn échouer ; ouvrir la socket
+  nous-mêmes et la passer à uvicorn (lancement testé à réécrire pour une
+  fenêtre de concurrence négligeable).
+
+---
+
 ## Questions ouvertes (trancher avec l'expert)
 
 - Fichier Excel réel de la maison pilote (en-têtes exacts, valeurs utilisées)

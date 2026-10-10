@@ -117,3 +117,83 @@ def test_serveur_et_dev_ecoutent_la_ou_on_le_demande(options, hote, monkeypatch,
     assert serveur.main(["--base", str(tmp_path / "a.db"), *options]) == 0
     assert dev.main(["--base", str(tmp_path / "b.db"), "--backend", "factice", "--attente", "0.05", *options]) == 0
     assert ecoutes == [hote, hote]
+
+
+# --- port occupé : le suivant, ou un arrêt expliqué en français (decisions.md 0157) -----------------
+
+
+@pytest.fixture
+def port_occupe():
+    """Un port réellement pris par un autre programme : une socket qui écoute. Choisi
+    loin du haut de la plage, pour que les ports suivants existent."""
+    for port in range(30000, 31000):
+        occupant = socket.socket()
+        try:
+            occupant.bind(("127.0.0.1", port))
+        except OSError:
+            occupant.close()
+            continue
+        occupant.listen()
+        try:
+            yield port
+        finally:
+            occupant.close()
+        return
+    pytest.skip("aucun port libre pour le test")
+
+
+def test_sans_port_impose_l_application_prend_le_port_libre_suivant_et_le_dit(port_occupe, capsys):
+    port = serveur.choisir_port("127.0.0.1", None, premier=port_occupe)
+    assert port > port_occupe and serveur.port_libre("127.0.0.1", port)
+    assert (
+        f"Le port {port_occupe} est déjà utilisé par un autre programme : l'application démarre "
+        f"sur le port {port}." in capsys.readouterr().out
+    )
+
+
+def test_un_port_libre_est_pris_sans_rien_dire(port_occupe, capsys):
+    libre = serveur.choisir_port("127.0.0.1", None, premier=port_occupe + 1)
+    assert serveur.choisir_port("127.0.0.1", None, premier=libre) == libre
+    assert serveur.choisir_port("127.0.0.1", libre) == libre
+    assert "déjà utilisé" not in capsys.readouterr().out
+
+
+def test_un_port_impose_et_occupe_n_est_jamais_remplace_en_silence(port_occupe):
+    with pytest.raises(serveur.PortOccupe, match=f"Le port {port_occupe} est déjà utilisé par un autre programme"):
+        serveur.choisir_port("127.0.0.1", port_occupe)
+
+
+def test_serveur_py_demarre_sur_le_port_suivant_si_le_port_par_defaut_est_pris(port_occupe, monkeypatch, tmp_path, capsys):
+    import uvicorn
+
+    ecoutes = []
+    monkeypatch.setattr(serveur, "PORT_DEFAUT", port_occupe)
+    monkeypatch.setattr(uvicorn, "run", lambda app, host, port, log_level: ecoutes.append(port))
+    assert serveur.main(["--base", str(tmp_path / "a.db")]) == 0
+    assert ecoutes and ecoutes[0] != port_occupe
+    sortie = capsys.readouterr().out
+    assert f"démarre sur le port {ecoutes[0]}" in sortie and f"http://127.0.0.1:{ecoutes[0]}/" in sortie
+
+
+def test_serveur_py_s_arrete_en_francais_si_le_port_impose_est_pris(port_occupe, monkeypatch, tmp_path, capsys):
+    import uvicorn
+
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: pytest.fail("le serveur ne doit pas démarrer"))
+    assert serveur.main(["--port", str(port_occupe), "--base", str(tmp_path / "a.db")]) == 2
+    assert f"Le port {port_occupe} est déjà utilisé" in capsys.readouterr().err
+
+
+def test_dev_py_ne_demarre_pas_le_worker_si_le_port_impose_est_pris(port_occupe, monkeypatch, tmp_path, capsys):
+    """Le cas vécu : le serveur ne démarrait pas, mais le worker, lancé avant,
+    appelait déjà le modèle."""
+    import uvicorn
+
+    import dev
+    from src import worker
+
+    crees = []
+    monkeypatch.setattr(worker.Worker, "__init__", lambda self, *a, **k: crees.append(a))
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: pytest.fail("le serveur ne doit pas démarrer"))
+    code = dev.main(["--port", str(port_occupe), "--base", str(tmp_path / "b.db"), "--backend", "factice"])
+    assert code == 2 and crees == []
+    assert f"Le port {port_occupe} est déjà utilisé" in capsys.readouterr().err
