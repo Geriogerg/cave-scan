@@ -122,3 +122,12 @@ def avancement(session: Session, inventaire_id: int) -> Avancement:
         ecoule_s=ecoule,
         restant_estime_s=estime,
     )
+
+
+def reprendre(session: Session, inventaire_id: int) -> int:
+    """« Relancer les erreurs » de l'écran de suivi : les bouteilles en erreur
+    repassent à extraire et l'inventaire est relancé s'il était arrêté ou
+    annulé. Renvoie le nombre de bouteilles relancées."""
+    nombre = relancer_erreurs(session, inventaire_id)
+    lancer(session, inventaire_id)
+    return nombre

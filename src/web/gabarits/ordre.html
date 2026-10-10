@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titre %}Ordre — {{ vue.inventaire.nom }}{% endblock %}
+{% block fil %}<span class="fil">{{ vue.inventaire.nom }}</span>{% endblock %}
+{% block contenu %}
+<h1>Vérifier l'ordre</h1>
+<p class="aide">
+  {% if vue.inventaire.sans_contre %}
+    Chaque photo deviendra une bouteille, dans cet ordre.
+  {% else %}
+    Chaque ligne deviendra une bouteille : l'étiquette à gauche, la contre-étiquette à
+    droite. Une photo décalée décale toutes les bouteilles suivantes : vérifiez bien.
+  {% endif %}
+</p>
+{% include "_paires.html" %}
+{% endblock %}

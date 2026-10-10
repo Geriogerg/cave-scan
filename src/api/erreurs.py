@@ -9,10 +9,11 @@ nombre impair de photos, valeur hors liste, bouteille en erreur… — sont déj
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException
 
 from src.config.maison import ConfigInvalide
@@ -53,30 +54,41 @@ def erreur(statut: int, code: str, message: str, detail: object = None) -> JSONR
     return JSONResponse(status_code=statut, content={"code": code, "message": message, "detail": detail})
 
 
-def installer(app: FastAPI) -> None:
+PageErreur = Callable[[Request, int, str], Response]
+
+
+def installer(app: FastAPI, page_erreur: PageErreur | None = None) -> None:
+    """`page_erreur` : pour les écrans (adresses /app), la même erreur rendue en
+    page HTML lisible plutôt qu'en JSON."""
+
+    def repondre(request: Request, statut: int, code: str, message: str, detail: object = None) -> Response:
+        if page_erreur is not None and request.url.path.startswith("/app"):
+            return page_erreur(request, statut, message)
+        return erreur(statut, code, message, detail)
+
     for classe, statut, code in TRADUCTIONS:
 
-        def gerer(_request: Request, exception: Exception, statut: int = statut, code: str = code):
-            return erreur(statut, code, str(exception).strip("'\""))
+        def gerer(request: Request, exception: Exception, statut: int = statut, code: str = code):
+            return repondre(request, statut, code, str(exception).strip("'\""))
 
         app.add_exception_handler(classe, gerer)
 
     @app.exception_handler(RequestValidationError)
-    def requete_invalide(_request: Request, exception: RequestValidationError):
+    def requete_invalide(request: Request, exception: RequestValidationError):
         champs = [
             {"champ": ".".join(str(p) for p in e["loc"] if p not in ("body", "query", "path", "header")),
              "probleme": e["msg"]}
             for e in exception.errors()
         ]
         noms = ", ".join(c["champ"] for c in champs if c["champ"]) or "la requête"
-        return erreur(422, "requete_invalide", f"Saisie incomplète ou invalide : {noms}.", champs)
+        return repondre(request, 422, "requete_invalide", f"Saisie incomplète ou invalide : {noms}.", champs)
 
     @app.exception_handler(HTTPException)
-    def http(_request: Request, exception: HTTPException):
+    def http(request: Request, exception: HTTPException):
         code, message = MESSAGES_HTTP.get(exception.status_code, ("erreur", str(exception.detail)))
-        return erreur(exception.status_code, code, message)
+        return repondre(request, exception.status_code, code, message)
 
     @app.exception_handler(Exception)
-    def imprevue(_request: Request, exception: Exception):
+    def imprevue(request: Request, exception: Exception):
         journal.exception("Erreur imprévue")
-        return erreur(500, "erreur_interne", "Erreur inattendue du serveur : l'opération n'a pas abouti.")
+        return repondre(request, 500, "erreur_interne", "Erreur inattendue du serveur : l'opération n'a pas abouti.")

@@ -1,0 +1,56 @@
+{% set id = vue.inventaire.id %}
+<section id="paires" class="paires" data-peut-lancer="{{ 'oui' if vue.peut_lancer else 'non' }}">
+  {% if erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
+  {% for anomalie in vue.anomalies %}<p class="message attention">{{ anomalie }}</p>{% endfor %}
+  <p class="aide">{{ vue.photos | length }} photo(s) · classées par {{ vue.tri }}
+    {% if vue.inventaire.ordre_manuel %}
+      <button class="lien" hx-post="/app/inventaires/{{ id }}/ordre/retrier" hx-target="#paires" hx-swap="outerHTML">Retrier automatiquement</button>
+    {% endif %}
+  </p>
+  <ol class="liste-paires">
+  {% for paire in vue.paires %}
+    <li class="paire">
+      <div class="paire-titre">
+        <strong>Bouteille {{ paire.numero }}</strong>
+        {% if paire.contre_etiquette and not vue.inventaire.sans_contre %}
+          <button class="bouton petit" hx-post="/app/inventaires/{{ id }}/ordre/inverser/{{ paire.numero }}"
+                  hx-target="#paires" hx-swap="outerHTML">Inverser</button>
+        {% endif %}
+      </div>
+      <div class="paire-photos">
+        {% for photo, role in [(paire.etiquette, "Étiquette"), (paire.contre_etiquette, "Contre-étiquette")] %}
+          {% if photo %}
+          <figure class="vignette">
+            <img src="/inventaires/{{ id }}/photos/{{ photo.id }}?taille=miniature" alt="{{ role }} — photo {{ photo.ordre }}" loading="lazy">
+            <figcaption>
+              {% if not vue.inventaire.sans_contre %}{{ role }} · {% endif %}photo {{ photo.ordre }}
+              {% if photo.prise_de_vue is none %}<span class="etiquette neutre">sans date</span>{% endif %}
+            </figcaption>
+            <div class="vignette-actions">
+              {% if photo.ordre > 1 %}
+              <button class="bouton petit" hx-post="/app/inventaires/{{ id }}/ordre/deplacer/{{ photo.id }}"
+                      hx-vals='{"position": {{ photo.ordre - 1 }}}' hx-target="#paires" hx-swap="outerHTML">Avant</button>
+              {% endif %}
+              {% if photo.ordre < vue.photos | length %}
+              <button class="bouton petit" hx-post="/app/inventaires/{{ id }}/ordre/deplacer/{{ photo.id }}"
+                      hx-vals='{"position": {{ photo.ordre + 1 }}}' hx-target="#paires" hx-swap="outerHTML">Après</button>
+              {% endif %}
+              <button class="bouton petit danger" hx-post="/app/inventaires/{{ id }}/ordre/supprimer/{{ photo.id }}"
+                      hx-confirm="Retirer cette photo de l'inventaire ?" hx-target="#paires" hx-swap="outerHTML">Retirer</button>
+            </div>
+          </figure>
+          {% elif not vue.inventaire.sans_contre %}
+          <div class="vignette manquante">Contre-étiquette manquante</div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </li>
+  {% endfor %}
+  </ol>
+  <nav class="barre-actions">
+    <a class="bouton" href="/app/inventaires/{{ id }}/depot">Ajouter des photos</a>
+    <button class="bouton principal" id="lancer" {% if not vue.peut_lancer %}disabled{% endif %}
+            hx-post="/app/inventaires/{{ id }}/lancer" hx-target="#paires" hx-swap="outerHTML"
+            hx-confirm="Lancer l'analyse ? Les photos ne pourront plus être modifiées.">Lancer l'analyse</button>
+  </nav>
+</section>

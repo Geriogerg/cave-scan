@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block titre %}Oups{% endblock %}
+{% block contenu %}
+<h1>Impossible d'afficher cette page</h1>
+<p class="message alerte" role="alert">{{ message }}</p>
+{% endblock %}
+{% block actions %}
+<nav class="barre-actions">
+  <a class="bouton principal" href="/app">Retour aux inventaires</a>
+</nav>
+{% endblock %}

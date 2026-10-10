@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from src.api import erreurs
 from src.api.dependances import acces
@@ -48,7 +49,13 @@ def creer_app(
     app.state.moteur = moteur
     app.state.stockage = dossier_stockage(stockage)
     app.state.configs = Path(configs)
-    erreurs.installer(app)
+    from src.web import pages  # les écrans : mêmes services, même contrôle d'accès
+
+    erreurs.installer(app, page_erreur=lambda request, statut, message: pages.page(request, "erreur.html", statut, message=message))
     for module in (maisons, inventaires, depot, bouteilles, photos):
         app.include_router(module.routeur, dependencies=[Depends(acces)])
+    app.include_router(pages.routeur, dependencies=[Depends(acces)])
+    # Feuille de style et scripts seulement : les photos ne sont JAMAIS servies
+    # comme un dossier statique (decisions.md 0117).
+    app.mount("/static", StaticFiles(directory=pages.DOSSIER / "static"), name="static")
     return app

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titre %}Nouvel inventaire{% endblock %}
+{% block contenu %}
+<h1>Nouvel inventaire</h1>
+{% if erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
+<form method="post" action="/app/nouveau" class="formulaire" id="formulaire-nouveau">
+  <label for="nom">Nom de la vente</label>
+  <input id="nom" name="nom" type="text" required maxlength="200" value="{{ nom or '' }}"
+         placeholder="Vente de printemps — cave Dupont" autocomplete="off">
+
+  <label for="maison">Maison</label>
+  <select id="maison" name="maison" required>
+    {% for m in maisons %}
+      <option value="{{ m.maison }}" {% if m.maison == maison %}selected{% endif %}>{{ m.maison }}</option>
+    {% endfor %}
+  </select>
+
+  <label class="case">
+    <input type="checkbox" name="sans_contre" value="true" {% if sans_contre %}checked{% endif %}>
+    Je n'ai que les étiquettes (pas de contre-étiquette) : une photo par bouteille
+  </label>
+</form>
+{% endblock %}
+{% block actions %}
+<nav class="barre-actions">
+  <a class="bouton" href="/app">Annuler</a>
+  <button class="bouton principal" type="submit" form="formulaire-nouveau">Créer et ajouter les photos</button>
+</nav>
+{% endblock %}

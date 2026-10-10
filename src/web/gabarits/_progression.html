@@ -1,0 +1,31 @@
+<section id="progression" class="progression"
+  {% if not etat.terminee and etat.extraction == "lancee" %}
+    hx-get="/app/inventaires/{{ inventaire.id }}/progression" hx-trigger="every 3s" hx-swap="outerHTML"
+  {% endif %}>
+  {% if erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
+  {% set faites = etat.par_statut.extraite + etat.par_statut.validee %}
+  <progress max="{{ etat.total or 1 }}" value="{{ faites + etat.par_statut.erreur }}"></progress>
+  <ul class="chiffres">
+    <li><strong>{{ faites }}</strong> extraite(s)</li>
+    <li><strong>{{ etat.par_statut.erreur }}</strong> en erreur</li>
+    <li><strong>{{ etat.restantes }}</strong> restante(s)</li>
+  </ul>
+  {% if etat.extraction == "arretee" %}
+    <p class="message alerte">L'analyse s'est arrêtée : {{ etat.motif_arret }}</p>
+  {% elif etat.extraction == "annulee" %}
+    <p class="message attention">L'analyse a été annulée.</p>
+  {% elif etat.terminee %}
+    <p class="message ok">Analyse terminée en {{ etat.ecoule_s | duree }}.</p>
+  {% else %}
+    <p class="aide">Temps écoulé : {{ etat.ecoule_s | duree }} · temps restant estimé : {{ etat.restant_estime_s | duree }}</p>
+  {% endif %}
+  <div class="actions-suivi">
+    {% if etat.par_statut.erreur or etat.extraction == "arretee" %}
+      <button class="bouton" hx-post="/app/inventaires/{{ inventaire.id }}/relancer-erreurs"
+              hx-target="#progression" hx-swap="outerHTML">Relancer les erreurs</button>
+    {% endif %}
+    {% if etat.terminee %}
+      <a class="bouton principal" href="/inventaires/{{ inventaire.id }}/export" download>Télécharger l'Excel</a>
+    {% endif %}
+  </div>
+</section>

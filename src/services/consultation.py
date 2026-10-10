@@ -194,3 +194,10 @@ def fiche_bouteille(session: Session, inventaire_id: int, bouteille_id: int) -> 
 def _saisie_expert(config, champ: str) -> bool:
     colonne = config.colonne(champ)
     return colonne is not None and colonne.source == "expert"
+
+
+def tableau_des_inventaires(session: Session) -> list[tuple[Inventaire, Avancement]]:
+    """L'accueil : chaque inventaire avec son avancement, le plus récent d'abord."""
+    from src.services.inventaires import lister_inventaires
+
+    return [(inventaire, avancement(session, inventaire.id)) for inventaire in reversed(lister_inventaires(session))]

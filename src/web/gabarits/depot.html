@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block titre %}Photos — {{ vue.inventaire.nom }}{% endblock %}
+{% block fil %}<span class="fil">{{ vue.inventaire.nom }}</span>{% endblock %}
+{% block contenu %}
+<section id="depot"
+         data-depot
+         data-inventaire="{{ vue.inventaire.id }}"
+         data-taille="{{ taille_reduction }}"
+         data-deja="{{ vue.photos | length }}">
+  <h1>Ajouter les photos</h1>
+  <p class="aide">
+    {% if vue.inventaire.sans_contre %}
+      Une photo d'étiquette par bouteille.
+    {% else %}
+      Pour chaque bouteille : l'étiquette, puis la contre-étiquette.
+    {% endif %}
+    Vous pouvez en ajouter en plusieurs fois.
+  </p>
+
+  <div class="choix">
+    <label class="bouton principal grand" for="galerie">Choisir dans la galerie</label>
+    <input id="galerie" class="cache" type="file" accept="image/*,.heic,.heif" multiple>
+    <label class="bouton grand" for="camera">Prendre une photo</label>
+    <input id="camera" class="cache" type="file" accept="image/*" capture="environment">
+  </div>
+
+  <label class="case">
+    <input type="checkbox" id="reduire" {% if reduction %}checked{% endif %}>
+    Réduire les photos avant l'envoi (plus rapide en 4G)
+  </label>
+
+  <p id="garder-ouvert" class="message attention" hidden>
+    Gardez cette page ouverte pendant l'envoi. Si l'envoi s'arrête, il reprendra
+    tout seul à votre retour sur la page.
+  </p>
+
+  <div id="resume" class="resume" aria-live="polite">
+    <span id="resume-texte">{{ vue.photos | length }} photo(s) déjà reçue(s) pour cet inventaire.</span>
+    <progress id="barre" max="1" value="0" hidden></progress>
+  </div>
+
+  <ul id="envois" class="envois" aria-live="polite"></ul>
+</section>
+{% endblock %}
+{% block actions %}
+<nav class="barre-actions">
+  <a class="bouton" href="/app">Plus tard</a>
+  <a id="vers-ordre" class="bouton principal" href="/app/inventaires/{{ vue.inventaire.id }}/ordre">Vérifier l'ordre</a>
+</nav>
+{% endblock %}
+{% block scripts %}<script src="/static/depot.js" defer></script>{% endblock %}
