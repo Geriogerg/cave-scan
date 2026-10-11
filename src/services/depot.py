@@ -51,6 +51,7 @@ from src.services.inventaires import (
     bouteille_du_groupe,
     charger_inventaire,
     config_figee,
+    verifier_modifiable,
 )
 from src.services.pilotage import LancementRefuse
 
@@ -375,7 +376,8 @@ def finaliser(session: Session, inventaire_id: int, stockage: Path) -> int:
         session.rollback()
         raise LancementRefuse("Aucune bouteille en attente : ajoutez des photos avant de lancer l'analyse.")
     bouteilles = list(inventaire.bouteilles)
-    position = max((b.position for b in bouteilles), default=0)
+    # Après la dernière, retirées comprises : elles gardent leur place (0168).
+    position = max((b.position for b in inventaire.toutes_les_bouteilles), default=0)
     rien_en_cours = not any(b.statut in ("a_extraire", "en_cours") for b in bouteilles)
     for groupe in attente:
         position += 1
@@ -398,7 +400,8 @@ def finaliser(session: Session, inventaire_id: int, stockage: Path) -> int:
 
 def _depot_ouvert(inventaire: Inventaire) -> Inventaire:
     """On peut déposer dans un brouillon, et ajouter des bouteilles à un inventaire
-    lancé (decisions.md 0167)."""
+    lancé (decisions.md 0167) — pas à un inventaire clos (0168)."""
+    verifier_modifiable(inventaire)
     return inventaire
 
 

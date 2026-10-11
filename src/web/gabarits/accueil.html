@@ -2,6 +2,7 @@
 {% block titre %}Inventaires{% endblock %}
 {% block contenu %}
 <h1>Inventaires</h1>
+{% if fait %}<p class="message ok" role="status">{{ fait }}</p>{% endif %}
 {% if not inventaires %}
   <p class="vide">Aucun inventaire pour l'instant. Commencez par « Nouvel inventaire ».</p>
 {% else %}
@@ -12,7 +13,9 @@
         <span class="carte-titre">{{ inventaire.nom }}</span>
         <span class="carte-ligne">{{ inventaire.maison.nom }} · {{ inventaire.cree_le | date }}</span>
         <span class="carte-ligne">
-          {% if inventaire.statut == "brouillon" %}
+          {% if inventaire.clos_le %}
+            <span class="etiquette ok">Clos</span>
+          {% elif inventaire.statut == "brouillon" %}
             <span class="etiquette neutre">Brouillon — dépôt des photos</span>
           {% elif inventaire.statut == "valide" %}
             <span class="etiquette ok">Validé</span>
@@ -34,6 +37,37 @@
     </li>
   {% endfor %}
   </ul>
+{% endif %}
+
+{% if archives %}
+<details class="bloc-repli">
+  <summary>Archives ({{ archives | length }})</summary>
+  <ul class="cartes">
+  {% for inventaire, etat in archives %}
+    <li><a class="carte" href="/app/inventaires/{{ inventaire.id }}">
+      <span class="carte-titre">{{ inventaire.nom }}</span>
+      <span class="carte-ligne">{{ inventaire.maison.nom }} · {{ inventaire.cree_le | date }}
+        {% if inventaire.clos_le %}<span class="etiquette ok">Clos</span>{% endif %}</span>
+    </a></li>
+  {% endfor %}
+  </ul>
+</details>
+{% endif %}
+
+{% if corbeille %}
+<details class="bloc-repli">
+  <summary>Corbeille ({{ corbeille | length }})</summary>
+  <p class="aide">Rien n'y est effacé : photos, lectures du modèle et corrections sont conservées.</p>
+  <ul class="cartes">
+  {% for inventaire in corbeille %}
+    <li class="carte">
+      <span class="carte-titre">{{ inventaire.nom }}</span>
+      <span class="carte-ligne">{{ inventaire.maison.nom }} · mis à la corbeille le {{ inventaire.supprime_le | horodatage }}</span>
+      <form method="post" action="/app/inventaires/{{ inventaire.id }}/restaurer"><button class="bouton petit">Restaurer</button></form>
+    </li>
+  {% endfor %}
+  </ul>
+</details>
 {% endif %}
 {% endblock %}
 {% block actions %}

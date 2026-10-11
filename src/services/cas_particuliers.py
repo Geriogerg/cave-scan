@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from src.config.maison import COLONNE_QUANTITE
 from src.donnees.modeles import Correction, EvenementBouteille, FicheBouteille
 from src.services.extraction import charger_bouteille
-from src.services.inventaires import actualiser_statut, config_figee
+from src.services.inventaires import actualiser_statut, config_figee, verifier_modifiable
 from src.services.relecture import (
     auteur_valide,
     champs_corrigeables,
@@ -67,6 +67,7 @@ def reanalyser(session: Session, bouteille_id: int, auteur: str) -> bool:
     """
     auteur = auteur_valide(auteur)
     bouteille = charger_bouteille(session, bouteille_id)
+    verifier_modifiable(bouteille.inventaire)
     if bouteille.statut in ("a_extraire", "en_cours"):
         return False
     inventaire = bouteille.inventaire
@@ -95,6 +96,7 @@ def signaler_paire(session: Session, bouteille_id: int, auteur: str, motif: str 
     l'historique les porte. Renvoie False si elle était déjà signalée."""
     auteur = auteur_valide(auteur)
     bouteille = charger_bouteille(session, bouteille_id)
+    verifier_modifiable(bouteille.inventaire)
     if bouteille.paire_signalee:
         return False
     bouteille.paire_signalee = True
@@ -111,6 +113,7 @@ def lever_signalement(session: Session, bouteille_id: int, auteur: str) -> bool:
     Renvoie False si elle n'était pas signalée."""
     auteur = auteur_valide(auteur)
     bouteille = charger_bouteille(session, bouteille_id)
+    verifier_modifiable(bouteille.inventaire)
     if not bouteille.paire_signalee:
         return False
     bouteille.paire_signalee = False
@@ -136,6 +139,7 @@ def separer(session: Session, bouteille_id: int, quantite: Any, auteur: str) -> 
     """
     auteur = auteur_valide(auteur)
     source = charger_bouteille(session, bouteille_id)
+    verifier_modifiable(source.inventaire)
     if source.statut not in ("extraite", "validee"):
         raise ActionRefusee(
             f"{_nom(source)} : seule une bouteille déjà analysée peut être séparée."
@@ -151,7 +155,8 @@ def separer(session: Session, bouteille_id: int, quantite: Any, auteur: str) -> 
 
     # La place juste après la source : les suivantes reculent d'un rang, en deux
     # temps (la contrainte d'unicité refuserait un décalage direct).
-    suivantes = [b for b in inventaire.bouteilles if b.position > source.position]
+    # Toutes, retirées comprises : elles gardent leur place (decisions.md 0168).
+    suivantes = [b for b in inventaire.toutes_les_bouteilles if b.position > source.position]
     for bouteille in suivantes:
         bouteille.position = -(bouteille.position + 1)
     session.flush()

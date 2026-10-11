@@ -32,6 +32,10 @@ class InventaireIntrouvable(LookupError):
     pass
 
 
+class InventaireClos(ValueError):
+    """L'inventaire est clos : lecture seule tant qu'il n'est pas rouvert (0168)."""
+
+
 @dataclass(frozen=True)
 class InventaireCree:
     """Ce que la création a fait — de quoi l'annoncer à l'utilisateur."""
@@ -162,11 +166,28 @@ def bouteille_du_groupe(groupe: GroupePhotos, position: int, stockage: Path) -> 
     )
 
 
-def charger_inventaire(session: Session, inventaire_id: int) -> Inventaire:
+def charger_inventaire(session: Session, inventaire_id: int, corbeille: bool = False) -> Inventaire:
+    """L'inventaire demandé. Un inventaire à la corbeille n'est plus ouvert par
+    aucun écran ni aucune route — seulement restauré (`corbeille=True`)."""
     inventaire = session.get(Inventaire, inventaire_id)
     if inventaire is None:
         raise InventaireIntrouvable(f"Aucun inventaire n°{inventaire_id}.")
+    if inventaire.supprime_le is not None and not corbeille:
+        raise InventaireIntrouvable(
+            f"L'inventaire n°{inventaire_id} est dans la corbeille : restaurez-le depuis l'accueil pour l'ouvrir."
+        )
     return inventaire
+
+
+def verifier_modifiable(inventaire: Inventaire) -> None:
+    """Un inventaire clos est en lecture seule : ni correction, ni validation,
+    ni ajout ou retrait de bouteille, ni nouvelle analyse (decisions.md 0168).
+    L'export reste possible."""
+    if inventaire.clos_le is not None:
+        raise InventaireClos(
+            f"L'inventaire « {inventaire.nom} » est clos : il est en lecture seule. "
+            f"Rouvrez-le (écran de suivi) pour le modifier."
+        )
 
 
 def actualiser_statut(inventaire: Inventaire) -> None:
@@ -256,6 +277,8 @@ def _version_de_config(
     return version, True, avertissements
 
 
-def lister_inventaires(session: Session) -> list[Inventaire]:
-    return list(session.scalars(select(Inventaire).order_by(Inventaire.id)))
+def lister_inventaires(session: Session, corbeille: bool = False) -> list[Inventaire]:
+    """Les inventaires, hors corbeille ; ou ceux de la corbeille."""
+    condition = Inventaire.supprime_le.is_not(None) if corbeille else Inventaire.supprime_le.is_(None)
+    return list(session.scalars(select(Inventaire).where(condition).order_by(Inventaire.id)))
 

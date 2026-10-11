@@ -200,7 +200,7 @@
     }
   });
 
-  // Les autres actions (réanalyser, inverser, signaler, séparer) quittent la page.
+  // Les autres actions (réanalyser, signaler, séparer, retirer) quittent la page.
   document.addEventListener("submit", function (evenement) {
     var formulaire = evenement.target;
     if (formulaire === fiche) {
@@ -209,6 +209,8 @@
     }
     if (!formulaire.hasAttribute("data-action") || formulaire.dataset.pret === "oui") return;
     evenement.preventDefault();
+    // Un geste qui demande confirmation (retirer la bouteille) : seulement si l'expert confirme.
+    if (formulaire.dataset.confirmer && !window.confirm(formulaire.dataset.confirmer)) return;
     quandToutEstEnregistre(function () {
       formulaire.dataset.pret = "oui";
       quitterSansAlerte = true;

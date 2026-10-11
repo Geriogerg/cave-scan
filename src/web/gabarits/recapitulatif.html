@@ -29,6 +29,21 @@
     </ul>
   {% endif %}
 
+  {% if retirees %}
+  <h2>Bouteilles retirées</h2>
+  <p class="aide">Hors de la relecture et de l'Excel ; rien n'est effacé.</p>
+  <ul class="restes">
+    {% for b in retirees %}
+    <li>n°{{ b.position }} ({{ b.identifiant }})
+      {% if not r.inventaire.clos_le %}
+      <form class="en-ligne" method="post" action="/app/inventaires/{{ i }}/bouteilles/{{ b.id }}/remettre">
+        <button class="lien">Remettre dans l'inventaire</button></form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
   <h2>Chiffres</h2>
   <dl class="chiffres-recap">
     <dt>Bouteilles</dt><dd>{{ c.total }} (dont {{ s.nb_separees }} née(s) d'une séparation)</dd>

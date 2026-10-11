@@ -21,6 +21,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import RedirectResponse, Response
 
 from src.api.dependances import AuteurEcran, Formulaire, SessionBase
+from src.services.cycle_de_vie import bouteilles_retirees, remettre_bouteille, retirer_bouteille
 from src.services.cas_particuliers import (
     lever_signalement,
     reanalyser,
@@ -34,7 +35,7 @@ from src.services.consultation import (
     prochaine_a_relire,
     recapitulatif,
 )
-from src.services.inventaires import charger_inventaire, config_figee
+from src.services.inventaires import InventaireClos, charger_inventaire, config_figee
 from src.services.relecture import (
     CorrectionRefusee,
     ModificationConcurrente,
@@ -53,6 +54,7 @@ MESSAGES_FAIT = {
     "signalee": "Problème de photos signalé : cette bouteille ne peut plus être validée, elle attend au récapitulatif.",
     "levee": "Signalement levé : la bouteille peut de nouveau être validée.",
     "separee": "Bouteille séparée. Ajustez l'état et la description de cet exemplaire.",
+    "retiree": "Bouteille retirée de l'inventaire. Elle se remet depuis le récapitulatif.",
 }
 
 routeur = APIRouter(include_in_schema=False)
@@ -104,6 +106,8 @@ def entrer(inventaire_id: int, base: SessionBase, filtre: Filtre = None):
 @routeur.get("/app/inventaires/{inventaire_id}/relecture/{bouteille_id}")
 def afficher(request: Request, inventaire_id: int, bouteille_id: int, base: SessionBase, auteur: AuteurEcran,
              filtre: Filtre = None, fait: Filtre = None):
+    if bouteille_de(base, inventaire_id, bouteille_id).retiree:  # hors de l'inventaire : au récapitulatif
+        return RedirectResponse(adresse(inventaire_id), status_code=303)
     return _page_bouteille(request, base, inventaire_id, bouteille_id, filtre == FILTRE,
                            fait=MESSAGES_FAIT.get(fait or ""), auteur=auteur)
 
@@ -118,11 +122,22 @@ def attente(request: Request, inventaire_id: int, bouteille_id: int, base: Sessi
 
 
 @routeur.get("/app/inventaires/{inventaire_id}/recapitulatif")
-def recapituler(request: Request, inventaire_id: int, base: SessionBase):
+def recapituler(request: Request, inventaire_id: int, base: SessionBase, erreur: str | None = None):
     inventaire = charger_inventaire(base, inventaire_id)
     if inventaire.statut == "brouillon":
         return RedirectResponse(f"/app/inventaires/{inventaire_id}/depot", status_code=303)
-    return page(request, "recapitulatif.html", recap=recapitulatif(base, inventaire_id))
+    return page(request, "recapitulatif.html", recap=recapitulatif(base, inventaire_id),
+                retirees=bouteilles_retirees(base, inventaire_id))
+
+
+@routeur.post("/app/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/remettre")
+def remettre(request: Request, inventaire_id: int, bouteille_id: int, base: SessionBase, auteur: AuteurEcran):
+    bouteille_de(base, inventaire_id, bouteille_id)
+    try:
+        remettre_bouteille(base, bouteille_id, auteur)
+    except ERREURS_DE_SERVICE as refus:
+        return page(request, "erreur.html", 409, message=str(refus))
+    return RedirectResponse(adresse(inventaire_id, bouteille_id), status_code=303)
 
 
 # --- enregistrer un champ, revenir à la valeur du modèle --------------------------------------
@@ -144,7 +159,7 @@ def enregistrer_champ(request: Request, inventaire_id: int, bouteille_id: int, c
             base, bouteille_id, cle, saisies[cle], auteur, saisies.get("_version"), saisies.get("_forcer") == "1"
         )
         etat, statut = ("enregistre" if correction is not None else "inchange"), 200
-    except CorrectionRefusee as refus:
+    except (CorrectionRefusee, InventaireClos) as refus:
         etat, statut, contexte["message"] = "refuse", 422, str(refus)
     except ModificationConcurrente as conflit:
         etat, statut, contexte["changements"] = "conflit", 409, conflit.changements
@@ -163,7 +178,7 @@ def revenir(request: Request, inventaire_id: int, bouteille_id: int, cle: str,
     try:
         revenir_a_la_valeur_du_modele(base, bouteille_id, cle, auteur, saisies.get("_version"), saisies.get("_forcer") == "1")
         etat, statut = "enregistre", 200
-    except CorrectionRefusee as refus:
+    except (CorrectionRefusee, InventaireClos) as refus:
         etat, statut, contexte["message"] = "refuse", 422, str(refus)
     except ModificationConcurrente as conflit:
         etat, statut, contexte["changements"] = "conflit", 409, conflit.changements
@@ -241,6 +256,27 @@ def demander_reanalyse(request: Request, inventaire_id: int, bouteille_id: int,
                        base: SessionBase, auteur: AuteurEcran, saisies: Formulaire):
     return _action(request, base, inventaire_id, bouteille_id, saisies,
                    lambda: reanalyser(base, bouteille_id, auteur) and None, "reanalyse")
+
+
+@routeur.post("/app/inventaires/{inventaire_id}/relecture/{bouteille_id}/retirer")
+def retirer(request: Request, inventaire_id: int, bouteille_id: int,
+            base: SessionBase, auteur: AuteurEcran, saisies: Formulaire):
+    """Retirer la bouteille de l'inventaire (rien n'est effacé, 0168), puis passer
+    à la suivante à relire."""
+    filtre = saisies.get("_filtre") == FILTRE
+    position = bouteille_de(base, inventaire_id, bouteille_id).position
+
+    def faire():
+        retirer_bouteille(base, bouteille_id, auteur, saisies.get("motif", ""))
+        return prochaine_a_relire(etats_de_relecture(base, inventaire_id), position, filtre)
+
+    try:
+        suivante = faire()
+    except ERREURS_DE_SERVICE as refus:
+        return _page_bouteille(request, base, inventaire_id, bouteille_id, filtre, 409, erreur=str(refus))
+    if suivante is None:
+        return RedirectResponse(adresse(inventaire_id), status_code=303)
+    return RedirectResponse(adresse(inventaire_id, suivante, filtre, "retiree"), status_code=303)
 
 
 @routeur.post("/app/inventaires/{inventaire_id}/relecture/{bouteille_id}/signaler")

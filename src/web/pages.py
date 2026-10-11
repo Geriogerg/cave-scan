@@ -35,7 +35,7 @@ from src.services.depot import (
 )
 from src.services.depot import ModificationRefusee
 from src.services.envoi import TAILLE_MAX_OCTETS, config_de_la_maison, configs_disponibles
-from src.services.inventaires import charger_inventaire
+from src.services.inventaires import charger_inventaire, lister_inventaires
 from src.services.pilotage import avancement, reprendre
 
 DOSSIER = Path(__file__).resolve().parent
@@ -97,8 +97,17 @@ def racine() -> RedirectResponse:
 
 
 @routeur.get("/app")
-def accueil(request: Request, base: SessionBase):
-    return page(request, "accueil.html", inventaires=tableau_des_inventaires(base))
+def accueil(request: Request, base: SessionBase, fait: str | None = None):
+    from src.web.cycle import MESSAGES
+
+    tous = tableau_des_inventaires(base)
+    return page(
+        request, "accueil.html",
+        inventaires=[(i, e) for i, e in tous if i.archive_le is None],
+        archives=[(i, e) for i, e in tous if i.archive_le is not None],
+        corbeille=lister_inventaires(base, corbeille=True),
+        fait=MESSAGES.get(fait or ""),
+    )
 
 
 @routeur.get("/app/nouveau")
@@ -138,7 +147,10 @@ def ouvrir(inventaire_id: int, base: SessionBase):
 
 @routeur.get("/app/inventaires/{inventaire_id}/depot")
 def depot(request: Request, inventaire_id: int, base: SessionBase):
-    """Le dépôt d'un brouillon, ou l'ajout de bouteilles à un inventaire lancé."""
+    """Le dépôt d'un brouillon, ou l'ajout de bouteilles à un inventaire lancé —
+    pas à un inventaire clos (lecture seule, 0168)."""
+    if charger_inventaire(base, inventaire_id).clos_le is not None:
+        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi", status_code=303)
     vue = apercu(base, inventaire_id)
     attente = {b.groupe.cle: len(b.photos) for b in vue.bouteilles if b.groupe.cle}
     return page(
@@ -218,13 +230,15 @@ def lancer_l_analyse(request: Request, inventaire_id: int, base: SessionBase, st
 
 
 @routeur.get("/app/inventaires/{inventaire_id}/suivi")
-def suivi(request: Request, inventaire_id: int, base: SessionBase):
+def suivi(request: Request, inventaire_id: int, base: SessionBase, fait: str | None = None):
+    from src.web.cycle import MESSAGES
+
     inventaire = charger_inventaire(base, inventaire_id)
     if inventaire.statut == "brouillon":
         return RedirectResponse(f"/app/inventaires/{inventaire_id}/depot", status_code=303)
     return page(
         request, "suivi.html", inventaire=inventaire, etat=avancement(base, inventaire_id),
-        en_attente=apercu(base, inventaire_id).bouteilles,
+        en_attente=apercu(base, inventaire_id).bouteilles, fait=MESSAGES.get(fait or ""),
     )
 
 

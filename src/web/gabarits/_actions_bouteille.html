@@ -17,6 +17,15 @@
       <span class="aide">Une photo ne montre pas cette bouteille : elle ne pourra pas être validée.</span>
     </form>
     {% endif %}
+    {% if b.statut != "en_cours" %}
+    <form method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/retirer" data-action
+          data-confirmer="Retirer la bouteille n°{{ b.position }} de l'inventaire ? Rien n'est effacé : elle se remet depuis le récapitulatif.">
+      {% include "_filtre_cache.html" %}
+      <button class="bouton petit danger">Retirer cette bouteille</button>
+      <input type="text" name="motif" placeholder="Motif (facultatif)" aria-label="Motif du retrait" autocomplete="off">
+      <span class="aide">Photographiée par erreur, pas dans la vente… Elle sort de la relecture et de l'Excel.</span>
+    </form>
+    {% endif %}
     {% if b.statut in ("extraite", "validee") %}
     <form method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/separer" data-action>
       {% include "_filtre_cache.html" %}

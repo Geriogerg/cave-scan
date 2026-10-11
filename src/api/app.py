@@ -51,7 +51,7 @@ def creer_app(
     app.state.moteur = moteur
     app.state.stockage = dossier_stockage(stockage)
     app.state.configs = Path(configs)
-    from src.web import configuration, pages, relecture  # les écrans : mêmes services, même contrôle d'accès
+    from src.web import configuration, cycle, pages, relecture  # les écrans : mêmes services, même contrôle d'accès
 
     erreurs.installer(app, page_erreur=lambda request, statut, message: pages.page(request, "erreur.html", statut, message=message))
     for module in (maisons, inventaires, depot, bouteilles, photos):
@@ -59,6 +59,7 @@ def creer_app(
     app.include_router(pages.routeur, dependencies=[Depends(acces)])
     app.include_router(relecture.routeur, dependencies=[Depends(acces)])
     app.include_router(configuration.routeur, dependencies=[Depends(acces)])
+    app.include_router(cycle.routeur, dependencies=[Depends(acces)])
     # Feuille de style et scripts seulement : les photos ne sont JAMAIS servies
     # comme un dossier statique (decisions.md 0117).
     app.mount("/static", StaticFiles(directory=pages.DOSSIER / "static"), name="static")

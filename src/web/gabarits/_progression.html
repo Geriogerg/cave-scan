@@ -13,7 +13,7 @@
   {% if etat.extraction == "arretee" %}
     <p class="message alerte">L'analyse s'est arrêtée : {{ etat.motif_arret }}</p>
   {% elif etat.extraction == "annulee" %}
-    <p class="message attention">L'analyse a été annulée.</p>
+    <p class="message attention">L'analyse est en pause.</p>
   {% elif etat.terminee %}
     <p class="message ok">Analyse terminée en {{ etat.ecoule_s | duree }}.</p>
   {% else %}
@@ -26,9 +26,16 @@
     {% else %}
       <span class="bouton inactif" aria-disabled="true">Relecture — dès la première bouteille analysée</span>
     {% endif %}
+    {% if not inventaire.clos_le %}
     {% if etat.par_statut.erreur or etat.extraction == "arretee" %}
       <button class="bouton" hx-post="/app/inventaires/{{ inventaire.id }}/relancer-erreurs"
               hx-target="#progression" hx-swap="outerHTML">Relancer les erreurs</button>
+    {% endif %}
+    {% if etat.extraction == "lancee" and not etat.terminee %}
+      <form method="post" action="/app/inventaires/{{ inventaire.id }}/pause"><button class="bouton">Mettre l'analyse en pause</button></form>
+    {% elif etat.extraction == "annulee" and not etat.terminee %}
+      <form method="post" action="/app/inventaires/{{ inventaire.id }}/reprendre-analyse"><button class="bouton principal">Reprendre l'analyse</button></form>
+    {% endif %}
     {% endif %}
     {% if etat.terminee %}
       <a class="bouton" href="/inventaires/{{ inventaire.id }}/export" download>Télécharger l'Excel</a>

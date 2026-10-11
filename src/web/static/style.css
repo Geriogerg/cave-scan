@@ -134,6 +134,16 @@ progress { width: 100%; height: 14px; accent-color: var(--accent); }
 .quantite-galerie input { width: 4em; text-align: center; min-height: 44px; }
 .bouton.inactif { opacity: 0.5; pointer-events: none; }
 
+/* Cycle de vie de l'inventaire (session 6) */
+.gestion { margin: 18px 0; }
+.gestion summary { cursor: pointer; color: var(--accent); }
+.gestion-contenu { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.gestion-boutons { display: flex; flex-wrap: wrap; gap: 8px; }
+.formulaire-en-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.formulaire-en-ligne input { flex: 1 1 200px; }
+.explications { line-height: 1.6; padding-left: 20px; }
+.bouton.danger-plein { background: var(--alerte); border-color: var(--alerte); color: #fff; }
+
 /* Vérifier les bouteilles en attente */
 .liste-attente { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .attente-titre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -209,6 +219,7 @@ body.relecture .contenu { max-width: 1680px; padding-bottom: 32px; }
 .message form.en-ligne { display: inline; }
 .proposition { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .champs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+fieldset.champs { border: none; padding: 0; margin: 0; min-width: 0; }
 .champ { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; }
 .champ.douteux { background: #fdf7e8; border-color: #e3c37a; }
 .champ-tete { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }

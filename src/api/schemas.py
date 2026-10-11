@@ -99,8 +99,19 @@ class InventaireResume(BaseModel):
     maison: str
     statut: str
     extraction: str
-    nb_bouteilles: int
+    nb_bouteilles: int = Field(description="Bouteilles de l'inventaire, retirées exclues.")
     cree_le: datetime
+    archive: bool = False
+    clos: bool = Field(False, description="Clos : lecture seule (l'export reste possible).")
+    dans_la_corbeille: bool = False
+
+
+class RenommageDemande(BaseModel):
+    nom: str = Field(min_length=1, max_length=200)
+
+
+class RetraitDemande(BaseModel):
+    motif: str = Field("", max_length=500)
 
 
 class InventaireDetail(InventaireResume):
@@ -118,6 +129,9 @@ def depuis_inventaire(inventaire) -> InventaireResume:
         extraction=inventaire.extraction,
         nb_bouteilles=len(inventaire.bouteilles),
         cree_le=inventaire.cree_le,
+        archive=inventaire.archive_le is not None,
+        clos=inventaire.clos_le is not None,
+        dans_la_corbeille=inventaire.supprime_le is not None,
     )
 
 
@@ -210,7 +224,7 @@ class CorrectionHistorique(BaseModel):
 
 
 class EvenementHistorique(BaseModel):
-    type: str = Field(description="reanalyse, signalement_paire, signalement_leve, separation (inversion_photos : historique d'avant les groupes de photos)")
+    type: str = Field(description="reanalyse, signalement_paire, signalement_leve, separation, retrait, remise (inversion_photos : historique d'avant les groupes de photos)")
     auteur: str
     le: datetime
     detail: Any = None
@@ -245,6 +259,7 @@ class BouteilleDetail(BaseModel):
     paire_signalee: bool
     separee_de_id: int | None
     temps_relecture_ms: int
+    retiree: bool = Field(False, description="Retirée de l'inventaire : hors relecture et hors export.")
 
 
 def depuis_fiche(fiche: FicheComplete) -> BouteilleDetail:
@@ -288,6 +303,7 @@ def depuis_fiche(fiche: FicheComplete) -> BouteilleDetail:
         paire_signalee=b.paire_signalee,
         separee_de_id=b.separee_de_id,
         temps_relecture_ms=b.temps_relecture_ms,
+        retiree=b.retiree,
     )
 
 

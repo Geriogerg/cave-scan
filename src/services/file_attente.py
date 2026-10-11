@@ -48,7 +48,12 @@ def reserver_bouteille(session: Session, worker: str, inventaire_id: int | None 
     prochaine = (
         select(FicheBouteille.id)
         .join(Inventaire, Inventaire.id == FicheBouteille.inventaire_id)
-        .where(FicheBouteille.statut == "a_extraire", Inventaire.extraction == "lancee")
+        .where(
+            FicheBouteille.statut == "a_extraire",
+            FicheBouteille.retiree.is_(False),  # retirée : jamais analysée (0168)
+            Inventaire.extraction == "lancee",
+            Inventaire.supprime_le.is_(None),  # à la corbeille : jamais traité
+        )
         .order_by(Inventaire.id, FicheBouteille.position)
         .limit(1)
     )

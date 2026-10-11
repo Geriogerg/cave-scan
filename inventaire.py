@@ -86,11 +86,16 @@ def _lister(session: Session, arguments: argparse.Namespace) -> None:
         return
     print(f"{'N°':>4}  {'statut':<7} {'btl':>4}  {'config':<7} {'créé le (UTC)':<16}  maison — nom")
     for inventaire in inventaires:
+        marques = [m for m, oui in (("clos", inventaire.clos_le), ("archivé", inventaire.archive_le)) if oui]
         print(
             f"{inventaire.id:>4}  {inventaire.statut:<7} {len(inventaire.bouteilles):>4}  "
             f"n°{inventaire.config_version.numero:<5} {inventaire.cree_le:%Y-%m-%d %H:%M}  "
-            f"{inventaire.maison.nom} — {inventaire.nom}"
+            f"{inventaire.maison.nom} — {inventaire.nom}" + (f"  ({', '.join(marques)})" if marques else "")
         )
+    corbeille = lister_inventaires(session, corbeille=True)
+    if corbeille:
+        print(f"
+{len(corbeille)} inventaire(s) dans la corbeille : à restaurer depuis l'application.")
 
 
 def _bouteilles(session: Session, arguments: argparse.Namespace) -> None:

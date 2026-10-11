@@ -44,7 +44,7 @@ from src.services.extraction import (
     derniere_extraction_reussie,
     extractions_de,
 )
-from src.services.inventaires import actualiser_statut, charger_inventaire, config_figee
+from src.services.inventaires import actualiser_statut, charger_inventaire, config_figee, verifier_modifiable
 
 # Le changement de statut d'une bouteille (validation, remise à relire) est
 # tracé dans l'historique sous ce nom (decisions.md 0083).
@@ -350,6 +350,8 @@ LIBELLES_EVENEMENT = {
     "signalement_paire": "problème de photos signalé",
     "signalement_leve": "signalement de photos levé",
     "separation": "bouteille séparée",
+    "retrait": "bouteille retirée de l'inventaire",
+    "remise": "bouteille remise dans l'inventaire",
 }
 
 
@@ -388,7 +390,9 @@ def enregistrer_correction(
     session: Session, bouteille: FicheBouteille, champ: str, valeur: Any, auteur: str
 ) -> Correction:
     """Ajoute à l'historique une valeur DÉJÀ validée, puis applique la règle de
-    statut : une bouteille validée qu'on modifie est à relire (decisions.md 0083)."""
+    statut : une bouteille validée qu'on modifie est à relire (decisions.md 0083).
+    Jamais sur un inventaire clos (lecture seule, 0168)."""
+    verifier_modifiable(bouteille.inventaire)
     ancienne = valeur_courante(valeurs_courantes(session, bouteille.id), champ)
     correction = Correction(
         champ=champ,
@@ -601,6 +605,7 @@ def valider(session: Session, bouteille_id: int, auteur: str, temps_ms: int | No
     """
     auteur = auteur_valide(auteur)
     bouteille = charger_bouteille(session, bouteille_id)
+    verifier_modifiable(bouteille.inventaire)
     if bouteille.statut == "validee":
         _ajouter_temps(bouteille, temps_ms)
         session.commit()

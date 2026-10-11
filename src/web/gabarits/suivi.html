@@ -4,6 +4,11 @@
 {% block contenu %}
 <h1>Analyse des photos</h1>
 <p class="aide">{{ inventaire.maison.nom }} · {{ inventaire.bouteilles | length }} bouteille(s). Cette page se met à jour toute seule.</p>
+{% if fait %}<p class="message ok" role="status">{{ fait }}</p>{% endif %}
+{% if inventaire.clos_le %}
+  <p class="message info">Inventaire clos le {{ inventaire.clos_le | horodatage }} : il est en lecture seule.
+    L'Excel reste téléchargeable. <a href="/app/inventaires/{{ inventaire.id }}/rouvrir">Rouvrir</a></p>
+{% endif %}
 {% if en_attente %}
   <p class="message attention">
     {{ en_attente | length }} bouteille(s) ajoutée(s), pas encore lancée(s) :
@@ -11,11 +16,39 @@
   </p>
 {% endif %}
 {% include "_progression.html" %}
+
+<details class="gestion">
+  <summary>Gérer l'inventaire</summary>
+  <div class="gestion-contenu">
+    {% if not inventaire.clos_le %}
+    <form method="post" action="/app/inventaires/{{ inventaire.id }}/renommer" class="formulaire-en-ligne">
+      <label for="nouveau-nom">Nom</label>
+      <input id="nouveau-nom" name="nom" type="text" value="{{ inventaire.nom }}" maxlength="200" required>
+      <button class="bouton petit" type="submit">Renommer</button>
+    </form>
+    {% endif %}
+    <div class="gestion-boutons">
+      {% if inventaire.archive_le %}
+        <form method="post" action="/app/inventaires/{{ inventaire.id }}/desarchiver"><button class="bouton petit">Sortir des archives</button></form>
+      {% else %}
+        <form method="post" action="/app/inventaires/{{ inventaire.id }}/archiver"><button class="bouton petit">Archiver</button></form>
+      {% endif %}
+      {% if inventaire.clos_le %}
+        <a class="bouton petit" href="/app/inventaires/{{ inventaire.id }}/rouvrir">Rouvrir l'inventaire</a>
+      {% else %}
+        <a class="bouton petit" href="/app/inventaires/{{ inventaire.id }}/clore">Clore l'inventaire</a>
+      {% endif %}
+      <a class="bouton petit danger" href="/app/inventaires/{{ inventaire.id }}/supprimer">Mettre à la corbeille</a>
+    </div>
+    <p class="aide">Archiver range l'inventaire hors de la liste, sans le fermer. Clore le met en lecture seule
+      quand vous êtes sûr de lui ; valider chaque bouteille reste facultatif. Rien n'est jamais effacé.</p>
+  </div>
+</details>
 {% endblock %}
 {% block actions %}
 <nav class="barre-actions">
   <a class="bouton" href="/app">Inventaires</a>
-  <a class="bouton" href="/app/inventaires/{{ inventaire.id }}/depot">Ajouter des bouteilles</a>
+  {% if not inventaire.clos_le %}<a class="bouton" href="/app/inventaires/{{ inventaire.id }}/depot">Ajouter des bouteilles</a>{% endif %}
   <a class="bouton" href="/app/inventaires/{{ inventaire.id }}/recapitulatif">Récapitulatif</a>
 </nav>
 {% endblock %}

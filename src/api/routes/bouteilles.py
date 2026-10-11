@@ -17,6 +17,7 @@ from src.api.dependances import Auteur, BouteilleVerifiee, SessionBase
 from src.config.maison import COLONNE_QUANTITE
 from src.donnees.modeles import STATUTS_BOUTEILLE
 from src.services.cas_particuliers import lever_signalement, reanalyser, separer, signaler_paire
+from src.services.cycle_de_vie import remettre_bouteille, retirer_bouteille
 from src.services.consultation import PAR_PAGE_MAX, fiche_bouteille, parcourir_bouteilles
 from src.services.relecture import corriger, revenir_a_la_valeur_du_modele, valider, verifier_version
 
@@ -147,3 +148,28 @@ def separer_exemplaires(
 ):
     nouvelle = separer(base, bouteille.id, demande.quantite, auteur)
     return schemas.depuis_fiche(fiche_bouteille(base, inventaire_id, nouvelle.id))
+
+
+# --- retirer, remettre (session 6 ; decisions.md 0168) ------------------------------------------
+
+
+@routeur.post(
+    "/{bouteille_id}/retirer",
+    response_model=schemas.BouteilleDetail,
+    summary="Retirer la bouteille de l'inventaire (rien n'est effacé, elle se remet)",
+)
+def retirer(
+    inventaire_id: int,
+    bouteille: BouteilleVerifiee,
+    base: SessionBase,
+    auteur: Auteur,
+    demande: schemas.RetraitDemande | None = None,
+):
+    retirer_bouteille(base, bouteille.id, auteur, (demande or schemas.RetraitDemande()).motif)
+    return schemas.depuis_fiche(fiche_bouteille(base, inventaire_id, bouteille.id))
+
+
+@routeur.post("/{bouteille_id}/remettre", response_model=schemas.BouteilleDetail, summary="Remettre la bouteille dans l'inventaire")
+def remettre(inventaire_id: int, bouteille: BouteilleVerifiee, base: SessionBase, auteur: Auteur):
+    remettre_bouteille(base, bouteille.id, auteur)
+    return schemas.depuis_fiche(fiche_bouteille(base, inventaire_id, bouteille.id))

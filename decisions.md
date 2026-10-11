@@ -1085,6 +1085,29 @@ un renvoi d'une ligne à leur place.
   navigateur (elles restent dans la galerie, et le stockage du navigateur est
   limité).
 
+- 0168 — Cycle de vie de l'inventaire (migration 0007, accord du 2026-10-11) :
+  on le commence, l'arrête, le reprend, le modifie, et on le CLÔT quand on est
+  sûr. Rien ne se supprime : « supprimer » = corbeille (`supprime_le`) — plus
+  aucun écran ni aucune route ne l'ouvre, son analyse s'arrête, il se restaure
+  (choix 1 du 2026-10-10 : un effacement réel violerait la contrainte 4) ;
+  « archiver » range hors de la liste sans rien fermer ; « clore »
+  (`clos_le`) met en LECTURE SEULE (corrections, validations, cas
+  particuliers, dépôt, relance, renommage refusés côté serveur ; l'export
+  reste possible), permis sans tout avoir validé (avertissement, et ce qui ne
+  l'est pas est noté dans la trace), refusé tant qu'une bouteille n'a pas sa
+  ligne (pas encore analysée, ou ajoutée et pas lancée) ; « rouvrir » est
+  permis, confirmé et tracé (choix 7 et 8). Retirer une bouteille (`retiree`)
+  : hors relecture, export, comptes et file d'attente, elle garde sa place
+  (positions) et ses données, se remet depuis le récapitulatif. Chaque geste
+  est tracé avec son auteur : table `evenement_inventaire` (renommage,
+  archivage, désarchivage, suppression, restauration, clôture, réouverture),
+  types « retrait » / « remise » pour `evenement_bouteille` ; historiques
+  immuables. L'analyse se met en pause et reprend depuis le suivi (l'ancien
+  « annuler »). Corbeille, clôture et réouverture passent par une page de
+  confirmation qui dit ce qui va se passer — écarté : effacer pour de bon
+  (extractions immuables, 0072) ; clore seulement quand tout est validé
+  (valider reste facultatif, choix du 2026-10-11).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

@@ -64,6 +64,10 @@
 
   <section class="fiche-relecture" aria-label="Champs de la bouteille">
     <h1 class="titre-bouteille">Bouteille n°{{ b.position }} <span class="identifiant">{{ b.identifiant }}</span></h1>
+    {% if f.inventaire.clos_le %}
+      <p class="message info">Inventaire clos : lecture seule.
+        <a href="/app/inventaires/{{ i }}/rouvrir">Rouvrir l'inventaire</a> pour le modifier.</p>
+    {% endif %}
     {% include "_bandeau.html" %}
     <div id="messages" class="messages" aria-live="polite">
       {% if erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
@@ -78,9 +82,10 @@
       {% include "_version.html" %}
       {% include "_filtre_cache.html" %}
       <input type="hidden" id="temps" name="_temps_ms" value="">
-      <div class="champs">
+      {#- Inventaire clos : les champs se lisent, ne se modifient plus (le serveur refuse de toute façon). #}
+      <fieldset class="champs" {% if f.inventaire.clos_le %}disabled{% endif %}>
         {% for c in f.champs %}{% include "_champ.html" %}{% endfor %}
-      </div>
+      </fieldset>
       <div class="actions-fiche">
         <button type="submit" class="bouton principal" id="valider">
           {% if b.statut == "validee" %}Déjà validée — passer à la suivante{% else %}Valider et passer à la suivante{% endif %}
@@ -89,7 +94,7 @@
       </div>
     </form>
 
-    {% include "_actions_bouteille.html" %}
+    {% if not f.inventaire.clos_le %}{% include "_actions_bouteille.html" %}{% endif %}
 
     <details class="historique">
       <summary>Historique de la bouteille</summary>

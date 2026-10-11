@@ -20,10 +20,11 @@ from src.config.maison import ConfigInvalide
 from src.io.photos import PhotosInvalides
 from src.services.cas_particuliers import ActionRefusee
 from src.services.configuration import ConfigIntrouvable
+from src.services.cycle_de_vie import CycleRefuse
 from src.services.depot import DepotFerme, ModificationRefusee
 from src.services.envoi import EnvoiRefuse, PhotoIntrouvable
 from src.services.extraction import BouteilleIntrouvable, BouteilleOccupee
-from src.services.inventaires import InventaireIntrouvable
+from src.services.inventaires import InventaireClos, InventaireIntrouvable
 from src.services.pilotage import LancementRefuse
 from src.services.relecture import (
     CorrectionRefusee,
@@ -44,6 +45,8 @@ TRADUCTIONS: list[tuple[type[Exception], int, str]] = [
     (ValidationRefusee, 409, "validation_refusee"),
     (ModificationConcurrente, 409, "modification_concurrente"),
     (ActionRefusee, 409, "action_refusee"),
+    (CycleRefuse, 409, "action_refusee"),
+    (InventaireClos, 409, "inventaire_clos"),
     (LancementRefuse, 409, "lancement_refuse"),
     (DepotFerme, 409, "depot_ferme"),
     (ModificationRefusee, 422, "modification_refusee"),

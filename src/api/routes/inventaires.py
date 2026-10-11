@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, Request, Response, UploadFile
+from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 
 from src.api import schemas
 from src.api.dependances import Auteur, SessionBase, Stockage
 from src.services.consultation import etat_inventaire, exporter_en_octets, recapitulatif
+from src.services.cycle_de_vie import archiver, clore, desarchiver, renommer, restaurer, rouvrir, supprimer
 from src.services.envoi import creer_inventaire_depuis_envoi
-from src.services.inventaires import lister_inventaires
+from src.services.inventaires import charger_inventaire, lister_inventaires
 from src.services.pilotage import annuler, avancement, lancer, relancer_erreurs
 from src.services.relecture import valider_inventaire
 
@@ -47,8 +48,8 @@ def creer(
 
 
 @routeur.get("", response_model=list[schemas.InventaireResume], summary="Lister les inventaires")
-def lister(base: SessionBase):
-    return [schemas.depuis_inventaire(i) for i in lister_inventaires(base)]
+def lister(base: SessionBase, corbeille: Annotated[bool, Query(description="Ceux de la corbeille.")] = False):
+    return [schemas.depuis_inventaire(i) for i in lister_inventaires(base, corbeille=corbeille)]
 
 
 @routeur.get("/{inventaire_id}", response_model=schemas.InventaireDetail, summary="Statut, progression, statistiques")
@@ -112,3 +113,60 @@ def recapituler(inventaire_id: int, base: SessionBase):
 def exporter(inventaire_id: int, base: SessionBase):
     nom, contenu = exporter_en_octets(base, inventaire_id)
     return Response(contenu, media_type=EXCEL, headers={"Content-Disposition": f'attachment; filename="{nom}"'})
+
+
+# --- cycle de vie (session 6 ; decisions.md 0168) -----------------------------------------------
+
+
+def _detail(base, inventaire_id: int) -> schemas.InventaireDetail:
+    return schemas.depuis_etat(etat_inventaire(base, inventaire_id))
+
+
+@routeur.patch("/{inventaire_id}", response_model=schemas.InventaireDetail, summary="Renommer l'inventaire")
+def renommer_l_inventaire(inventaire_id: int, demande: schemas.RenommageDemande, base: SessionBase, auteur: Auteur):
+    renommer(base, inventaire_id, demande.nom, auteur)
+    return _detail(base, inventaire_id)
+
+
+@routeur.post("/{inventaire_id}/archiver", response_model=schemas.InventaireDetail, summary="Archiver")
+def archiver_l_inventaire(inventaire_id: int, base: SessionBase, auteur: Auteur):
+    archiver(base, inventaire_id, auteur)
+    return _detail(base, inventaire_id)
+
+
+@routeur.post("/{inventaire_id}/desarchiver", response_model=schemas.InventaireDetail, summary="Sortir des archives")
+def desarchiver_l_inventaire(inventaire_id: int, base: SessionBase, auteur: Auteur):
+    desarchiver(base, inventaire_id, auteur)
+    return _detail(base, inventaire_id)
+
+
+@routeur.delete(
+    "/{inventaire_id}",
+    response_model=schemas.InventaireResume,
+    summary="Mettre à la corbeille (rien n'est effacé, l'inventaire se restaure)",
+)
+def supprimer_l_inventaire(inventaire_id: int, base: SessionBase, auteur: Auteur):
+    supprimer(base, inventaire_id, auteur)
+    return schemas.depuis_inventaire(charger_inventaire(base, inventaire_id, corbeille=True))
+
+
+@routeur.post("/{inventaire_id}/restaurer", response_model=schemas.InventaireDetail, summary="Sortir de la corbeille")
+def restaurer_l_inventaire(inventaire_id: int, base: SessionBase, auteur: Auteur):
+    restaurer(base, inventaire_id, auteur)
+    return _detail(base, inventaire_id)
+
+
+@routeur.post(
+    "/{inventaire_id}/clore",
+    response_model=schemas.InventaireDetail,
+    summary="Clore (lecture seule) : chaque bouteille doit avoir sa ligne ; valider reste facultatif",
+)
+def clore_l_inventaire(inventaire_id: int, base: SessionBase, auteur: Auteur):
+    clore(base, inventaire_id, auteur)
+    return _detail(base, inventaire_id)
+
+
+@routeur.post("/{inventaire_id}/rouvrir", response_model=schemas.InventaireDetail, summary="Rouvrir un inventaire clos")
+def rouvrir_l_inventaire(inventaire_id: int, base: SessionBase, auteur: Auteur):
+    rouvrir(base, inventaire_id, auteur)
+    return _detail(base, inventaire_id)

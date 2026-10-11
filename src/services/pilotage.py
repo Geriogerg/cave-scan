@@ -16,7 +16,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from src.donnees.modeles import STATUTS_BOUTEILLE, Extraction, FicheBouteille, maintenant
-from src.services.inventaires import charger_inventaire
+from src.services.inventaires import charger_inventaire, verifier_modifiable
 
 
 class LancementRefuse(ValueError):
@@ -26,6 +26,7 @@ class LancementRefuse(ValueError):
 def lancer(session: Session, inventaire_id: int) -> bool:
     """Ouvre l'inventaire au worker. Renvoie False s'il était déjà lancé."""
     inventaire = charger_inventaire(session, inventaire_id)
+    verifier_modifiable(inventaire)
     if inventaire.statut == "brouillon":
         raise LancementRefuse(
             "Cet inventaire est encore en brouillon : vérifiez l'ordre des photos puis "
@@ -42,10 +43,14 @@ def lancer(session: Session, inventaire_id: int) -> bool:
 
 def relancer_erreurs(session: Session, inventaire_id: int) -> int:
     """Remet les bouteilles en erreur « à extraire ». Renvoie leur nombre."""
-    charger_inventaire(session, inventaire_id)
+    verifier_modifiable(charger_inventaire(session, inventaire_id))
     nombre = session.execute(
         update(FicheBouteille)
-        .where(FicheBouteille.inventaire_id == inventaire_id, FicheBouteille.statut == "erreur")
+        .where(
+            FicheBouteille.inventaire_id == inventaire_id,
+            FicheBouteille.statut == "erreur",
+            FicheBouteille.retiree.is_(False),
+        )
         .values(statut="a_extraire")
         .execution_options(synchronize_session="fetch")
     ).rowcount

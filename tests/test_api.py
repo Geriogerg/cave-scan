@@ -359,7 +359,7 @@ def test_aucune_reponse_ne_contient_de_metadonnees_exif(api, tmp_path):
 ROUTES_DOCUMENTEES = {
     "/maisons": {"get"},
     "/inventaires": {"get", "post"},
-    "/inventaires/{inventaire_id}": {"get"},
+    "/inventaires/{inventaire_id}": {"get", "patch", "delete"},
     "/inventaires/{inventaire_id}/lancer": {"post"},
     "/inventaires/{inventaire_id}/annuler": {"post"},
     "/inventaires/{inventaire_id}/relancer-erreurs": {"post"},
@@ -384,6 +384,14 @@ ROUTES_DOCUMENTEES = {
     "/inventaires/{inventaire_id}/groupes/{groupe_id}/quantite": {"put"},
     "/inventaires/{inventaire_id}/groupes/{groupe_id}": {"delete"},
     "/inventaires/{inventaire_id}/bouteilles-en-cours/{cle}/quantite": {"put"},
+    # Session 6 — cycle de vie de l'inventaire (plan validé le 2026-10-11).
+    "/inventaires/{inventaire_id}/archiver": {"post"},
+    "/inventaires/{inventaire_id}/desarchiver": {"post"},
+    "/inventaires/{inventaire_id}/restaurer": {"post"},
+    "/inventaires/{inventaire_id}/clore": {"post"},
+    "/inventaires/{inventaire_id}/rouvrir": {"post"},
+    "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/retirer": {"post"},
+    "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/remettre": {"post"},
     # Session 5 — relecture (ajouts approuvés avec le plan, le 2026-10-10).
     "/inventaires/{inventaire_id}/recapitulatif": {"get"},
     "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/revenir": {"post"},
