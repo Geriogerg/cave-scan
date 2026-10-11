@@ -14,9 +14,9 @@ paths:
   le navigateur. Aucune logique métier dans les gabarits ni dans le JavaScript.
 - Dépôt pensé pour le téléphone (une main, gros boutons, réseau instable) ;
   relecture pensée pour l'ordinateur (clavier, grand écran).
-- Envoi des photos fichier par fichier, reprise après coupure ; date de prise de
-  vue lue avant toute réduction ; ordre des paires visible et corrigeable avant
-  le lancement.
+- Une bouteille = un groupe de photos (plafond réglé par maison). Envoi des
+  photos fichier par fichier, reprise après coupure ; chaque bouteille et
+  l'ordre de ses photos visibles et corrigeables avant le lancement.
 - Relecture : chaque modification est enregistrée immédiatement et l'état
   « enregistré / erreur » est visible ; pas de validation en masse, et valider
   une bouteille reste facultatif. « Clore l'inventaire » avertit de ce qui n'est

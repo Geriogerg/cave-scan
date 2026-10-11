@@ -9,8 +9,9 @@
 ## Le produit
 
 Assistant de catalogage de vins pour maisons de vente. L'expert dépose les photos
-(étiquette + contre-étiquette), un modèle vision-langage extrait les champs,
-l'expert relit et corrige, l'outil exporte un Excel au format de la maison.
+de chaque bouteille (étiquette, contre-étiquette, capsule…), un modèle
+vision-langage extrait les champs, l'expert relit et corrige, l'outil exporte
+un Excel au format de la maison.
 On ne remplace pas l'expert : on lui retire la saisie.
 
 Pipeline : photos → extraction (sortie contrainte) → normalisation (identité pour

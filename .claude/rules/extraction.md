@@ -28,6 +28,9 @@ paths:
 ## Lecture
 - Extraction par modèle vision-langage en tool-use, sortie contrainte. Pas d'OCR
   classique.
+- Une bouteille = un groupe de photos : toutes envoyées en UN appel, numérotées
+  dans l'ordre, sous la limite d'envoi du fournisseur. HEIC converti en JPEG
+  pour le modèle seulement ; le fichier reçu est gardé tel quel.
 - Millésime : lu, jamais déduit d'un style. Format : `non_determinable` par
   défaut sur un gros plan d'étiquette. `couleur_source` : observee | inferee |
   non_lisible.
@@ -53,7 +56,9 @@ paths:
 
 ## Comparaison et normalisation
 - La comparaison mesure la sortie du modèle seule, sans les corrections, et est
-  insensible à la casse et aux accents.
+  insensible à la casse et aux accents. Une bouteille née d'une séparation n'y
+  entre pas (elle reprend la lecture de sa source) : l'alignement ligne à ligne
+  avec le listing ne se décale pas.
 - Beaucoup d'écarts sont des conventions (« Domaine X » vs « X », cuvée dans
   l'appellation), pas des erreurs de lecture : on ne conclut rien sur la
   qualité de lecture avant d'avoir la couche de normalisation. On raisonne en

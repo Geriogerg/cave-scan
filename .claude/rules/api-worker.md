@@ -26,5 +26,7 @@ paths:
   dossier statique ; jamais de métadonnées EXIF dans les réponses (elles peuvent
   porter la position GPS de la cave du client).
 - Serveur en local par défaut ; écoute réseau local seulement via une option de
-  développement explicite, avec avertissement.
+  développement explicite, avec avertissement. Port pris : le premier libre qui
+  suit, annoncé ; port imposé (`--port`) pris : message en français, rien ne
+  démarre.
 - Format d'erreur unique : code, message en français, détail éventuel.

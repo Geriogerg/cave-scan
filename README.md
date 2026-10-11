@@ -1,9 +1,10 @@
 # cave-scan
 
-À partir des photos d'une bouteille (étiquette + contre-étiquette), un modèle
-vision-langage extrait les champs de catalogage. On exporte ensuite un Excel au
-format de la maison de ventes, puis on compare ce listing automatique au listing
-de l'expert, champ par champ. Le livrable est ce **tableau de scores par champ**.
+À partir des photos d'une bouteille (étiquette, contre-étiquette, capsule…), un
+modèle vision-langage extrait les champs de catalogage. L'expert relit et
+corrige, puis on exporte un Excel au format de la maison de ventes. On peut
+aussi comparer ce listing automatique au listing de l'expert, champ par champ :
+c'est le **tableau de scores par champ**.
 
 Inventaires, extractions et corrections sont conservés dans une base de données.
 Les règles du projet sont dans `CLAUDE.md`, les décisions techniques dans
@@ -35,8 +36,10 @@ python inventaire.py bouteilles 1 --base out/demo.db
 
 ## Un inventaire réel
 
-Les photos sont posées à plat dans un dossier, dans l'ordre de prise de vue :
-étiquette, contre-étiquette, bouteille après bouteille.
+Une bouteille = ses photos. Chaque photo posée à la racine du dossier est une
+bouteille d'une seule photo ; une bouteille photographiée plusieurs fois
+(étiquette, contre-étiquette, capsule…) a son propre sous-dossier, ses photos
+dans l'ordre de leur nom. Les photos HEIC d'iPhone sont lues.
 
 ```
 python run_v0.py --photos data/photos --limite 3            (essai sur 3 bouteilles)
@@ -47,19 +50,16 @@ Dans l'ordre, `run_v0.py` :
 
 1. crée l'inventaire : la config de la maison est figée et les photos sont
    copiées dans le stockage de l'outil ;
-2. refuse un dossier invalide (nombre impair, photo en double, HEIC) AVANT tout
-   appel, puis affiche l'appariement ;
-3. extrait chaque bouteille, en enregistrant la réponse du modèle dès son retour ;
-4. exporte l'Excel (`out/listing_auto.xlsx` par défaut, ou `--sortie`) ;
+2. refuse un dossier invalide (photo en double, format non lu, plus de photos
+   pour une bouteille que la maison n'en accepte — 4 par défaut) AVANT tout
+   appel, puis affiche chaque bouteille avec ses photos ;
+3. extrait chaque bouteille — toutes ses photos en un seul appel — en
+   enregistrant la réponse du modèle dès son retour ;
+4. exporte l'Excel (`out/listing_auto.xlsx` par défaut, ou `--sortie`) : une
+   ligne par bouteille, y compris une bouteille en erreur d'analyse (fond rouge
+   pâle, « Erreur d'analyse » dans « À vérifier ») ;
 5. avec `--manual`, affiche le **score du modèle** face à l'expert ; sans, les
    signaux du modèle.
-
-Vous n'avez que des étiquettes, sans contre-étiquette ? Ajoutez `--sans-contre` :
-chaque photo devient une bouteille.
-
-```
-python run_v0.py --photos data/etiquettes --sans-contre
-```
 
 Autres options : `--backend gemini|anthropic`, `--maison config/maisons/x.json`
 et `--base`.
@@ -104,10 +104,15 @@ python inventaire.py exporter 1 --sortie out/cave_dupont.xlsx
 - L'estimation se saisit ici, par l'expert. Le modèle ne la remplit jamais.
 - Le score de `run_v0.py --manual` mesure **le modèle seul**, sans les
   corrections. Les corrections se comptent dans `stats`.
-- Une bouteille corrigée après validation repasse à relire. Un inventaire est
+- Valider bouteille par bouteille est facultatif : l'Excel se télécharge sans.
+  Une bouteille corrigée après validation repasse à relire. Un inventaire est
   `valide` quand toutes ses bouteilles le sont, validées une par une : il n'y a
-  pas de validation en masse. Une bouteille en erreur, ou dont la paire de
-  photos est signalée, ne peut pas être validée.
+  pas de validation en masse. Une bouteille dont les photos sont signalées ne
+  peut pas être validée. Une bouteille en erreur d'analyse se valide « en
+  saisie manuelle » une fois ses champs obligatoires saisis (domaine,
+  appellation, millésime, format).
+- `exporter` est refusé tant qu'une bouteille n'est pas encore analysée :
+  chaque bouteille doit avoir sa ligne dans l'Excel.
 - `stats` donne les tokens consommés par bouteille : c'est la base du coût réel.
 
 ## API et extraction en arrière-plan
@@ -122,13 +127,22 @@ python dev.py                        (les deux à la fois)
 python dev.py --backend factice      (sans réseau ni quota : réponses fausses, pour développer)
 ```
 
+Si le port 8000 est pris, l'application démarre sur le premier port libre qui
+suit et l'annonce. Avec `--port N`, c'est ce port-là ou un message clair : rien
+ne démarre.
+
 La documentation interactive est sur http://127.0.0.1:8000/docs. On peut y :
-- créer un inventaire en envoyant ses photos (`POST /inventaires`) ;
+- créer un inventaire en envoyant ses photos (`POST /inventaires`), ou en
+  brouillon, bouteille par bouteille ;
 - lancer l'extraction, suivre la progression, annuler, relancer les erreurs ;
 - lister et consulter les bouteilles, les corriger, les valider une par une ;
-- revenir à la valeur du modèle, réanalyser une bouteille, inverser ses photos,
-  signaler un problème de paire, séparer des exemplaires d'état différent ;
-- lire le récapitulatif de la relecture et télécharger l'Excel.
+- revenir à la valeur du modèle, réanalyser une bouteille, signaler un problème
+  de photos, séparer des exemplaires d'état différent, retirer une bouteille
+  (et la remettre) ;
+- renommer, archiver, mettre à la corbeille (et restaurer), clore et rouvrir un
+  inventaire ;
+- lire le récapitulatif de la relecture et télécharger l'Excel (refusé, avec la
+  raison, tant qu'une bouteille n'a pas sa ligne).
 
 Les actions de l'expert demandent l'en-tête `X-Auteur`. La fiche d'une bouteille
 porte une `version` : la renvoyer avec une correction ou une validation fait
@@ -166,24 +180,33 @@ d'autoriser Python dans le pare-feu (« Réseaux privés »).
 
 Le parcours de l'expert :
 
-1. **Nouvel inventaire** : le nom de la vente et la maison. Cochez « je n'ai que
-   les étiquettes » s'il n'y a pas de contre-étiquette.
-2. **Ajouter les photos**, avec « Choisir dans la galerie » ou « Prendre une
-   photo ».
-   - Les photos partent une par une.
-   - Une coupure de réseau n'en perd aucune : l'envoi reprend tout seul, et une
-     photo déjà reçue n'est pas renvoyée.
-   - Un fichier refusé est affiché avec sa raison.
-   - Gardez la page ouverte pendant l'envoi.
-3. **Vérifier l'ordre** : les paires sont affichées en miniatures numérotées.
-   - Vous pouvez inverser une paire, avancer ou reculer une photo, la retirer.
-   - Les photos sont classées par date de prise de vue, puis par nom, puis par
-     ordre d'arrivée.
-4. **Lancer l'analyse**. C'est impossible tant que le nombre de photos est
-   impair, et le serveur le vérifie aussi. Ensuite, les photos ne bougent plus.
-5. **Suivi** : la progression se met à jour seule. On peut relancer les erreurs,
-   télécharger l'Excel une fois l'analyse terminée, et **relire** dès la première
-   bouteille analysée (voir ci-dessous).
+1. **Nouvel inventaire** : le nom de la vente et la maison.
+2. **Photographier les bouteilles**, une à une, chacune avec toutes ses photos
+   (étiquette, contre-étiquette, capsule, bouteille entière… 4 au plus par
+   défaut, réglable par maison).
+   - **Appareil photo** : prenez les photos de la bouteille à la suite (le
+     compteur les affiche), indiquez la quantité s'il y a plusieurs bouteilles
+     identiques, puis « Bouteille suivante ».
+   - **Galerie ou ordinateur** : « Bouteille 1 » → ajoutez ses photos ;
+     « Ajouter une bouteille » → les siennes, etc.
+   - Les photos partent une par une. Une coupure de réseau n'en perd aucune :
+     l'envoi reprend tout seul, et une photo déjà reçue n'est pas renvoyée.
+   - Un fichier refusé est affiché avec sa raison. Les photos HEIC d'iPhone
+     sont acceptées.
+   - « Plus tard » : on s'arrête et on reprend quand on veut.
+3. **Vérifier et lancer** : chaque bouteille est une carte, ses photos dans
+   l'ordre. Une photo d'une autre bouteille ? « Nouvelle bouteille à partir
+   d'ici ». Une bouteille coupée en deux ? « Rattacher à la précédente ». Puis
+   **Lancer l'analyse** : les photos d'une bouteille lancée ne bougent plus.
+4. **Suivi** : la progression se met à jour seule. On peut mettre l'analyse en
+   pause et la reprendre, relancer les erreurs, **relire** dès la première
+   bouteille analysée (voir ci-dessous), et télécharger l'Excel dès que chaque
+   bouteille a sa ligne.
+5. **Gérer l'inventaire** (depuis le suivi) : ajouter des bouteilles après le
+   lancement, renommer, archiver, mettre à la corbeille (rien n'est effacé, il
+   se restaure depuis l'accueil), **clore** quand tout est bon (lecture seule ;
+   l'écran dit d'abord ce qui n'a pas été validé), rouvrir si besoin. Chaque
+   geste est tracé.
 
 **La réduction des photos avant l'envoi est désactivée par défaut**, tant que
 son effet sur la lecture n'est pas mesuré. Avec des crédits API et de **vraies
@@ -206,8 +229,9 @@ bouteilles pas encore analysées sont sautées et comptées à part.
 
 - **À gauche, les photos** : molette, double-clic ou `Z` pour zoomer (l'original
   pleine résolution se charge dès qu'on zoome), glisser pour se déplacer, `E`
-  pour passer de l'étiquette à la contre-étiquette, « Ouvrir l'original » dans
-  un nouvel onglet. Les photos de la bouteille suivante sont préchargées.
+  pour passer à la photo suivante de la bouteille (`Maj` + `E` : précédente),
+  « Ouvrir l'original » dans un nouvel onglet. Les photos de la bouteille
+  suivante sont préchargées.
 - **À droite, les champs**, dans l'ordre de la config de la maison. Chacun dit
   d'où vient sa valeur : lue, déduite, proposée (à vérifier), corrigée ou saisie
   par l'expert. Une valeur non lisible s'affiche « à remplir », jamais comme une
@@ -239,22 +263,26 @@ dans un champ : `Échap` pour en sortir.
 **Les cas particuliers** (« Autres actions », sous les champs) :
 - **Réanalyser** : la bouteille repasse par le modèle (le worker doit tourner).
   L'ancienne lecture est gardée ; vos corrections restent prioritaires.
-- **Inverser les photos** : étiquette et contre-étiquette interverties, puis la
-  page propose de réanalyser.
-- **Signaler un problème de paire** : les deux photos ne vont pas ensemble. La
-  bouteille ne peut plus être validée tant que le signalement n'est pas levé.
+- **Signaler un problème de photos** : une photo ne montre pas cette bouteille.
+  Elle ne peut plus être validée tant que le signalement n'est pas levé.
+- **Retirer cette bouteille** : photographiée par erreur, pas dans la vente…
+  Elle sort de la relecture et de l'Excel ; rien n'est effacé, elle se remet
+  depuis le récapitulatif.
 - **Séparer** : 5 bonnes et 1 abîmée ? Indiquez d'abord la quantité totale (6),
   puis séparez 1 exemplaire. Une seconde bouteille apparaît juste après, avec
   les mêmes photos et les mêmes valeurs ; ajustez son état et sa description.
   Si les deux restent identiques sur les colonnes de regroupement de la maison,
   l'écran prévient qu'elles seront fusionnées en une ligne à l'export.
 - **Bouteille en erreur d'analyse** : la raison est affichée en clair, avec
-  « Réanalyser ». On peut saisir ses champs à la main, mais elle ne pourra être
-  validée qu'après une analyse réussie.
+  « Réanalyser ». On peut aussi saisir ses champs à la main : avec au moins
+  domaine, appellation, millésime et format, elle se valide « en saisie
+  manuelle ». Dans l'Excel, elle a toujours sa ligne : « Erreur d'analyse »,
+  ou « Saisie manuelle » une fois validée.
 
 Le **récapitulatif** (lien en haut, et à la fin) donne ce qui reste à relire,
 les bouteilles en erreur ou signalées, et les chiffres : corrections par champ,
-temps de relecture par bouteille (absences de plus d'une minute exclues),
+temps de relecture par bouteille (compté même sans valider, absences de plus
+d'une minute exclues),
 bouteilles réanalysées, séparées, signalées. Les mêmes chiffres sont dans
 `python inventaire.py stats 1`.
 
@@ -272,15 +300,27 @@ Les corrections faites à l'écran sont signées « Expert », ou du nom indiqu�
   automatiquement à l'ouverture de la base.
 - **Config d'une maison** : `config/maisons/*.json`. Un inventaire garde la
   config du jour de sa création. Un fichier modifié devient une nouvelle version
-  pour les inventaires suivants : pensez à incrémenter son champ `version`.
+  pour les inventaires suivants : pensez à incrémenter son champ `version` (la
+  page « Configuration » le fait pour vous).
+
+## Configuration d'une maison
+
+Depuis l'accueil, **Configuration** : les colonnes de l'Excel de chaque maison.
+On ajoute, modifie, réordonne ou retire une colonne (nom, type, source, valeurs
+et leur description, règle), on voit pour chacune ce qui est envoyé au modèle,
+on importe ou exporte le JSON. Chaque enregistrement est vérifié comme un
+fichier et devient une nouvelle version ; un inventaire garde la version de sa
+création. Colonnes système facultatives : `a_verifier` (doutes du modèle, et
+« Erreur d'analyse ») et `relue` (« oui » si l'expert a validé la bouteille).
 
 ## Anciennes options
 
-| Avant (session 1)       | Maintenant                                                          |
+| Avant                   | Maintenant                                                          |
 |-------------------------|---------------------------------------------------------------------|
 | `--journal FICHIER`     | supprimé : chaque extraction est en base                            |
 | `--reprendre`           | `--inventaire ID`                                                   |
 | `--auto JOURNAL.jsonl`  | `--inventaire ID` : réexport et score sans rappeler le modèle       |
+| `--sans-contre`         | inutile : une photo à la racine = une bouteille ; plusieurs photos = un sous-dossier |
 
 Ces options sont encore acceptées, mais seulement pour afficher leur remplaçante.
 
@@ -296,8 +336,9 @@ aucun test ne peut appeler un vrai modèle.
 Les tests de navigation pilotent un vrai Chromium :
 - `tests/test_navigateur.py`, au format téléphone, du dépôt des photos à l'Excel ;
 - `tests/test_navigateur_relecture.py`, sur un écran d'ordinateur : 10 bouteilles
-  relues uniquement au clavier, deux onglets sur la même bouteille, une coupure
-  de réseau, et le passage d'une bouteille à la suivante sur 300 bouteilles.
+  relues uniquement au clavier, le temps compté sans validation, deux onglets
+  sur la même bouteille, une coupure de réseau, et le passage d'une bouteille à
+  la suivante sur 300 bouteilles.
 
 Ils demandent une installation préalable : `python -m playwright install
 chromium`. Sans Chromium, ils sont ignorés.
@@ -309,13 +350,13 @@ chromium`. Sans Chromium, ils sont ignorés.
 | `run_v0.py`, `inventaire.py`   | lignes de commande : elles appellent les services et affichent      |
 | `serveur.py`, `worker.py`, `dev.py` | API JSON (local), worker d'extraction, les deux pour développer |
 | `src/api/`                     | API FastAPI : routes fines, format d'erreur unique                  |
-| `src/web/`                     | écrans : pages Jinja2 + HTMX (dépôt, suivi, relecture), scripts d'envoi des photos et de relecture, style |
+| `src/web/`                     | écrans : pages Jinja2 + HTMX (dépôt, suivi, relecture, configuration), scripts d'envoi des photos, de relecture et de configuration, style |
 | `mesurer_reduction.py`, `src/mesure/` | mesure de l'effet de la réduction des photos sur l'extraction |
 | `src/worker.py`                | boucle du worker : réserver, extraire en parallèle, signes de vie   |
-| `src/services/`                | inventaires, dépôt (brouillons), extraction, file d'attente, pilotage, débit, relecture, cas particuliers, consultation, envoi des photos, restitution |
+| `src/services/`                | inventaires, cycle de vie, dépôt (brouillons), extraction, file d'attente, pilotage, débit, relecture, cas particuliers, consultation, envoi des photos, configuration, restitution |
 | `src/donnees/`                 | modèles SQLAlchemy, ouverture et migration de la base, stockage des photos |
 | `src/extract/`                 | contrat `Bouteille`, extracteurs Gemini, Anthropic et fixtures      |
 | `src/config/`                  | config par maison, lecture de `.env`                                |
 | `src/export/`, `src/compare/`  | Excel au format maison, comparaison au listing de l'expert          |
-| `src/io/`, `src/normalize/`    | photos et listing manuel, normalisation (identité pour l'instant)   |
+| `src/io/`, `src/normalize/`    | photos (HEIC compris) et listing manuel, normalisation (identité pour l'instant) |
 | `migrations/`                  | migrations Alembic                                                  |
