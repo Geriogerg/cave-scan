@@ -1014,6 +1014,22 @@ un renvoi d'une ligne à leur place.
   d'étiquette), la ligne est à vérifier et ne fusionne pas, comme pour le
   format (0066). Bouchon : hors pilote.
 
+- 0163 — Page « Configuration » (/app/configuration, lien depuis l'accueil) :
+  liste des maisons (un fichier invalide est montré avec ses erreurs), import
+  d'un JSON, édition d'une maison. Chaque action (ajouter, monter, descendre,
+  retirer une colonne ; ajouter, retirer une valeur ; changer type ou source ;
+  vérifier) renvoie TOUTE la config, que le serveur réaffiche : aucun état
+  gardé entre deux demandes, rien d'écrit avant « Enregistrer la version N ».
+  Une clé ou un code déjà enregistrés ne se modifient pas (champs cachés : les
+  inventaires s'y réfèrent) ; ceux d'une nouveauté sont créés à partir du nom
+  ou du libellé s'ils sont laissés vides. `canonique` est posé par l'outil.
+  Sous chaque colonne, « Ce que reçoit le modèle » ; les consignes générales
+  sont consultables. Historique des versions, chacune téléchargeable. Quitter
+  avec des modifications non enregistrées est signalé par le navigateur. Sans
+  JavaScript, tout fonctionne en simples envois de formulaire — écarté : un
+  éditeur JSON brut (illisible pour une maison) ; un éditeur en JavaScript
+  (la logique et les garde-fous resteraient côté serveur de toute façon).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

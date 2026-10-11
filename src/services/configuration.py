@@ -28,9 +28,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.config.maison import (
+    NOYAU_CANONIQUE,
+    SOURCES_MODELE,
+    Colonne,
     ConfigInvalide,
     ConfigMaison,
-    Colonne,
+    colonne_depuis_brut,
     config_depuis_texte,
     empreinte_config,
     lire_config,
@@ -43,6 +46,11 @@ from src.services.inventaires import _maison, _version_de_config
 # Deux enregistrements simultanés liraient la même version et écriraient la
 # même suivante : la lecture, la vérification et l'écriture se font d'un tenant.
 _VERROU = threading.Lock()
+
+
+class ConfigIntrouvable(LookupError):
+    """Aucune config active pour cette maison (ou ce fichier), ou aucune version
+    de ce numéro."""
 
 
 class ConfigModifieeAilleurs(RuntimeError):
@@ -90,7 +98,7 @@ def config_active(dossier_configs: Path, maison: str) -> ConfigActive:
             continue
         if plier(config.maison) == plier(maison):
             return ConfigActive(fichier=fichier, texte=texte, config=config)
-    raise LookupError(f"Aucune config pour la maison « {maison} » dans {Path(dossier_configs).name}/.")
+    raise ConfigIntrouvable(f"Aucune config pour la maison « {maison} » dans {Path(dossier_configs).name}/.")
 
 
 def versions_de(session: Session, maison: str) -> list[ConfigVersion]:
@@ -188,7 +196,7 @@ def exporter_version(
         return active.fichier.name, active.texte
     version = next((v for v in versions_de(session, active.config.maison) if v.numero == numero), None)
     if version is None:
-        raise LookupError(f"Aucune version n°{numero} de la configuration de « {active.config.maison} ».")
+        raise ConfigIntrouvable(f"Aucune version n°{numero} de la configuration de « {active.config.maison} ».")
     return f"{active.fichier.stem}_version_{numero}.json", version.contenu
 
 
@@ -243,3 +251,208 @@ def _fichier_libre(dossier: Path, maison: str) -> Path:
     while candidat.exists():
         candidat, rang = dossier / f"{base}_{rang}.json", rang + 1
     return candidat
+
+
+# --- édition dans la page ----------------------------------------------------------------
+#
+# La page envoie TOUTE la config à chaque action (ajouter, déplacer, supprimer,
+# vérifier, enregistrer) : le serveur la relit, applique l'action et la
+# réaffiche. Rien n'est gardé entre deux demandes ; rien n'est écrit avant
+# « Enregistrer ».
+
+TYPES_EDITABLES = ("texte", "liste", "nombre")
+SOURCES_EDITABLES = ("modele", "modele_best_effort", "expert", "systeme")
+
+
+def config_du_fichier(dossier_configs: Path, nom: str) -> ConfigActive:
+    """La config active désignée par le nom de son fichier (sans « .json ») :
+    l'adresse de la page reste lisible, sans accents ni espaces."""
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", nom or ""):
+        raise ConfigIntrouvable(f"Aucune configuration « {nom} ».")
+    fichier = Path(dossier_configs) / f"{Path(nom).stem}.json"
+    if not fichier.is_file():
+        raise ConfigIntrouvable(f"Aucune configuration « {nom} ».")
+    config, texte = lire_config(fichier)
+    return ConfigActive(fichier=fichier, texte=texte, config=config)
+
+
+def brut_depuis_formulaire(champs: dict[str, str]) -> dict[str, Any]:
+    """La config telle que la page l'affiche, relue champ par champ.
+
+    Noms des champs : `c{i}_nom`, `c{i}_v{j}_libelle`… ; `nb_colonnes` et
+    `c{i}_nb_valeurs` disent combien il y en a. Les commentaires (`_…`) de la
+    config voyagent tels quels dans un champ caché.
+    """
+
+    def texte(nom: str) -> str:
+        return (champs.get(nom) or "").strip()
+
+    def entier(nom: str, defaut: int = 0) -> int:
+        valeur = texte(nom)
+        return int(valeur) if valeur.isdigit() else defaut
+
+    brut: dict[str, Any] = dict(_commentaires(champs.get("commentaires")))
+    brut["maison"] = texte("maison")
+    brut["version"] = entier("version_vue", 1)
+    brut["langue"] = texte("langue") or "fr"
+    plafond = texte("photos_max_par_bouteille")
+    # Une saisie qui n'est pas un nombre est gardée telle quelle : la validation
+    # dira pourquoi elle est refusée, au lieu de la remplacer en silence.
+    brut["photos_max_par_bouteille"] = int(plafond) if plafond.isdigit() else plafond
+
+    colonnes, regroupement = [], []
+    for i in range(entier("nb_colonnes")):
+        colonne: dict[str, Any] = dict(_commentaires(champs.get(f"c{i}_commentaires")))
+        nom = texte(f"c{i}_nom")
+        cle = texte(f"c{i}_cle") or _identifiant(nom)
+        colonne.update(cle=cle, nom=nom, type=texte(f"c{i}_type"), source=texte(f"c{i}_source"))
+        for champ in ("description", "regle"):
+            if texte(f"c{i}_{champ}"):
+                colonne[champ] = texte(f"c{i}_{champ}")
+        if cle in NOYAU_CANONIQUE:
+            colonne["canonique"] = True  # posé par l'outil, jamais à la main (0021)
+        if colonne["type"] == "liste":
+            valeurs = []
+            for j in range(entier(f"c{i}_nb_valeurs")):
+                libelle = texte(f"c{i}_v{j}_libelle")
+                code = texte(f"c{i}_v{j}_code") or _identifiant(libelle)
+                if not (code or libelle):
+                    continue  # ligne laissée vide
+                valeur = {"code": code, "libelle": libelle}
+                if texte(f"c{i}_v{j}_description"):
+                    valeur["description"] = texte(f"c{i}_v{j}_description")
+                valeurs.append(valeur)
+            colonne["valeurs"] = valeurs
+        if champs.get(f"c{i}_regrouper"):
+            regroupement.append(cle)
+        colonnes.append(colonne)
+    brut["regroupement_export"] = regroupement
+    brut["colonnes"] = colonnes
+    return brut
+
+
+def appliquer(brut: dict[str, Any], action: str) -> dict[str, Any]:
+    """Les actions de la page qui changent la STRUCTURE, sans rien enregistrer :
+    `ajouter_colonne`, `monter-3`, `descendre-3`, `supprimer-3`,
+    `ajouter_valeur-3`, `supprimer_valeur-3-1`. Une action inconnue ne change
+    rien."""
+    brut = json.loads(json.dumps(brut))  # copie : la page reçoit un nouvel état
+    colonnes = brut["colonnes"]
+    nom, *arguments = (action or "").split("-")
+    try:
+        index = [int(argument) for argument in arguments]
+    except ValueError:
+        return brut
+
+    def existe(i: int) -> bool:
+        return 0 <= i < len(colonnes)
+
+    if nom == "ajouter_colonne":
+        colonnes.append({"cle": "", "nom": "", "type": "texte", "source": "expert"})
+    elif nom in ("monter", "descendre") and len(index) == 1 and existe(index[0]):
+        i = index[0]
+        j = i - 1 if nom == "monter" else i + 1
+        if existe(j):
+            colonnes[i], colonnes[j] = colonnes[j], colonnes[i]
+    elif nom == "supprimer" and len(index) == 1 and existe(index[0]):
+        cle = colonnes.pop(index[0]).get("cle")
+        brut["regroupement_export"] = [c for c in brut.get("regroupement_export", []) if c != cle]
+    elif nom == "ajouter_valeur" and len(index) == 1 and existe(index[0]):
+        colonne = colonnes[index[0]]
+        colonne["type"] = "liste"
+        colonne.setdefault("valeurs", []).append({"code": "", "libelle": ""})
+    elif nom == "supprimer_valeur" and len(index) == 2 and existe(index[0]):
+        valeurs = colonnes[index[0]].get("valeurs", [])
+        if 0 <= index[1] < len(valeurs):
+            valeurs.pop(index[1])
+    return brut
+
+
+@dataclass(frozen=True)
+class ColonneEditee:
+    """Une colonne telle que la page la montre."""
+
+    index: int
+    donnees: dict[str, Any]
+    nouvelle: bool  # absente de la version active : sa clé se choisit encore
+    codes_existants: tuple[str, ...]  # codes de la version active : stables, jamais modifiés
+    envoyee: bool  # lue par le modèle (modele, best effort)
+    apercu: str | None  # ce que le modèle reçoit ; None si la colonne n'est pas encore valide
+    regroupee: bool
+
+
+@dataclass(frozen=True)
+class Edition:
+    """L'état de la page Configuration."""
+
+    active: ConfigActive
+    brut: dict[str, Any]
+    colonnes: list[ColonneEditee]
+    commentaires: str  # les clés « _… » de la racine, en JSON, renvoyées telles quelles
+    erreurs: list[str] = field(default_factory=list)
+    avertissements: list[str] = field(default_factory=list)
+    verifiee: bool = False  # la validation complète a été faite
+
+
+def edition(active: ConfigActive, brut: dict[str, Any] | None = None, verifier: bool = False) -> Edition:
+    """Ce que la page affiche : la config (active, ou en cours d'édition), avec
+    l'aperçu de chaque colonne et, si demandé, le résultat de la validation."""
+    brut = active.brut if brut is None else brut
+    anciennes = {colonne.cle: colonne for colonne in active.config.colonnes}
+    regroupees = set(brut.get("regroupement_export") or [])
+    colonnes = []
+    for index, donnees in enumerate(brut.get("colonnes") or []):
+        cle = donnees.get("cle", "")
+        valide = colonne_depuis_brut(donnees)
+        colonnes.append(
+            ColonneEditee(
+                index=index,
+                donnees=donnees,
+                nouvelle=cle not in anciennes,
+                codes_existants=tuple(c for c in anciennes[cle].codes if c != "non_determinable")
+                if cle in anciennes
+                else (),
+                envoyee=donnees.get("source") in SOURCES_MODELE,
+                apercu=apercu_modele(valide) if valide is not None else None,
+                regroupee=cle in regroupees,
+            )
+        )
+    erreurs: list[str] = []
+    avertissements: list[str] = []
+    if verifier:
+        candidat = dict(brut, version=active.config.version + 1)
+        try:
+            avertissements = list(config_depuis_texte(_texte(candidat), active.fichier.name).avertissements)
+        except ConfigInvalide as refus:
+            erreurs = refus.erreurs
+    commentaires = {cle: valeur for cle, valeur in brut.items() if cle.startswith("_")}
+    return Edition(
+        active=active,
+        brut=brut,
+        colonnes=colonnes,
+        commentaires=json.dumps(commentaires, ensure_ascii=False),
+        erreurs=erreurs,
+        avertissements=avertissements,
+        verifiee=verifier,
+    )
+
+
+def commentaires_de_colonne(donnees: dict[str, Any]) -> str:
+    """Les clés « _… » d'une colonne, en JSON, pour les renvoyer telles quelles."""
+    return json.dumps({c: v for c, v in donnees.items() if c.startswith("_")}, ensure_ascii=False)
+
+
+def _identifiant(libelle: str) -> str:
+    """« État de la capsule » -> etat_de_la_capsule (clé ou code d'une nouveauté)."""
+    identifiant = re.sub(r"[^a-z0-9]+", "_", plier(libelle)).strip("_")
+    if identifiant and not identifiant[0].isalpha():
+        identifiant = f"c_{identifiant}"
+    return identifiant
+
+
+def _commentaires(texte: str | None) -> dict[str, Any]:
+    try:
+        valeur = json.loads(texte or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return {c: v for c, v in valeur.items() if c.startswith("_")} if isinstance(valeur, dict) else {}

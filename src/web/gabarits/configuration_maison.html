@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% set config = vue.active.config %}
+{% block titre %}Configuration — {{ config.maison }}{% endblock %}
+{% block classe %}page-configuration{% endblock %}
+{% block fil %}<a class="fil" href="/app/configuration">Configuration</a>{% endblock %}
+{% block contenu %}
+<h1>{{ config.maison }}</h1>
+<p class="aide">
+  Version active : {{ config.version }} ({{ vue.active.fichier.name }}). Modifiez les colonnes
+  ci-dessous puis « Enregistrer » : une version {{ config.version + 1 }} est créée pour les
+  prochains inventaires ; ceux déjà créés gardent la leur.
+</p>
+
+{% include "_config_editeur.html" %}
+
+<details class="bloc-repli">
+  <summary>Consignes générales envoyées au modèle, pour toutes les maisons</summary>
+  <p class="aide">
+    En plus des colonnes ci-dessus lues par le modèle, il reçoit toujours ces consignes et lit
+    toujours ces champs, quelle que soit la configuration : {{ champs_toujours_lus | join(", ") }}.
+    Les colonnes saisies par l'expert ou calculées par l'outil ne lui sont jamais envoyées.
+  </p>
+  <pre class="code">{{ consignes }}</pre>
+</details>
+
+<h2>Versions enregistrées</h2>
+<p class="aide"><a href="/app/configuration/{{ nom }}/export">Télécharger la version active (JSON)</a></p>
+{% if versions %}
+<ul class="liste-versions">
+  {% for v in versions %}
+  <li>
+    Version {{ v.version_declaree }} · enregistrée le {{ v.cree_le | horodatage }}
+    · <a href="/app/configuration/{{ nom }}/export?numero={{ v.numero }}">télécharger</a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="aide">Aucune version enregistrée en base pour l'instant : la première le sera au premier
+inventaire ou au premier enregistrement.</p>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="/static/configuration.js" defer></script>{% endblock %}

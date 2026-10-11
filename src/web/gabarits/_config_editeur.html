@@ -1,0 +1,144 @@
+{#- L'éditeur de la config d'une maison. Chaque bouton renvoie TOUT le formulaire :
+    le serveur applique l'action et renvoie cet éditeur. Rien n'est écrit avant
+    « Enregistrer ». Sans JavaScript, ce sont de simples envois de formulaire. #}
+{% set config = vue.active.config %}
+{% set adresse = "/app/configuration/" ~ nom %}
+<section id="editeur" class="editeur-config">
+  {% if erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
+  {% if fait %}<p class="message ok" role="status">{{ fait }}</p>{% endif %}
+  {% if info %}<p class="message info" role="status">{{ info }}</p>{% endif %}
+  {% if vue.erreurs %}
+    <div class="message alerte" role="alert">
+      <p>Rien n'a été enregistré : {{ vue.erreurs | length }} point(s) à corriger.</p>
+      <ul class="liste-erreurs">{% for e in vue.erreurs %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+  {% set avertissements = vue.avertissements if vue.verifiee else config.avertissements %}
+  {% for a in avertissements %}<p class="message attention">{{ a }}</p>{% endfor %}
+
+  <form id="config" method="post" action="{{ adresse }}" class="formulaire-config" data-config
+        hx-post="{{ adresse }}" hx-target="#editeur" hx-swap="outerHTML">
+    <input type="hidden" name="maison" value="{{ vue.brut.maison }}">
+    <input type="hidden" name="version_vue" value="{{ config.version }}">
+    <input type="hidden" name="langue" value="{{ vue.brut.langue or 'fr' }}">
+    <input type="hidden" name="commentaires" value="{{ vue.commentaires }}">
+    <input type="hidden" name="nb_colonnes" value="{{ vue.colonnes | length }}">
+
+    <div class="reglage">
+      <label for="photos_max">Photos au plus par bouteille</label>
+      <input id="photos_max" name="photos_max_par_bouteille" type="text" inputmode="numeric" size="3"
+             value="{{ vue.brut.photos_max_par_bouteille if vue.brut.photos_max_par_bouteille is defined else 4 }}">
+      <span class="aide">De 1 à 10. Chaque photo envoyée au modèle se paie.</span>
+    </div>
+
+    <ol class="colonnes-config">
+    {% for c in vue.colonnes %}
+      {% set d = c.donnees %}{% set i = c.index %}
+      <li class="colonne-config{% if c.nouvelle %} nouvelle{% endif %}" id="colonne-{{ i }}">
+        <input type="hidden" name="c{{ i }}_commentaires" value="{{ commentaires_de_colonne(d) }}">
+        <div class="colonne-tete">
+          <strong>{{ i + 1 }}. {{ d.nom or "Nouvelle colonne" }}</strong>
+          {% if c.nouvelle %}<span class="etiquette encours">nouvelle</span>{% endif %}
+          {% if d.cle in noyau %}<span class="etiquette neutre" title="Toujours lue par le modèle, même retirée de l'Excel">noyau</span>{% endif %}
+          <span class="colonne-boutons">
+            <button class="bouton petit" type="submit" name="action" value="monter-{{ i }}" {% if loop.first %}disabled{% endif %} aria-label="Monter la colonne {{ d.nom }}">↑</button>
+            <button class="bouton petit" type="submit" name="action" value="descendre-{{ i }}" {% if loop.last %}disabled{% endif %} aria-label="Descendre la colonne {{ d.nom }}">↓</button>
+            <button class="bouton petit danger" type="submit" name="action" value="supprimer-{{ i }}"
+                    hx-post="{{ adresse }}" hx-target="#editeur" hx-swap="outerHTML"
+                    hx-confirm="Retirer la colonne « {{ d.nom or 'nouvelle' }} » de l'Excel ? (Rien n'est enregistré avant « Enregistrer ».)">Retirer</button>
+          </span>
+        </div>
+
+        <div class="colonne-champs">
+          <label>Nom (en-tête de l'Excel)
+            <input type="text" name="c{{ i }}_nom" value="{{ d.nom or '' }}" maxlength="200">
+          </label>
+          <label>Clé
+            {% if c.nouvelle %}
+              <input type="text" name="c{{ i }}_cle" value="{{ d.cle or '' }}" placeholder="créée à partir du nom" maxlength="60">
+            {% else %}
+              <input type="hidden" name="c{{ i }}_cle" value="{{ d.cle }}">
+              <code class="cle-figee" title="Une clé enregistrée ne change plus : les inventaires s'y réfèrent">{{ d.cle }}</code>
+            {% endif %}
+          </label>
+          <label>Type
+            <select name="c{{ i }}_type" hx-post="{{ adresse }}" hx-trigger="change" hx-target="#editeur"
+                    hx-swap="outerHTML" hx-vals='{"action": "afficher"}'>
+              {% for valeur, libelle in types %}<option value="{{ valeur }}" {% if d.type == valeur %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>Source
+            <select name="c{{ i }}_source" hx-post="{{ adresse }}" hx-trigger="change" hx-target="#editeur"
+                    hx-swap="outerHTML" hx-vals='{"action": "afficher"}'>
+              {% for valeur, libelle in sources %}<option value="{{ valeur }}" {% if d.source == valeur %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="large">Description
+            <textarea name="c{{ i }}_description" rows="2">{{ d.description or '' }}</textarea>
+          </label>
+          {% if c.envoyee %}
+          <label class="large">Règle (consigne supplémentaire pour le modèle)
+            <textarea name="c{{ i }}_regle" rows="2">{{ d.regle or '' }}</textarea>
+          </label>
+          {% elif d.regle %}
+          <input type="hidden" name="c{{ i }}_regle" value="{{ d.regle }}">
+          {% endif %}
+          {% if d.source != "systeme" %}
+          <label class="case large">
+            <input type="checkbox" name="c{{ i }}_regrouper" value="1" {% if c.regroupee %}checked{% endif %}>
+            Regrouper l'Excel sur cette colonne (deux bouteilles qui diffèrent ici restent sur deux lignes)
+          </label>
+          {% endif %}
+        </div>
+
+        {% if d.type == "liste" %}
+        {% set valeurs = d.valeurs or [] %}
+        <input type="hidden" name="c{{ i }}_nb_valeurs" value="{{ valeurs | length }}">
+        <table class="valeurs-config">
+          <thead><tr><th>Code</th><th>Libellé (Excel)</th><th>Description (pour le modèle)</th><th></th></tr></thead>
+          <tbody>
+          {% for v in valeurs %}{% set j = loop.index0 %}
+            <tr>
+              <td>
+                {% if v.code in c.codes_existants %}
+                  <input type="hidden" name="c{{ i }}_v{{ j }}_code" value="{{ v.code }}"><code>{{ v.code }}</code>
+                {% else %}
+                  <input type="text" name="c{{ i }}_v{{ j }}_code" value="{{ v.code or '' }}" placeholder="auto" size="12">
+                {% endif %}
+              </td>
+              <td><input type="text" name="c{{ i }}_v{{ j }}_libelle" value="{{ v.libelle or '' }}"></td>
+              <td><input type="text" name="c{{ i }}_v{{ j }}_description" value="{{ v.description or '' }}"></td>
+              <td><button class="lien" type="submit" name="action" value="supprimer_valeur-{{ i }}-{{ j }}">Retirer</button></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <p class="aide">« Non déterminable » est ajoutée d'office à chaque liste.
+          <button class="lien" type="submit" name="action" value="ajouter_valeur-{{ i }}">Ajouter une valeur</button></p>
+        {% else %}
+        <input type="hidden" name="c{{ i }}_nb_valeurs" value="0">
+        {% endif %}
+
+        <details class="apercu-modele">
+          <summary>Ce que reçoit le modèle</summary>
+          {% if not c.envoyee %}
+            <p class="aide">Jamais envoyée au modèle : {{ "saisie par l'expert" if d.source == "expert" else "calculée par l'outil" }}.</p>
+          {% elif c.apercu %}
+            <pre class="code">{{ c.apercu }}</pre>
+          {% else %}
+            <p class="aide">Aperçu disponible quand la colonne est complète (nom, clé, type, valeurs).</p>
+          {% endif %}
+        </details>
+      </li>
+    {% endfor %}
+    </ol>
+
+    <p><button class="bouton" type="submit" name="action" value="ajouter_colonne">Ajouter une colonne</button></p>
+
+    <nav class="barre-actions">
+      <a class="bouton" href="{{ adresse }}" data-abandon>Annuler les modifications</a>
+      <button class="bouton" type="submit" name="action" value="verifier">Vérifier</button>
+      <button class="bouton principal" type="submit" name="action" value="enregistrer">Enregistrer la version {{ config.version + 1 }}</button>
+    </nav>
+  </form>
+</section>

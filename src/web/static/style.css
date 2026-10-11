@@ -233,3 +233,39 @@ input.saisie::placeholder { color: var(--texte-doux); }
 @media (max-width: 720px) {
   .champs { grid-template-columns: 1fr; }
 }
+
+/* Configuration d'une maison (session 6) */
+textarea {
+  font: inherit; padding: 8px 10px; border: 1px solid var(--bordure); border-radius: var(--rayon);
+  background: var(--surface); color: var(--texte); width: 100%; resize: vertical;
+}
+.code { background: #f4f4f1; border: 1px solid var(--bordure); border-radius: 8px; padding: 10px; font-size: 0.82rem; white-space: pre-wrap; overflow-x: auto; }
+.liste-erreurs { margin: 6px 0 0; padding-left: 20px; }
+.reglage { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 0 16px; }
+.reglage label { font-weight: 600; }
+.reglage input { width: 5em; }
+.colonnes-config { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.colonne-config { background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon); padding: 12px; }
+.colonne-config.nouvelle { border-color: var(--accent); }
+.colonne-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.colonne-boutons { margin-left: auto; display: flex; gap: 6px; }
+.colonne-champs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 14px; }
+.colonne-champs input[type="text"], .colonne-champs select { width: 100%; min-width: 0; }
+.colonne-champs label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 0.95rem; }
+.colonne-champs .large { grid-column: 1 / -1; }
+.colonne-champs .case { flex-direction: row; font-weight: 400; margin: 4px 0; }
+.cle-figee { padding: 12px 0; }
+.valeurs-config { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
+.valeurs-config th { text-align: left; font-weight: 600; padding: 4px; color: var(--texte-doux); }
+.valeurs-config td { padding: 3px 4px; }
+.valeurs-config input { width: 100%; min-height: 40px; }
+.apercu-modele { margin-top: 10px; }
+.apercu-modele summary, .bloc-repli summary { cursor: pointer; color: var(--accent); }
+.bloc-repli { margin: 18px 0; }
+.liste-versions { padding-left: 20px; }
+.editeur-config .barre-actions { position: sticky; margin: 16px -16px 0; }
+@media (max-width: 640px) {
+  .colonne-champs { grid-template-columns: minmax(0, 1fr); }
+  .valeurs-config thead { display: none; }
+  .valeurs-config tr { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px 0; border-bottom: 1px solid var(--bordure); }
+}

@@ -332,6 +332,14 @@ def _cles_inconnues(objet: dict[str, Any], connues: tuple[str, ...], ou: str, er
             )
 
 
+def colonne_depuis_brut(entree: Any) -> Colonne | None:
+    """UNE colonne validée seule, ou None si elle ne l'est pas encore : de quoi
+    montrer son aperçu pendant qu'on édite le reste de la config."""
+    erreurs: list[str] = []
+    colonne = _valider_colonne(entree, 0, erreurs)
+    return None if erreurs else colonne
+
+
 def _valider_colonne(entree: Any, index: int, erreurs: list[str]) -> Colonne | None:
     if not isinstance(entree, dict):
         erreurs.append(f"colonne n°{index + 1} : objet attendu.")

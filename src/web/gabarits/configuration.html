@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block titre %}Configuration{% endblock %}
+{% block fil %}<span class="fil">Configuration</span>{% endblock %}
+{% block contenu %}
+<h1>Configuration des maisons</h1>
+<p class="aide">
+  Les colonnes de l'Excel de chaque maison, et ce que le modèle doit lire. Chaque
+  enregistrement crée une nouvelle version ; un inventaire garde toujours la version
+  avec laquelle il a été créé.
+</p>
+
+{% if erreurs %}
+  <div class="message alerte" role="alert">
+    <p>« {{ importe }} » n'a pas été importé : {{ erreurs | length }} erreur(s) à corriger dans le fichier.</p>
+    <ul class="liste-erreurs">{% for e in erreurs %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<ul class="cartes">
+{% for m in maisons %}
+  <li>
+    {% if m.erreur %}
+      <div class="carte">
+        <span class="carte-titre">{{ m.fichier }}</span>
+        <span class="carte-ligne"><span class="etiquette alerte">Fichier invalide</span></span>
+        <span class="carte-ligne">Importez un fichier corrigé pour cette maison.</span>
+        <details><summary>Voir les erreurs</summary><pre class="code">{{ m.erreur }}</pre></details>
+      </div>
+    {% else %}
+      <a class="carte" href="/app/configuration/{{ m.fichier[:-5] }}">
+        <span class="carte-titre">{{ m.maison }}</span>
+        <span class="carte-ligne">Version {{ m.version_declaree }} · {{ m.fichier }}</span>
+      </a>
+    {% endif %}
+  </li>
+{% else %}
+  <li class="vide">Aucune configuration pour l'instant : importez le fichier JSON d'une maison.</li>
+{% endfor %}
+</ul>
+
+<h2>Importer un fichier</h2>
+<p class="aide">
+  Le fichier JSON d'une maison. Si la maison existe déjà, il devient sa nouvelle version ;
+  sinon, une nouvelle maison est ajoutée. Il est vérifié avant d'être pris en compte.
+</p>
+<form method="post" action="/app/configuration/importer" enctype="multipart/form-data" class="formulaire">
+  <input type="file" name="fichier" accept=".json,application/json" required>
+  <button class="bouton" type="submit">Importer</button>
+</form>
+{% endblock %}
+{% block actions %}
+<nav class="barre-actions">
+  <a class="bouton" href="/app">Inventaires</a>
+</nav>
+{% endblock %}

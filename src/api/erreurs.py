@@ -19,6 +19,7 @@ from starlette.exceptions import HTTPException
 from src.config.maison import ConfigInvalide
 from src.io.photos import PhotosInvalides
 from src.services.cas_particuliers import ActionRefusee
+from src.services.configuration import ConfigIntrouvable
 from src.services.depot import DepotFerme, ModificationRefusee
 from src.services.envoi import EnvoiRefuse, PhotoIntrouvable
 from src.services.extraction import BouteilleIntrouvable, BouteilleOccupee
@@ -50,6 +51,7 @@ TRADUCTIONS: list[tuple[type[Exception], int, str]] = [
     (InventaireIntrouvable, 404, "introuvable"),
     (BouteilleIntrouvable, 404, "introuvable"),
     (PhotoIntrouvable, 404, "introuvable"),
+    (ConfigIntrouvable, 404, "introuvable"),
     # Pas `LookupError` : un KeyError de programmation deviendrait un faux 404.
 ]
 
