@@ -90,3 +90,7 @@ Décisions remplacées ou devenues sans objet, retirées de `decisions.md`
   installé) mais il faudrait en plus convertir en JPEG avant l'envoi (Anthropic
   n'accepte pas le HEIC) : à décider selon le téléphone de l'expert. Restent :
   google-genai, anthropic, openpyxl, pillow, python-dotenv, pytest.
+
+- 0019 — [remplacée par 0162] Champs du pilote : identifiant, domaine, appellation, cuvée,
+  millésime, couleur, format, quantité, état de l'étiquette, description
+  générale de l'état. Niveau, capsule, bouchon : hors pilote.

@@ -388,13 +388,14 @@ def schema_extraction(config: ConfigMaison | None = None) -> dict[str, Any]:
 
     proprietes = outil["input_schema"]["properties"]
     for colonne in config.colonnes_modele:
-        proprietes[colonne.cle] = _propriete(colonne)
+        proprietes[colonne.cle] = propriete_modele(colonne)
     outil["input_schema"]["required"] = list(proprietes)
     return outil
 
 
-def _propriete(colonne: Colonne) -> dict[str, Any]:
-    """Une colonne de config traduite en propriété du schéma."""
+def propriete_modele(colonne: Colonne) -> dict[str, Any]:
+    """Une colonne de config traduite en propriété du schéma : EXACTEMENT ce que
+    le modèle reçoit pour elle (montré tel quel par la page Configuration)."""
     morceaux = [colonne.description] if colonne.description else []
     if colonne.regle:
         morceaux.append(f"Consigne : {colonne.regle}")

@@ -114,7 +114,9 @@ def test_cle_json_en_double_refusee(tmp_path):
 
 
 def test_cle_racine_en_double_refusee(tmp_path):
-    texte = CONFIG_TEST.read_text(encoding="utf-8").replace('"version": 1,', '"version": 1, "version": 2,', 1)
+    texte = CONFIG_TEST.read_text(encoding="utf-8")
+    version = json.loads(texte)["version"]
+    texte = texte.replace(f'"version": {version},', f'"version": {version}, "version": {version + 1},', 1)
     with pytest.raises(ConfigInvalide, match="« version » en double"):
         charger_config(ecrire(tmp_path, texte))
 
@@ -278,9 +280,13 @@ def test_regroupement_sur_colonne_inexistante_refuse(tmp_path, brut):
     refusee(tmp_path, brut, "aucune colonne de clé « region_inexistante »")
 
 
-def test_regroupement_sur_colonne_expert_refuse(tmp_path, brut):
+def test_regroupement_sur_colonne_expert_accepte_et_sur_colonne_systeme_refuse(tmp_path, brut):
+    """decisions.md 0160 : deux lots différents ne doivent jamais fusionner ; une
+    colonne calculée par l'outil ne décrit pas la bouteille."""
     brut["regroupement_export"].append("estimation")
-    refusee(tmp_path, brut, "on ne regroupe que sur ce que le modèle extrait")
+    assert "estimation" in charger_config(ecrire(tmp_path, json.dumps(brut, ensure_ascii=False))).regroupement_export
+    brut["regroupement_export"].append("a_verifier")
+    refusee(tmp_path, brut, "« a_verifier » est calculée par l'outil")
 
 
 # --- vocabulaire --------------------------------------------------------------

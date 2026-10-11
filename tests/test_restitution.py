@@ -93,7 +93,8 @@ def test_l_export_depuis_la_base_est_identique_a_celui_de_la_session_1(
     obtenu = exporter(session, inventaire_id, tmp_path / "depuis_la_base.xlsx")
 
     assert contenu_xlsx(obtenu) == contenu_xlsx(attendu)
-    assert len(contenu_xlsx(obtenu)["cellules"]) == 7 * 12  # en-tête + 6 lignes, 12 colonnes
+    colonnes = len(charger_config(CONFIG_TEST).colonnes)
+    assert len(contenu_xlsx(obtenu)["cellules"]) == 7 * colonnes  # en-tête + 6 lignes
 
 
 # --- config figée (critère du guide) ------------------------------------------------------

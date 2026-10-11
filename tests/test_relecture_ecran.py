@@ -70,7 +70,9 @@ PROPRE = {
     "couleur": "rouge",
     "couleur_source": "observee",
     "format": "bouteille",
+    "niveau": "haute_epaule",
     "etat_etiquette": "parfait",
+    "etat_capsule": "intacte",
     "description_etat": "Étiquette propre, capsule intacte.",
     "champs_a_verifier": [],
 }

@@ -62,7 +62,13 @@ DESCRIPTION_NON_DETERMINABLE = (
     "Rien de ce qui est visible sur les photos ne permet de trancher."
 )
 
-CLES_RACINE = ("maison", "version", "langue", "regroupement_export", "colonnes")
+# Plafond de photos par bouteille (decisions.md 0159) : chaque photo envoyée au
+# modèle se paie. 4 par défaut : étiquette, contre-étiquette, capsule,
+# bouteille entière.
+PHOTOS_MAX_DEFAUT = 4
+PHOTOS_MAX_BORNES = (1, 10)
+
+CLES_RACINE = ("maison", "version", "langue", "photos_max_par_bouteille", "regroupement_export", "colonnes")
 CLES_COLONNE = (
     "cle", "nom", "type", "source", "description", "regle", "canonique", "valeurs",
 )
@@ -82,7 +88,13 @@ MOTIFS_EXEMPLE = (
 
 
 class ConfigInvalide(ValueError):
-    """La config ne respecte pas le format attendu. Le message liste tout."""
+    """La config ne respecte pas le format attendu. Le message liste tout ;
+    `erreurs` : chaque anomalie à part, pour les montrer une à une (page
+    Configuration)."""
+
+    def __init__(self, message: str, erreurs: list[str] | None = None) -> None:
+        super().__init__(message)
+        self.erreurs = list(erreurs) if erreurs else [message]
 
 
 @dataclass(frozen=True)
@@ -152,6 +164,7 @@ class ConfigMaison:
     colonnes: tuple[Colonne, ...]
     regroupement_export: tuple[str, ...] = ()
     avertissements: tuple[str, ...] = ()
+    photos_max_par_bouteille: int = PHOTOS_MAX_DEFAUT
 
     def colonne(self, cle: str) -> Colonne | None:
         return next((c for c in self.colonnes if c.cle == cle), None)
@@ -262,6 +275,14 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
     if not isinstance(langue, str):
         erreurs.append(f"« langue » : texte attendu (reçu {langue!r}).")
 
+    photos_max = brut.get("photos_max_par_bouteille", PHOTOS_MAX_DEFAUT)
+    minimum, maximum = PHOTOS_MAX_BORNES
+    if isinstance(photos_max, bool) or not isinstance(photos_max, int) or not minimum <= photos_max <= maximum:
+        erreurs.append(
+            f"« photos_max_par_bouteille » : entier de {minimum} à {maximum} attendu (reçu "
+            f"{photos_max!r}). Chaque photo envoyée au modèle se paie."
+        )
+
     colonnes_brutes = brut.get("colonnes")
     colonnes: list[Colonne] = []
     if not isinstance(colonnes_brutes, list) or not colonnes_brutes:
@@ -286,7 +307,7 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
 
     if erreurs:
         liste = "\n".join(f"  - {erreur}" for erreur in erreurs)
-        raise ConfigInvalide(f"{chemin} : config invalide ({len(erreurs)}) :\n{liste}")
+        raise ConfigInvalide(f"{chemin} : config invalide ({len(erreurs)}) :\n{liste}", erreurs)
 
     return ConfigMaison(
         chemin=chemin,
@@ -296,6 +317,7 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
         colonnes=tuple(colonnes),
         regroupement_export=regroupement,
         avertissements=tuple(_reperer_exemples(colonnes)),
+        photos_max_par_bouteille=photos_max,
     )
 
 
@@ -499,10 +521,13 @@ def _valider_regroupement(
         elif colonne is None:
             if cle not in cles_declarees:  # sinon déjà signalée comme invalide
                 erreurs.append(f"« regroupement_export » : aucune colonne de clé « {cle} ».")
-        elif not colonne.envoyee_au_modele:
+        elif colonne.source == "systeme":
+            # Une colonne expert (lot, caisse) peut séparer deux lignes : deux lots
+            # différents ne doivent jamais fusionner (decisions.md 0160). Une
+            # colonne calculée, elle, ne décrit pas la bouteille.
             erreurs.append(
-                f"« regroupement_export » : « {cle} » n'est pas une colonne lue sur la "
-                f"bouteille — on ne regroupe que sur ce que le modèle extrait."
+                f"« regroupement_export » : « {cle} » est calculée par l'outil — on regroupe sur "
+                f"ce qui décrit la bouteille (colonnes lues par le modèle ou saisies par l'expert)."
             )
         vus.add(cle)
     return tuple(brut)

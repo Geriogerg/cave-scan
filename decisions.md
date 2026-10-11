@@ -76,9 +76,7 @@ un renvoi d'une ligne à leur place.
 - 0018 — Lotting automatique reporté ; seul l'identifiant stable est prévu
   maintenant.
 
-- 0019 — Champs du pilote : identifiant, domaine, appellation, cuvée,
-  millésime, couleur, format, quantité, état de l'étiquette, description
-  générale de l'état. Niveau, capsule, bouchon : hors pilote.
+- 0019 — archivée (remplacée par 0162) → docs/decisions-archive.md
 
 - 0020 — Format de sortie par maison décrit dans une config versionnée :
   colonnes, type (texte | liste | nombre), source (modele | modele_best_effort |
@@ -971,6 +969,50 @@ un renvoi d'une ligne à leur place.
   AVANT tout appel — écarté : convertir à la réception (le fichier reçu ne
   serait plus celui de l'expert) ; envoyer le HEIC tel quel à Gemini (les deux
   backends ne liraient plus la même image).
+
+- 0159 — Plafond de photos par bouteille : clé racine
+  `photos_max_par_bouteille` de la config de la maison (1 à 10, 4 par défaut :
+  étiquette, contre-étiquette, capsule, bouteille entière), modifiable dans la
+  page Configuration et figée avec l'inventaire. Chaque photo envoyée au modèle
+  se paie (choix du 2026-10-11) — écarté : un réglage global dans `.env` (une
+  maison ne pourrait pas l'ajuster).
+
+- 0160 — [remplace en partie 0066] Regroupement de l'export : colonnes lues par
+  le modèle OU saisies par l'expert ; seules les colonnes calculées par l'outil
+  (id, à vérifier) sont refusées. Deux lots ou deux caisses différents ne
+  fusionnent jamais ; deux bouteilles sans lot saisi restent fusionnables.
+  Une abstention sur une clé LUE empêche toujours la fusion (0066) — écarté :
+  regrouper sur les seules colonnes lues (deux bouteilles identiques de lots
+  différents deviendraient une ligne « 12 / 13 »).
+
+- 0161 — [remplace en partie 0020 : l'éditeur dans l'interface existe]
+  Configuration d'une maison par la page « Configuration » ou par import d'un
+  JSON (`src/services/configuration.py`). Le fichier de `config/maisons/` reste
+  LA config active (la ligne de commande le lit, contrainte 6) : chaque
+  enregistrement est validé exactement comme un fichier, rien n'est écrit tant
+  qu'il reste une erreur (chaque erreur listée à part), le numéro de version
+  est fixé par l'outil (le précédent + 1, signalé si le fichier importé en
+  disait un autre), le fichier est remplacé d'un coup, puis la version est
+  enregistrée en base (exportable, et un inventaire garde celle de sa
+  création). Refusés : un contenu identique à la version active, une page
+  ouverte sur une version périmée (rien n'est écrasé), un changement de nom de
+  maison (ce serait une autre maison : on l'importe). Une maison nouvelle
+  importée reçoit un fichier nommé d'après elle. L'aperçu de chaque colonne
+  montre le morceau de schéma EXACT envoyé au modèle (`propriete_modele`), ou
+  « jamais envoyée » — écarté : configs en base seulement (la ligne de
+  commande et le README reposent sur le fichier) ; un brouillon de config en
+  base (état caché entre deux pages).
+
+- 0162 — [remplace 0019] Champs du pilote dans la config de test (version 2) :
+  ceux de 0019, plus `niveau` et `etat_capsule` (best effort, avec la règle
+  « seulement si une photo montre le col… sinon non déterminable »), `caisse`
+  (CBO, carton, sans) et `numero_lot` (texte), saisis par l'expert : une photo
+  de bouteille ne montre pas la caisse. L'exemple de réponse de
+  `description_etat` est retiré (few-shot, contrainte 7). Le regroupement
+  porte aussi sur niveau, capsule, caisse et lot. Conséquence assumée : tant
+  que niveau et capsule restent « non déterminables » (gros plans
+  d'étiquette), la ligne est à vérifier et ne fusionne pas, comme pour le
+  format (0066). Bouchon : hors pilote.
 
 ---
 

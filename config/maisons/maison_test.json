@@ -2,21 +2,27 @@
   "_fictif": "Config de TEST inventée, à remplacer par la nomenclature réelle de la maison pilote.",
   "_format": {
     "version": "Entier, incrémenté à chaque modification du fichier. Copié dans chaque export.",
-    "regroupement_export": "Liste de 'cle' de colonnes. Les bouteilles identiques sur toutes ces clés sont fusionnées en une ligne, quantités additionnées.",
+    "regroupement_export": "Liste de 'cle' de colonnes lues par le modèle ou saisies par l'expert. Les bouteilles identiques sur toutes ces clés sont fusionnées en une ligne, quantités additionnées.",
     "valeurs": "Chaque valeur a un 'code' stable (stocké, comparé, jamais modifié) et un 'libelle' affiché à l'export (modifiable librement). La description guide le modèle.",
     "regle": "Texte optionnel, consigne supplémentaire injectée dans le schéma envoyé au modèle pour cette colonne.",
-    "source": "modele = lu sur la photo ; modele_best_effort = proposé par le modèle et toujours à vérifier ; expert = saisi par l'expert, jamais envoyé au modèle ; systeme = calculé par l'outil, jamais envoyé au modèle."
+    "source": "modele = lu sur la photo ; modele_best_effort = proposé par le modèle et toujours à vérifier ; expert = saisi par l'expert, jamais envoyé au modèle ; systeme = calculé par l'outil, jamais envoyé au modèle.",
+    "photos_max_par_bouteille": "Nombre de photos au plus par bouteille (1 à 10, 4 par défaut). Chaque photo envoyée au modèle se paie."
   },
   "maison": "Maison Test",
-  "version": 1,
+  "version": 2,
   "langue": "fr",
+  "photos_max_par_bouteille": 4,
   "regroupement_export": [
     "domaine",
     "appellation",
     "cuvee",
     "millesime",
     "format",
-    "etat_etiquette"
+    "etat_etiquette",
+    "niveau",
+    "etat_capsule",
+    "caisse",
+    "numero_lot"
   ],
   "colonnes": [
     {
@@ -148,6 +154,46 @@
       "regle": "Seulement si la contenance est imprimée ou si la photo montre clairement la bouteille entière. Sinon non déterminable."
     },
     {
+      "cle": "niveau",
+      "nom": "Niveau",
+      "type": "liste",
+      "source": "modele_best_effort",
+      "description": "Hauteur du vin dans la bouteille, lue sur une photo qui montre le col et l'épaule.",
+      "regle": "Seulement si une photo montre la bouteille entière ou son col avec le vin visible. Sinon non déterminable.",
+      "valeurs": [
+        {
+          "code": "goulot",
+          "libelle": "Dans le goulot",
+          "description": "Le vin atteint le goulot."
+        },
+        {
+          "code": "base_goulot",
+          "libelle": "Base du goulot",
+          "description": "Le vin arrive à la base du goulot."
+        },
+        {
+          "code": "haute_epaule",
+          "libelle": "Haute épaule",
+          "description": "Le vin est en haut de l'épaule."
+        },
+        {
+          "code": "mi_epaule",
+          "libelle": "Mi-épaule",
+          "description": "Le vin est au milieu de l'épaule."
+        },
+        {
+          "code": "basse_epaule",
+          "libelle": "Basse épaule",
+          "description": "Le vin est en bas de l'épaule."
+        },
+        {
+          "code": "sous_epaule",
+          "libelle": "Sous l'épaule",
+          "description": "Le vin est descendu sous l'épaule."
+        }
+      ]
+    },
+    {
       "cle": "etat_etiquette",
       "nom": "État étiquette",
       "type": "liste",
@@ -186,11 +232,41 @@
       ]
     },
     {
+      "cle": "etat_capsule",
+      "nom": "État capsule",
+      "type": "liste",
+      "source": "modele_best_effort",
+      "description": "État de la capsule qui recouvre le bouchon.",
+      "regle": "Seulement si une photo montre le haut du col. Sinon non déterminable.",
+      "valeurs": [
+        {
+          "code": "intacte",
+          "libelle": "Intacte",
+          "description": "Capsule complète, sans marque visible."
+        },
+        {
+          "code": "legerement_abimee",
+          "libelle": "Légèrement abîmée",
+          "description": "Petite marque, froissure ou éraflure."
+        },
+        {
+          "code": "abimee",
+          "libelle": "Abîmée",
+          "description": "Capsule déchirée, percée ou corrodée."
+        },
+        {
+          "code": "absente",
+          "libelle": "Absente",
+          "description": "Le haut du col est visible et ne porte pas de capsule."
+        }
+      ]
+    },
+    {
       "cle": "description_etat",
       "nom": "Description de l'état",
       "type": "texte",
       "source": "modele_best_effort",
-      "description": "Une phrase courte et factuelle sur ce qui est visible (étiquette, capsule, niveau si visible). Ne rien affirmer de non visible. Style catalogue : « Étiquette légèrement tachée, capsule intacte. »"
+      "description": "Une phrase courte et factuelle sur ce qui est visible (étiquette, capsule, niveau si visible). Ne rien affirmer de non visible. Style catalogue."
     },
     {
       "cle": "estimation",
@@ -198,6 +274,37 @@
       "type": "texte",
       "source": "expert",
       "description": "Saisie par l'expert. Jamais remplie par le modèle."
+    },
+    {
+      "cle": "caisse",
+      "nom": "Caisse",
+      "type": "liste",
+      "source": "expert",
+      "description": "Conditionnement d'origine. Saisi par l'expert : une photo de bouteille ne le montre pas.",
+      "valeurs": [
+        {
+          "code": "cbo",
+          "libelle": "CBO",
+          "description": "Caisse bois d'origine."
+        },
+        {
+          "code": "carton",
+          "libelle": "Carton",
+          "description": "Carton d'origine."
+        },
+        {
+          "code": "sans",
+          "libelle": "Sans",
+          "description": "Ni caisse ni carton."
+        }
+      ]
+    },
+    {
+      "cle": "numero_lot",
+      "nom": "N° de lot",
+      "type": "texte",
+      "source": "expert",
+      "description": "Numéro du lot dans la vente. Saisi par l'expert."
     },
     {
       "cle": "a_verifier",

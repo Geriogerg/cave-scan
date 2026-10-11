@@ -108,11 +108,29 @@ def test_une_cle_differente_empeche_la_fusion(config):
 
 
 def test_une_abstention_sur_une_cle_empeche_la_fusion(config):
-    """« Illisible » ne veut pas dire « identique » : on ne fusionne pas sur un inconnu."""
-    for cle in config.regroupement_export:
+    """« Illisible » ne veut pas dire « identique » : on ne fusionne pas sur un inconnu.
+    (Clés LUES par le modèle : une clé expert vide veut dire « pas saisie », 0160.)"""
+    lues = [cle for cle in config.regroupement_export if config.colonne(cle).envoyee_au_modele]
+    assert lues
+    for cle in lues:
         colonne = config.colonne(cle)
         bouteilles = [complete(config, f"B-{i}", **{cle: abstention(colonne)}) for i in range(2)]
         assert len(regrouper(bouteilles, config)) == 2, cle
+
+
+def test_deux_lots_differents_ne_fusionnent_jamais(config):
+    """decisions.md 0160 : une clé expert (lot, caisse) sépare les lignes ; vide des
+    deux côtés (rien de saisi), elle ne les sépare pas."""
+    experts = [config.colonne(cle) for cle in config.regroupement_export if config.colonne(cle).source == "expert"]
+    if not experts:
+        pytest.skip("la config de test ne regroupe sur aucune colonne expert")
+    for colonne in experts:
+        a, b = complete(config, "B-1"), complete(config, "B-2")
+        valeurs = (colonne.codes[0], colonne.codes[1]) if colonne.type == "liste" else ("12", "13")
+        poser(a, colonne, valeurs[0])
+        poser(b, colonne, valeurs[1])
+        assert len(regrouper([a, b], config)) == 2, colonne.cle
+    assert len(regrouper([complete(config, "B-3"), complete(config, "B-4")], config)) == 1
 
 
 def test_une_bouteille_a_relire_garde_sa_ligne(tmp_path, config):

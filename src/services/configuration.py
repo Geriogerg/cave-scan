@@ -1,0 +1,245 @@
+"""La configuration d'une maison : nouvelle version, import, export, aperçu
+(session 6 ; decisions.md 0161).
+
+Le fichier JSON de `config/maisons/` reste LA config active d'une maison : la
+ligne de commande le lit, et le format de chaque maison reste piloté par lui
+(CLAUDE.md, contrainte 6). La page « Configuration » et l'import ne font rien
+d'autre que produire une NOUVELLE version de ce fichier :
+
+1. le contenu est validé EXACTEMENT comme un fichier (`config_depuis_texte`) :
+   rien n'est écrit tant qu'il reste une erreur ;
+2. son numéro de version est fixé par l'outil (la précédente + 1) ;
+3. le fichier est réécrit d'un coup (fichier temporaire puis remplacement) ;
+4. la version est enregistrée en base : chaque version reste exportable, et un
+   inventaire garde celle de sa création (decisions.md 0073).
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import threading
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from src.config.maison import (
+    ConfigInvalide,
+    ConfigMaison,
+    Colonne,
+    config_depuis_texte,
+    empreinte_config,
+    lire_config,
+    plier,
+)
+from src.donnees.modeles import ConfigVersion, Maison
+from src.extract.schema import propriete_modele
+from src.services.inventaires import _maison, _version_de_config
+
+# Deux enregistrements simultanés liraient la même version et écriraient la
+# même suivante : la lecture, la vérification et l'écriture se font d'un tenant.
+_VERROU = threading.Lock()
+
+
+class ConfigModifieeAilleurs(RuntimeError):
+    """La config a changé depuis qu'elle a été ouverte (autre onglet, autre
+    personne) : rien n'est écrit, il faut repartir de la version actuelle."""
+
+
+class ConfigInchangee(ValueError):
+    """Le contenu est identique à la version active : aucune version créée."""
+
+
+@dataclass(frozen=True)
+class ConfigActive:
+    """La config active d'une maison : son fichier, validé."""
+
+    fichier: Path
+    texte: str
+    config: ConfigMaison
+
+    @property
+    def brut(self) -> dict[str, Any]:
+        return json.loads(self.texte)
+
+
+@dataclass(frozen=True)
+class VersionEnregistree:
+    maison: str
+    fichier: Path
+    version: int  # le « version » écrit dans le fichier
+    numero: int  # la version en base (compteur propre à la maison)
+    nouvelle_maison: bool
+    avertissements: list[str] = field(default_factory=list)
+
+
+# --- lire ----------------------------------------------------------------------------------
+
+
+def config_active(dossier_configs: Path, maison: str) -> ConfigActive:
+    """Le fichier de la maison, validé. `LookupError` si aucune config valide ne
+    la décrit."""
+    for fichier in sorted(Path(dossier_configs).glob("*.json")):
+        try:
+            config, texte = lire_config(fichier)
+        except ConfigInvalide:
+            continue
+        if plier(config.maison) == plier(maison):
+            return ConfigActive(fichier=fichier, texte=texte, config=config)
+    raise LookupError(f"Aucune config pour la maison « {maison} » dans {Path(dossier_configs).name}/.")
+
+
+def versions_de(session: Session, maison: str) -> list[ConfigVersion]:
+    """Les versions enregistrées en base, la plus récente d'abord."""
+    return list(
+        session.scalars(
+            select(ConfigVersion)
+            .join(Maison, Maison.id == ConfigVersion.maison_id)
+            .where(Maison.nom == maison)
+            .order_by(ConfigVersion.numero.desc())
+        )
+    )
+
+
+def apercu_modele(colonne: Colonne) -> str | None:
+    """Ce que le modèle reçoit pour cette colonne, tel quel (le morceau du schéma
+    qui la décrit) ; None si elle ne lui est jamais envoyée (expert, système)."""
+    if not colonne.envoyee_au_modele:
+        return None
+    return json.dumps(propriete_modele(colonne), ensure_ascii=False, indent=2)
+
+
+# --- écrire --------------------------------------------------------------------------------
+
+
+def enregistrer_version(
+    session: Session,
+    dossier_configs: Path,
+    maison: str,
+    brut: dict[str, Any],
+    version_vue: int | None = None,
+) -> VersionEnregistree:
+    """Le contenu édité dans la page devient la nouvelle version de la maison.
+
+    `version_vue` : la version active quand la page a été ouverte ; si elle a
+    changé depuis, rien n'est écrit (`ConfigModifieeAilleurs`). Le nom de la
+    maison ne change pas ici : ce serait une autre maison.
+    """
+    with _VERROU:
+        active = config_active(dossier_configs, maison)
+        if version_vue is not None and version_vue != active.config.version:
+            raise ConfigModifieeAilleurs(
+                f"La configuration de « {active.config.maison} » a été modifiée ailleurs depuis "
+                f"que vous l'avez ouverte (version {active.config.version}, vous éditiez la version "
+                f"{version_vue}). Rechargez la page pour repartir de la version actuelle."
+            )
+        brut = dict(brut)
+        if plier(str(brut.get("maison", ""))) != plier(active.config.maison):
+            raise ConfigInvalide(
+                f"« maison » : cette page modifie la configuration de « {active.config.maison} » ; "
+                f"pour une autre maison, importez son fichier."
+            )
+        brut["maison"] = active.config.maison
+        return _ecrire(session, active.fichier, brut, active, nouvelle_maison=False)
+
+
+def importer(session: Session, dossier_configs: Path, texte: str, nom_fichier: str = "") -> VersionEnregistree:
+    """Un fichier JSON apporté par la maison devient sa config active.
+
+    Maison déjà connue : nouvelle version de SON fichier, numérotée par l'outil
+    (la précédente + 1). Maison nouvelle : un nouveau fichier, nommé d'après
+    elle. Dans les deux cas, validé comme n'importe quel fichier.
+    """
+    source = nom_fichier or "fichier importé"
+    try:
+        brut = json.loads(texte)
+    except json.JSONDecodeError as erreur:
+        raise ConfigInvalide(
+            f"{source} : JSON illisible, ligne {erreur.lineno} colonne {erreur.colno} : {erreur.msg}."
+        ) from erreur
+    if not isinstance(brut, dict) or not isinstance(brut.get("maison"), str) or not brut["maison"].strip():
+        # Toutes les autres erreurs, la validation complète les listera.
+        config_depuis_texte(texte, source)
+        raise ConfigInvalide(f"{source} : « maison » manquant ou vide.")
+
+    with _VERROU:
+        try:
+            active = config_active(dossier_configs, brut["maison"])
+        except LookupError:
+            active = None
+        if active is not None:
+            brut["maison"] = active.config.maison
+            return _ecrire(session, active.fichier, brut, active, nouvelle_maison=False)
+        fichier = _fichier_libre(Path(dossier_configs), brut["maison"])
+        return _ecrire(session, fichier, brut, None, nouvelle_maison=True)
+
+
+def exporter_version(
+    session: Session, dossier_configs: Path, maison: str, numero: int | None = None
+) -> tuple[str, str]:
+    """(nom de fichier, texte JSON) : la config active, ou la version `numero`
+    enregistrée en base."""
+    active = config_active(dossier_configs, maison)
+    if numero is None:
+        return active.fichier.name, active.texte
+    version = next((v for v in versions_de(session, active.config.maison) if v.numero == numero), None)
+    if version is None:
+        raise LookupError(f"Aucune version n°{numero} de la configuration de « {active.config.maison} ».")
+    return f"{active.fichier.stem}_version_{numero}.json", version.contenu
+
+
+def _ecrire(
+    session: Session, fichier: Path, brut: dict[str, Any], active: ConfigActive | None, nouvelle_maison: bool
+) -> VersionEnregistree:
+    avertissements = []
+    if active is not None:
+        version = active.config.version + 1
+        declaree = brut.get("version")
+        if declaree not in (None, active.config.version, version):
+            avertissements.append(
+                f"Numéro de version fixé à {version} (le fichier indiquait {declaree!r}) : "
+                f"chaque version suit la précédente."
+            )
+        brut["version"] = active.config.version
+        if empreinte_config(_texte(brut)) == empreinte_config(active.texte):
+            raise ConfigInchangee("Aucun changement par rapport à la version active : rien n'a été enregistré.")
+    else:
+        version = brut.get("version") if isinstance(brut.get("version"), int) and brut["version"] >= 1 else 1
+    brut["version"] = version
+    texte = _texte(brut)
+    config = config_depuis_texte(texte, fichier.name)  # validation complète, comme un fichier
+
+    fichier.parent.mkdir(parents=True, exist_ok=True)
+    temporaire = fichier.with_name(f".{fichier.name}.en-cours")
+    temporaire.write_text(texte, encoding="utf-8", newline="\n")
+    os.replace(temporaire, fichier)
+
+    enregistree, _nouvelle, autres = _version_de_config(
+        session, _maison(session, config.maison), config, texte, fichier.name
+    )
+    session.commit()
+    return VersionEnregistree(
+        maison=config.maison,
+        fichier=fichier,
+        version=config.version,
+        numero=enregistree.numero,
+        nouvelle_maison=nouvelle_maison,
+        avertissements=[*avertissements, *config.avertissements, *autres],
+    )
+
+
+def _texte(brut: dict[str, Any]) -> str:
+    return json.dumps(brut, ensure_ascii=False, indent=2) + "\n"
+
+
+def _fichier_libre(dossier: Path, maison: str) -> Path:
+    """« Cave Dupont & Fils » -> cave_dupont_fils.json (ou _2, _3… s'il existe)."""
+    base = re.sub(r"[^a-z0-9]+", "_", plier(maison)).strip("_") or "maison"
+    candidat, rang = dossier / f"{base}.json", 2
+    while candidat.exists():
+        candidat, rang = dossier / f"{base}_{rang}.json", rang + 1
+    return candidat

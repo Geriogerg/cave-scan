@@ -19,10 +19,11 @@ paths:
   effervescence, millésime, région, pays, format, contenance_cl, degré,
   importateur, champs_a_verifier, notes.
 - Pilote : `id` (système), `quantite` (expert, 1 par défaut),
-  `etat_etiquette` et `description_etat` (source `modele_best_effort` : proposés
-  à partir de ce qui est VISIBLE, toujours ajoutés à `champs_a_verifier`).
-- Niveau, capsule, bouchon : hors pilote. Le modèle ne décrit jamais ce qu'il ne
-  voit pas.
+  `etat_etiquette`, `description_etat`, `niveau`, `etat_capsule` (source
+  `modele_best_effort` : proposés à partir de ce qui est VISIBLE, toujours
+  ajoutés à `champs_a_verifier`, « non déterminable » sans photo adaptée),
+  `caisse` et `numero_lot` (expert).
+- Bouchon : hors pilote. Le modèle ne décrit jamais ce qu'il ne voit pas.
 
 ## Lecture
 - Extraction par modèle vision-langage en tool-use, sortie contrainte. Pas d'OCR
@@ -46,6 +47,8 @@ paths:
 - JSON versionné ; listes avec `code` stable + `libelle` affiché + description ;
   « Non déterminable » ajouté automatiquement ; sources modele |
   modele_best_effort | expert | systeme.
+- Modifiable par import du JSON ou par la page « Configuration » : chaque
+  enregistrement est validé comme un fichier et devient une NOUVELLE version.
 - Un inventaire reste lié à la version de config avec laquelle il a été créé.
 
 ## Comparaison et normalisation
