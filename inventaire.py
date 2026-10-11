@@ -94,8 +94,8 @@ def _lister(session: Session, arguments: argparse.Namespace) -> None:
         )
     corbeille = lister_inventaires(session, corbeille=True)
     if corbeille:
-        print(f"
-{len(corbeille)} inventaire(s) dans la corbeille : à restaurer depuis l'application.")
+        print()
+        print(f"{len(corbeille)} inventaire(s) dans la corbeille : à restaurer depuis l'application.")
 
 
 def _bouteilles(session: Session, arguments: argparse.Namespace) -> None:
