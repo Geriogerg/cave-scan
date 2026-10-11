@@ -1,6 +1,6 @@
 """Bouteilles d'un inventaire : lister, consulter, corriger, modifier la quantité,
 valider — et les cas particuliers de la relecture (session 5) : revenir à la
-valeur du modèle, réanalyser, inverser les photos, signaler une paire, séparer.
+valeur du modèle, réanalyser, signaler un problème de photos, séparer.
 
 Mêmes fonctions de service que l'écran de relecture ; une `version` lue avec la
 bouteille peut être renvoyée pour être prévenu (409) d'une modification faite
@@ -16,7 +16,7 @@ from src.api import schemas
 from src.api.dependances import Auteur, BouteilleVerifiee, SessionBase
 from src.config.maison import COLONNE_QUANTITE
 from src.donnees.modeles import STATUTS_BOUTEILLE
-from src.services.cas_particuliers import inverser_photos, lever_signalement, reanalyser, separer, signaler_paire
+from src.services.cas_particuliers import lever_signalement, reanalyser, separer, signaler_paire
 from src.services.consultation import PAR_PAGE_MAX, fiche_bouteille, parcourir_bouteilles
 from src.services.relecture import corriger, revenir_a_la_valeur_du_modele, valider, verifier_version
 
@@ -111,15 +111,7 @@ def demander_reanalyse(inventaire_id: int, bouteille: BouteilleVerifiee, base: S
 
 
 @routeur.post(
-    "/{bouteille_id}/inverser-photos", response_model=schemas.BouteilleDetail, summary="Inverser étiquette et contre-étiquette"
-)
-def inverser(inventaire_id: int, bouteille: BouteilleVerifiee, base: SessionBase, auteur: Auteur):
-    inverser_photos(base, bouteille.id, auteur)
-    return schemas.depuis_fiche(fiche_bouteille(base, inventaire_id, bouteille.id))
-
-
-@routeur.post(
-    "/{bouteille_id}/signalement", response_model=schemas.BouteilleDetail, summary="Signaler un problème de paire"
+    "/{bouteille_id}/signalement", response_model=schemas.BouteilleDetail, summary="Signaler un problème de photos"
 )
 def signaler(
     inventaire_id: int,
@@ -133,7 +125,7 @@ def signaler(
 
 
 @routeur.delete(
-    "/{bouteille_id}/signalement", response_model=schemas.BouteilleDetail, summary="Lever le signalement de paire"
+    "/{bouteille_id}/signalement", response_model=schemas.BouteilleDetail, summary="Lever le signalement"
 )
 def lever(inventaire_id: int, bouteille: BouteilleVerifiee, base: SessionBase, auteur: Auteur):
     lever_signalement(base, bouteille.id, auteur)

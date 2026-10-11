@@ -1,9 +1,10 @@
-"""Les écrans web (session 4) : chaque page s'affiche, le parcours complet
+"""Les écrans web (sessions 4 et 6) : chaque page s'affiche, le parcours complet
 fonctionne avec l'extracteur factice, et les garde-fous restent côté serveur.
 
 Le navigateur est simulé par le client de test : les envois de photos passent
-par la même route que le script d'envoi (POST /inventaires/{id}/photos), les
-actions HTMX par leurs routes, avec l'en-tête HX-Request.
+par la même route que le script d'envoi (POST /inventaires/{id}/photos, une
+photo à la fois pour SA bouteille), les actions HTMX par leurs routes, avec
+l'en-tête HX-Request.
 """
 
 from __future__ import annotations
@@ -22,19 +23,24 @@ from tests.test_depot import jpeg
 HX = {"HX-Request": "true"}
 
 
-def creer(api, nom="Vente de printemps", sans_contre=False) -> int:
-    donnees = {"nom": nom, "maison": "Maison Test"}
-    if sans_contre:
-        donnees["sans_contre"] = "true"
-    reponse = api.post("/app/nouveau", data=donnees, follow_redirects=False)
+def creer(api, nom="Vente de printemps") -> int:
+    reponse = api.post("/app/nouveau", data={"nom": nom, "maison": "Maison Test"}, follow_redirects=False)
     assert reponse.status_code == 303, reponse.text
     return int(re.search(r"/app/inventaires/(\d+)/depot", reponse.headers["location"]).group(1))
 
 
-def deposer(api, inventaire_id, nombre=6):
-    for rang in range(1, nombre + 1):
-        reponse = envoyer(api, inventaire_id, jpeg(rang), f"IMG_{rang:04d}.jpg", f"2026-09-17T15:56:{rang:02d}")
-        assert reponse.status_code == 200, reponse.json()
+def deposer(api, inventaire_id, bouteilles=3, photos=2, premier=1):
+    """`bouteilles` bouteilles de `photos` photos, comme l'appareil photo les envoie."""
+    couleur = premier * 10
+    for numero in range(premier, premier + bouteilles):
+        for _ in range(photos):
+            couleur += 1
+            reponse = envoyer(api, inventaire_id, jpeg(couleur), f"IMG_{couleur:04d}.jpg", f"b{numero}", numero)
+            assert reponse.status_code == 200, reponse.json()
+
+
+def attente(api, inventaire_id):
+    return api.get(f"/inventaires/{inventaire_id}/apercu").json()["bouteilles"]
 
 
 def test_chaque_page_s_affiche(api):
@@ -43,15 +49,17 @@ def test_chaque_page_s_affiche(api):
     assert accueil.status_code == 200 and "Nouvel inventaire" in accueil.text and "Aucun inventaire" in accueil.text
     nouveau = api.get("/app/nouveau")
     assert nouveau.status_code == 200 and "Maison Test" in nouveau.text
+    assert "sans_contre" not in nouveau.text  # l'option « étiquettes seules » a disparu (0166)
 
     inventaire_id = creer(api)
     depot = api.get(f"/app/inventaires/{inventaire_id}/depot")
     assert depot.status_code == 200
-    for texte in ("Choisir dans la galerie", "Prendre une photo", 'capture="environment"', "multiple", "/static/depot.js"):
-        assert texte in depot.text
+    for texte in ("Appareil photo", "Galerie ou ordinateur", "Prendre une photo", 'capture="environment"',
+                  "Bouteille suivante", "Ajouter une bouteille", 'data-max="4"', "/static/depot.js"):
+        assert texte in depot.text, texte
     assert 'id="reduire"' in depot.text and 'id="reduire" checked' not in depot.text  # réduction désactivée (0130)
-    ordre = api.get(f"/app/inventaires/{inventaire_id}/ordre")
-    assert ordre.status_code == 200 and "Aucune photo pour" in ordre.text
+    verifier = api.get(f"/app/inventaires/{inventaire_id}/verifier")
+    assert verifier.status_code == 200 and "Aucune photo pour" in verifier.text and 'id="lancer" disabled' in verifier.text
     assert "Vente de printemps" in api.get("/app").text
     assert api.get(f"/app/inventaires/{inventaire_id}", follow_redirects=False).headers["location"].endswith("/depot")
 
@@ -65,18 +73,20 @@ def test_les_pages_n_appellent_aucun_script_exterieur(api):
     assert api.get("/static/depot.js").status_code == 200
 
 
-def test_parcours_brouillon_depot_ordre_lancement_suivi_export(api):
+def test_parcours_depot_verification_lancement_suivi_export(api):
     inventaire_id = creer(api)
     deposer(api, inventaire_id)
 
-    ordre = api.get(f"/app/inventaires/{inventaire_id}/ordre").text
-    assert ordre.count("Bouteille ") == 3 and "Lancer l'analyse" in ordre
-    assert 'id="lancer" disabled' not in ordre
+    page = api.get(f"/app/inventaires/{inventaire_id}/verifier").text
+    assert page.count("<strong>Bouteille ") == 3 and "Lancer l'analyse" in page
+    assert 'id="lancer" disabled' not in page
 
-    inverse = api.post(f"/app/inventaires/{inventaire_id}/ordre/inverser/2", headers=HX)
-    assert inverse.status_code == 200
-    vignettes = re.findall(r"photo (\d+)", inverse.text)
-    assert "ordre corrigé à la main" in inverse.text and vignettes
+    seconde = attente(api, inventaire_id)[0]["photos"][1]["id"]
+    coupee = api.post(f"/app/inventaires/{inventaire_id}/verifier/couper/{seconde}", headers=HX)
+    assert coupee.status_code == 200 and coupee.text.count("<strong>Bouteille ") == 4
+    groupe = attente(api, inventaire_id)[1]["groupe_id"]
+    rattachee = api.post(f"/app/inventaires/{inventaire_id}/verifier/rattacher/{groupe}", headers=HX)
+    assert rattachee.text.count("<strong>Bouteille ") == 3
 
     lance = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX)
     assert lance.status_code == 204 and lance.headers["HX-Redirect"] == f"/app/inventaires/{inventaire_id}/suivi"
@@ -85,6 +95,7 @@ def test_parcours_brouillon_depot_ordre_lancement_suivi_export(api):
     # La relecture (session 5) s'ouvre dès la première bouteille analysée.
     assert suivi.status_code == 200 and "Relecture — dès la première bouteille analysée" in suivi.text
     assert 'hx-trigger="every 3s"' in suivi.text  # se met à jour toute seule
+    assert f"/app/inventaires/{inventaire_id}/depot" in suivi.text  # « Ajouter des bouteilles »
 
     extraire_en_arriere_plan_deja_lance(api, inventaire_id, ExtracteurFactice(charger_config(CONFIG_TEST)))
     fin = api.get(f"/app/inventaires/{inventaire_id}/progression").text
@@ -96,43 +107,45 @@ def test_parcours_brouillon_depot_ordre_lancement_suivi_export(api):
     assert "Analyse terminée" in api.get("/app").text
 
 
-def test_lancement_refuse_si_impair_avec_le_message_prevu(api):
+def test_lancement_refuse_sans_bouteille_en_attente(api):
     inventaire_id = creer(api)
-    deposer(api, inventaire_id, nombre=5)
-    ordre = api.get(f"/app/inventaires/{inventaire_id}/ordre").text
-    assert "Nombre impair de photos (5)" in ordre and 'id="lancer" disabled' in ordre
-    assert "Contre-étiquette manquante" in ordre
-
     # Le bouton est désactivé, mais le SERVEUR refuse aussi : jamais un garde-fou
     # tenu seulement par le navigateur.
     refus = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX)
-    assert refus.status_code == 200 and "Nombre impair de photos (5)" in refus.text
-    assert "Supprimez la photo en trop" in refus.text
+    assert refus.status_code == 200 and "Aucune bouteille en attente" in refus.text
     assert api.get(f"/inventaires/{inventaire_id}").json()["statut"] == "brouillon"
 
 
-def test_supprimer_et_deplacer_depuis_la_page(api):
+def test_retirer_une_photo_supprimer_une_bouteille_changer_la_quantite(api):
     inventaire_id = creer(api)
-    deposer(api, inventaire_id, nombre=4)
-    photos = api.get(f"/inventaires/{inventaire_id}/apercu").json()["paires"]
-    premiere, derniere = photos[0]["etiquette"]["id"], photos[1]["contre_etiquette"]["id"]
+    deposer(api, inventaire_id, bouteilles=2)
+    premiere = attente(api, inventaire_id)[0]
+    apres = api.post(f"/app/inventaires/{inventaire_id}/verifier/retirer-photo/{premiere['photos'][0]['id']}", headers=HX)
+    assert apres.status_code == 200 and "2 bouteille(s) en attente · 3 photo(s)" in apres.text
 
-    api.post(f"/app/inventaires/{inventaire_id}/ordre/deplacer/{derniere}", data={"position": 1}, headers=HX)
-    assert api.get(f"/inventaires/{inventaire_id}/apercu").json()["paires"][0]["etiquette"]["id"] == derniere
-    apres = api.post(f"/app/inventaires/{inventaire_id}/ordre/supprimer/{premiere}", headers=HX)
-    assert "Nombre impair de photos (3)" in apres.text
-    retrie = api.post(f"/app/inventaires/{inventaire_id}/ordre/retrier", headers=HX)
-    assert "classées par date de prise de vue" in retrie.text
+    quantite = api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{premiere['groupe_id']}", data={"quantite": "6"}, headers=HX)
+    assert 'value="6"' in quantite.text
+    refus = api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{premiere['groupe_id']}", data={"quantite": "zéro"}, headers=HX)
+    assert "Quantité invalide" in refus.text
+
+    supprimee = api.post(f"/app/inventaires/{inventaire_id}/verifier/supprimer/{premiere['groupe_id']}", headers=HX)
+    assert "1 bouteille(s) en attente" in supprimee.text
 
 
-def test_apres_le_lancement_les_photos_ne_bougent_plus(api):
+def test_ajouter_des_bouteilles_apres_le_lancement(api):
     inventaire_id = creer(api)
-    deposer(api, inventaire_id, nombre=2)
+    deposer(api, inventaire_id, bouteilles=2, photos=1)
     api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX)
-    assert api.get(f"/app/inventaires/{inventaire_id}/depot", follow_redirects=False).headers["location"].endswith("/suivi")
-    refus = api.post(f"/app/inventaires/{inventaire_id}/ordre/inverser/1", headers=HX)
-    assert "ne peuvent plus être modifiées" in refus.text
-    assert envoyer(api, inventaire_id, jpeg(77), "tard.jpg").json()["code"] == "depot_ferme"
+
+    depot = api.get(f"/app/inventaires/{inventaire_id}/depot")
+    assert depot.status_code == 200 and "Ajouter des bouteilles" in depot.text and 'data-prochain="3"' in depot.text
+    assert envoyer(api, inventaire_id, jpeg(77), "tard.jpg", "b1", 1).json()["code"] == "depot_ferme"  # déjà formée
+    deposer(api, inventaire_id, bouteilles=1, photos=1, premier=3)
+    suivi = api.get(f"/app/inventaires/{inventaire_id}/suivi").text
+    assert "1 bouteille(s) ajoutée(s), pas encore lancée(s)" in suivi
+    lance = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX)
+    assert lance.status_code == 204
+    assert api.get(f"/inventaires/{inventaire_id}").json()["progression"]["total"] == 3
 
 
 def test_nouvel_inventaire_sans_nom_reaffiche_le_formulaire_avec_la_raison(api):
@@ -140,16 +153,9 @@ def test_nouvel_inventaire_sans_nom_reaffiche_le_formulaire_avec_la_raison(api):
     assert reponse.status_code == 422 and "Donner un nom" in reponse.text and "<form" in reponse.text
 
 
-def test_etiquettes_seules_depuis_les_pages(api):
-    inventaire_id = creer(api, sans_contre=True)
-    deposer(api, inventaire_id, nombre=3)
-    ordre = api.get(f"/app/inventaires/{inventaire_id}/ordre").text
-    assert ordre.count("Bouteille ") == 3 and "Inverser" not in ordre and 'id="lancer" disabled' not in ordre
-
-
 def test_relancer_les_erreurs_depuis_le_suivi(api):
     inventaire_id = creer(api)
-    deposer(api, inventaire_id, nombre=2)
+    deposer(api, inventaire_id, bouteilles=1)
     api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX)
     reponse = api.post(f"/app/inventaires/{inventaire_id}/relancer-erreurs", headers=HX)
     assert reponse.status_code == 200 and 'id="progression"' in reponse.text
@@ -164,11 +170,11 @@ def test_une_page_introuvable_s_affiche_en_francais(api):
 
 def test_aucune_date_ni_exif_dans_les_pages(api):
     inventaire_id = creer(api)
-    deposer(api, inventaire_id, nombre=2)
-    for adresse in (f"/app/inventaires/{inventaire_id}/ordre", f"/app/inventaires/{inventaire_id}/depot", "/app"):
+    deposer(api, inventaire_id, bouteilles=1)
+    for adresse in (f"/app/inventaires/{inventaire_id}/verifier", f"/app/inventaires/{inventaire_id}/depot", "/app"):
         texte = api.get(adresse).text
         assert "15:56" not in texte and "exif" not in texte.lower() and "gps" not in texte.lower()
-    vignette = re.search(r'src="(/inventaires/\d+/photos/\d+\?taille=miniature)"', api.get(f"/app/inventaires/{inventaire_id}/ordre").text)
+    vignette = re.search(r'src="(/inventaires/\d+/photos/\d+\?taille=miniature)"', api.get(f"/app/inventaires/{inventaire_id}/verifier").text)
     assert vignette and api.get(vignette.group(1)).headers["content-type"] == "image/jpeg"
 
 

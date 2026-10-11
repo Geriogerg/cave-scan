@@ -1,27 +1,53 @@
 {% extends "base.html" %}
+{% set brouillon = vue.inventaire.statut == "brouillon" %}
 {% block titre %}Photos — {{ vue.inventaire.nom }}{% endblock %}
 {% block fil %}<span class="fil">{{ vue.inventaire.nom }}</span>{% endblock %}
 {% block contenu %}
 <section id="depot"
          data-depot
          data-inventaire="{{ vue.inventaire.id }}"
-         data-taille="{{ taille_reduction }}"
-         data-deja="{{ vue.photos | length }}">
-  <h1>Ajouter les photos</h1>
+         data-prochain="{{ vue.prochain_numero }}"
+         data-max="{{ vue.photos_max }}"
+         data-attente="{{ attente }}"
+         data-taille="{{ taille_reduction }}">
+  <h1>{% if brouillon %}Photographier les bouteilles{% else %}Ajouter des bouteilles{% endif %}</h1>
   <p class="aide">
-    {% if vue.inventaire.sans_contre %}
-      Une photo d'étiquette par bouteille.
-    {% else %}
-      Pour chaque bouteille : l'étiquette, puis la contre-étiquette.
-    {% endif %}
-    Vous pouvez en ajouter en plusieurs fois.
+    Chaque bouteille avec ses photos : l'étiquette, la contre-étiquette s'il y en a une, la capsule,
+    la bouteille entière… ({{ vue.photos_max }} au plus). Vous pouvez vous arrêter et reprendre plus tard.
+    {% if not brouillon %}Les nouvelles bouteilles s'ajoutent à la fin de l'inventaire.{% endif %}
   </p>
 
-  <div class="choix">
-    <label class="bouton principal grand" for="galerie">Choisir dans la galerie</label>
-    <input id="galerie" class="cache" type="file" accept="image/*,.heic,.heif" multiple>
-    <label class="bouton grand" for="camera">Prendre une photo</label>
-    <input id="camera" class="cache" type="file" accept="image/*" capture="environment">
+  <div class="modes" role="tablist" aria-label="Façon de prendre les photos">
+    <button type="button" class="mode actif" role="tab" aria-selected="true" data-mode="appareil">Appareil photo</button>
+    <button type="button" class="mode" role="tab" aria-selected="false" data-mode="galerie">Galerie ou ordinateur</button>
+  </div>
+
+  {#- Mode appareil photo : la bouteille en cours, ses photos à la suite, « × N », puis la suivante. #}
+  <div data-panneau="appareil" role="tabpanel">
+    <div class="bouteille-en-cours" aria-live="polite">
+      <div class="en-cours-tete">
+        <strong id="titre-en-cours">Bouteille</strong>
+        <span id="compteur" class="compteur">0 photo</span>
+      </div>
+      <ul id="vignettes-en-cours" class="vignettes-depot"></ul>
+      <label class="bouton principal grand" for="camera" id="bouton-photo">Prendre une photo</label>
+      <input id="camera" class="cache" type="file" accept="image/*" capture="environment">
+      <div class="quantite-depot">
+        <span>Quantité</span>
+        <button type="button" class="bouton petit" data-quantite="-1" aria-label="Une bouteille de moins">−</button>
+        <input id="quantite" type="text" inputmode="numeric" value="1" aria-label="Quantité de bouteilles identiques">
+        <button type="button" class="bouton petit" data-quantite="1" aria-label="Une bouteille de plus">+</button>
+        <span class="aide">bouteille(s) identique(s)</span>
+      </div>
+      <button type="button" class="bouton grand" id="suivante">Bouteille suivante</button>
+    </div>
+    <ol id="precedentes" class="precedentes" aria-label="Bouteilles déjà photographiées"></ol>
+  </div>
+
+  {#- Mode galerie ou ordinateur : bouteille 1 -> ses photos, bouteille 2 -> les siennes… #}
+  <div data-panneau="galerie" role="tabpanel" hidden>
+    <ol id="bouteilles-galerie" class="bouteilles-galerie"></ol>
+    <button type="button" class="bouton grand" id="ajouter-bouteille">Ajouter une bouteille</button>
   </div>
 
   <label class="case">
@@ -30,12 +56,15 @@
   </label>
 
   <p id="garder-ouvert" class="message attention" hidden>
-    Gardez cette page ouverte pendant l'envoi. Si l'envoi s'arrête, il reprendra
-    tout seul à votre retour sur la page.
+    Envoi en cours. Si l'envoi s'arrête, il reprendra tout seul à votre retour sur la page.
+  </p>
+  <p id="memoire-indisponible" class="message attention" hidden>
+    Ce navigateur ne peut pas garder les photos en attente d'envoi : gardez cette page ouverte
+    jusqu'à la fin de l'envoi.
   </p>
 
   <div id="resume" class="resume" aria-live="polite">
-    <span id="resume-texte">{{ vue.photos | length }} photo(s) déjà reçue(s) pour cet inventaire.</span>
+    <span id="resume-texte">{{ vue.nb_photos }} photo(s) reçue(s) dans {{ vue.bouteilles | length }} bouteille(s) en attente.</span>
     <progress id="barre" max="1" value="0" hidden></progress>
   </div>
 
@@ -44,8 +73,8 @@
 {% endblock %}
 {% block actions %}
 <nav class="barre-actions">
-  <a class="bouton" href="/app">Plus tard</a>
-  <a id="vers-ordre" class="bouton principal" href="/app/inventaires/{{ vue.inventaire.id }}/ordre">Vérifier l'ordre</a>
+  <a class="bouton" href="{{ '/app' if brouillon else '/app/inventaires/' ~ vue.inventaire.id ~ '/suivi' }}">Plus tard</a>
+  <a id="vers-verification" class="bouton principal" href="/app/inventaires/{{ vue.inventaire.id }}/verifier">Vérifier et lancer</a>
 </nav>
 {% endblock %}
 {% block scripts %}<script src="/static/depot.js" defer></script>{% endblock %}

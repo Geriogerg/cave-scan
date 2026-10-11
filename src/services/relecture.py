@@ -346,9 +346,9 @@ def _changements_depuis(session: Session, bouteille_id: int, version_vue: str) -
 
 LIBELLES_EVENEMENT = {
     "reanalyse": "réanalyse demandée",
-    "inversion_photos": "photos inversées",
-    "signalement_paire": "problème de paire signalé",
-    "signalement_leve": "signalement de paire levé",
+    "inversion_photos": "photos inversées",  # avant les groupes de photos (0166) : historique seulement
+    "signalement_paire": "problème de photos signalé",
+    "signalement_leve": "signalement de photos levé",
     "separation": "bouteille séparée",
 }
 
@@ -617,8 +617,8 @@ def valider(session: Session, bouteille_id: int, auteur: str, temps_ms: int | No
         )
     if bouteille.paire_signalee:
         raise ValidationRefusee(
-            f"Bouteille n°{bouteille.position} ({bouteille.identifiant}) : un problème de paire de "
-            f"photos est signalé. Elle ne peut pas être validée tant que le signalement n'est pas levé."
+            f"Bouteille n°{bouteille.position} ({bouteille.identifiant}) : un problème de photos est "
+            f"signalé. Elle ne peut pas être validée tant que le signalement n'est pas levé."
         )
 
     bouteille.statut = "validee"
@@ -700,7 +700,7 @@ def valider_inventaire(session: Session, inventaire_id: int, auteur: str) -> int
         raisons.append(f"{len(pas_extraites)} bouteille(s) pas encore extraite(s) ({_positions(pas_extraites)})")
     if signalees:
         raisons.append(
-            f"{len(signalees)} bouteille(s) avec un problème de paire signalé ({_positions(signalees)})"
+            f"{len(signalees)} bouteille(s) avec un problème de photos signalé ({_positions(signalees)})"
         )
     if a_relire:
         raisons.append(

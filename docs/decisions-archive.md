@@ -94,3 +94,39 @@ Décisions remplacées ou devenues sans objet, retirées de `decisions.md`
 - 0019 — [remplacée par 0162] Champs du pilote : identifiant, domaine, appellation, cuvée,
   millésime, couleur, format, quantité, état de l'étiquette, description
   générale de l'état. Niveau, capsule, bouchon : hors pilote.
+
+- 0023 — [remplacée par 0166] Pas de réseau en cave : photos prises au téléphone dans l'ordre
+  (étiquette, contre-étiquette, bouteille suivante), puis dépôt au bureau ;
+  appariement par ordre, paires affichées côte à côte en relecture, paires
+  incohérentes signalées. Mode hors ligne dans l'application : plus tard.
+
+- 0068 — [remplacée par 0166] Appariement des photos par ordre (0023), sans jamais deviner : tri
+  par date de prise de vue EXIF si TOUTES les photos en ont une, sinon toutes
+  par nom de fichier en tri naturel (« photo 2 » avant « photo 10 ») — jamais
+  de tri mixte, qui intercalerait les photos au hasard ; paires consécutives
+  étiquette / contre-étiquette. ARRÊT avec message explicite sur : nombre
+  impair, photo dans un format non lu (HEIC d'iPhone, TIFF, RAW…, avec le
+  réglage iPhone à changer), photos rangées dans un sous-dossier (ancienne
+  convention, elles ne seraient jamais lues). Fichiers non-photo ignorés.
+  L'appariement est affiché AVANT l'extraction, et vérifié avant même de créer
+  le client du modèle : un dossier invalide se signale sans clé ni coût —
+  écarté : écarter la photo orpheline et continuer (décalage silencieux).
+
+- 0108 — [remplacée par 0166] Contre-étiquette facultative : `run_v0.py --photos DOSSIER --sans-contre`
+  traite un dossier d'étiquettes seules, une photo par bouteille (nombre impair
+  accepté). C'est l'utilisateur qui le déclare, par dossier : l'outil ne devine
+  jamais si une photo est une étiquette ou une contre-étiquette, et sans
+  l'option l'appariement par paires reste exigé. Schéma : `photo_contre_id`
+  devient facultatif (migration 0002, accord donné le 2026-10-09 ; les données
+  existantes sont conservées) ; le contrat `Bouteille` ne change pas. Le modèle
+  reçoit alors la seule étiquette — les extracteurs le géraient déjà.
+
+- 0128 — [remplacée par 0166] Ordre d'un brouillon : tri automatique par date de prise de vue, puis
+  nom (ordre naturel), puis ordre d'arrivée ; si une photo n'a pas de date,
+  toutes sont triées par nom (0068). Dès que l'expert corrige l'ordre à la main,
+  les photos ajoutées ensuite vont à la fin (et c'est signalé) ; « Retrier
+  automatiquement » revient au tri.
+
+- 0129 — [remplacée par 0166] Date de prise de vue : lue par le navigateur dans l'EXIF de l'ORIGINAL,
+  avant toute réduction, et envoyée à côté du fichier ; à défaut, le serveur la
+  lit dans le fichier reçu.

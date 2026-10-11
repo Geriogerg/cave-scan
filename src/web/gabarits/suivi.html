@@ -4,11 +4,18 @@
 {% block contenu %}
 <h1>Analyse des photos</h1>
 <p class="aide">{{ inventaire.maison.nom }} · {{ inventaire.bouteilles | length }} bouteille(s). Cette page se met à jour toute seule.</p>
+{% if en_attente %}
+  <p class="message attention">
+    {{ en_attente | length }} bouteille(s) ajoutée(s), pas encore lancée(s) :
+    <a href="/app/inventaires/{{ inventaire.id }}/verifier">les vérifier et lancer leur analyse</a>.
+  </p>
+{% endif %}
 {% include "_progression.html" %}
 {% endblock %}
 {% block actions %}
 <nav class="barre-actions">
   <a class="bouton" href="/app">Inventaires</a>
+  <a class="bouton" href="/app/inventaires/{{ inventaire.id }}/depot">Ajouter des bouteilles</a>
   <a class="bouton" href="/app/inventaires/{{ inventaire.id }}/recapitulatif">Récapitulatif</a>
 </nav>
 {% endblock %}

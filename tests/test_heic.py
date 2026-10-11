@@ -76,7 +76,9 @@ def test_le_depot_stocke_le_heic_et_l_affiche_en_jpeg(session, stockage, nom_mai
 
     inventaire_id = creer_brouillon(session, nom_maison, CONFIG_TEST, "iPhone").inventaire_id
     source = heic(tmp_path / "IMG_0005.HEIC")
-    recue = ajouter_photo(session, inventaire_id, io.BytesIO(source.read_bytes()), "IMG_0005.HEIC", stockage)
+    recue = ajouter_photo(
+        session, inventaire_id, io.BytesIO(source.read_bytes()), "IMG_0005.HEIC", stockage, bouteille="b1", numero=1
+    )
     photo = session.get(Photo, recue.photo_id)
     assert photo.chemin.endswith(".heic")
     assert (stockage / photo.chemin).read_bytes() == source.read_bytes()  # stockée telle quelle

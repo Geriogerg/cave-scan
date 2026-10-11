@@ -92,10 +92,7 @@ un renvoi d'une ligne à leur place.
   téléphone, écran de relecture comme pièce centrale — écarté : application
   native iOS/Android pour le pilote.
 
-- 0023 — Pas de réseau en cave : photos prises au téléphone dans l'ordre
-  (étiquette, contre-étiquette, bouteille suivante), puis dépôt au bureau ;
-  appariement par ordre, paires affichées côte à côte en relecture, paires
-  incohérentes signalées. Mode hors ligne dans l'application : plus tard.
+- 0023 — archivée (remplacée par 0166) → docs/decisions-archive.md
 
 - 0024 — Traitement en tâche de fond et en parallèle ; coût et temps par
   bouteille mesurés (session 2). Volume cible pilote : 300 bouteilles max.
@@ -367,17 +364,7 @@ un renvoi d'une ligne à leur place.
 
 - 0067 — archivée (remplacée par 0082) → docs/decisions-archive.md
 
-- 0068 — Appariement des photos par ordre (0023), sans jamais deviner : tri
-  par date de prise de vue EXIF si TOUTES les photos en ont une, sinon toutes
-  par nom de fichier en tri naturel (« photo 2 » avant « photo 10 ») — jamais
-  de tri mixte, qui intercalerait les photos au hasard ; paires consécutives
-  étiquette / contre-étiquette. ARRÊT avec message explicite sur : nombre
-  impair, photo dans un format non lu (HEIC d'iPhone, TIFF, RAW…, avec le
-  réglage iPhone à changer), photos rangées dans un sous-dossier (ancienne
-  convention, elles ne seraient jamais lues). Fichiers non-photo ignorés.
-  L'appariement est affiché AVANT l'extraction, et vérifié avant même de créer
-  le client du modèle : un dossier invalide se signale sans clé ni coût —
-  écarté : écarter la photo orpheline et continuer (décalage silencieux).
+- 0068 — archivée (remplacée par 0166) → docs/decisions-archive.md
 
 - 0069 — Paire incohérente : question technique `photos_meme_bouteille`
   (oui | non | non_determinable) posée au modèle — pas un champ de `Bouteille`.
@@ -627,14 +614,7 @@ un renvoi d'une ligne à leur place.
 
 - 0107 — archivée (liste d'adaptation de tests de la session 2, appliquée) → docs/decisions-archive.md
 
-- 0108 — Contre-étiquette facultative : `run_v0.py --photos DOSSIER --sans-contre`
-  traite un dossier d'étiquettes seules, une photo par bouteille (nombre impair
-  accepté). C'est l'utilisateur qui le déclare, par dossier : l'outil ne devine
-  jamais si une photo est une étiquette ou une contre-étiquette, et sans
-  l'option l'appariement par paires reste exigé. Schéma : `photo_contre_id`
-  devient facultatif (migration 0002, accord donné le 2026-10-09 ; les données
-  existantes sont conservées) ; le contrat `Bouteille` ne change pas. Le modèle
-  reçoit alors la seule étiquette — les extracteurs le géraient déjà.
+- 0108 — archivée (remplacée par 0166) → docs/decisions-archive.md
 
 ---
 
@@ -750,15 +730,9 @@ un renvoi d'une ligne à leur place.
   demande au serveur avant d'envoyer. Pas d'empreinte SHA-256 dans le navigateur :
   elle n'y est disponible qu'en HTTPS, pas sur le réseau local en HTTP.
 
-- 0128 — Ordre d'un brouillon : tri automatique par date de prise de vue, puis
-  nom (ordre naturel), puis ordre d'arrivée ; si une photo n'a pas de date,
-  toutes sont triées par nom (0068). Dès que l'expert corrige l'ordre à la main,
-  les photos ajoutées ensuite vont à la fin (et c'est signalé) ; « Retrier
-  automatiquement » revient au tri.
+- 0128 — archivée (remplacée par 0166) → docs/decisions-archive.md
 
-- 0129 — Date de prise de vue : lue par le navigateur dans l'EXIF de l'ORIGINAL,
-  avant toute réduction, et envoyée à côté du fichier ; à défaut, le serveur la
-  lit dans le fichier reçu.
+- 0129 — archivée (remplacée par 0166) → docs/decisions-archive.md
 
 - 0130 — Réduction avant envoi (navigateur, côté long 2 500 px, JPEG qualité
   0,9) : implémentée mais DÉSACTIVÉE par défaut tant que son effet sur
@@ -1054,6 +1028,62 @@ un renvoi d'une ligne à leur place.
   la réduction est notée dans le journal du worker — écarté : refuser la
   bouteille (l'expert ne saurait que faire) ; passer par l'API de fichiers de
   Gemini (un appel réseau de plus par photo, rien pour Anthropic).
+
+- 0166 — [remplace 0023, 0068, 0108, 0128, 0129 ; en partie 0116, 0126, 0141,
+  0145] Une bouteille = un GROUPE de photos (1 à N, plafond de la maison,
+  0159), tel que l'expert l'a constitué : plus d'appariement étiquette /
+  contre-étiquette par ordre, plus de tri par date de prise de vue (gardée
+  pour information), plus d'option « étiquettes seules ». Schéma (migration
+  0006, accord du 2026-10-11) : table `groupe_photos` (inventaire, numéro
+  d'ordre de prise de vue, clé donnée par l'appareil, quantité saisie à la
+  capture) ; `photo.groupe_id` + `rang` ; `bouteille.groupe_id` ;
+  `photo_etiquette_id`, `photo_contre_id`, `inventaire.sans_contre`,
+  `ordre_manuel` supprimées. Reprise : chaque paire devient un groupe
+  (étiquette = photo 1, contre = photo 2), une bouteille séparée partage le
+  groupe de sa source, un brouillon est découpé comme l'aurait fait l'ancien
+  lancement ; tout est vérifié AVANT d'écrire ; extractions, corrections,
+  événements, identifiants intouchés (vérifié sur une copie de la base réelle :
+  7 inventaires, 32 bouteilles, aller et retour sans perte). Retour arrière
+  possible tant qu'aucun groupe n'a plus de deux photos. Ligne de commande :
+  une photo à la racine du dossier = une bouteille, un sous-dossier = une
+  bouteille et toutes ses photos (ordre naturel des noms) ; `--sans-contre`
+  devient une option remplacée. API « tout d'un coup » : photos dans l'ordre
+  d'envoi, `photos_par_bouteille` (« 2,2,1 ») ou une par bouteille ; un total
+  qui ne correspond pas est refusé (on ne devine jamais). Identifiant :
+  empreinte des photos dans leur ordre — inchangé pour une ancienne paire. En
+  relecture : toutes les photos, numérotées, `E` / `Maj+E` ; « Inverser les
+  photos » disparaît avec les rôles (le type d'événement reste pour
+  l'historique) ; « problème de paire » devient « problème de photos » pour
+  l'expert, noms internes inchangés (l'historique les porte) — écarté :
+  garder des rôles (étiquette, contre, capsule…) à saisir pour chaque photo
+  (un geste de plus par photo, et le modèle n'en a pas besoin).
+
+- 0167 — Dépôt bouteille par bouteille (`services/depot.py`, `depot.js`) :
+  chaque photo part avec la CLÉ de sa bouteille (donnée par l'appareil) et son
+  numéro d'ordre de prise de vue ; le serveur crée le groupe à la première
+  photo, range les bouteilles par numéro (une photo peut arriver avant celle
+  d'une bouteille précédente sur un réseau qui coupe) et les photos d'une
+  bouteille dans leur ordre d'arrivée — le navigateur envoie donc les photos
+  d'UNE bouteille une à la fois, plusieurs bouteilles en parallèle. Mode
+  appareil photo : la bouteille en cours, compteur « n / plafond », « × N »,
+  « Bouteille suivante », « Reprendre » une bouteille précédente. Mode galerie
+  ou ordinateur : une carte par bouteille, « Ajouter ses photos ». Une photo
+  prise depuis la page n'existe nulle part ailleurs : gardée dans le
+  navigateur (IndexedDB) jusqu'à ce que le serveur l'ait reçue, la bouteille en
+  cours survit à un rechargement (testé dans un vrai navigateur) ; si le
+  navigateur ne peut pas la garder, un message le dit. Limite connue : si le
+  téléphone ferme le navigateur pendant que l'appareil photo est ouvert, la
+  photo qui venait d'être prise ne revient pas — le compteur le montre.
+  « Vérifier et lancer » : retirer une photo, « Nouvelle bouteille à partir
+  d'ici » (couper), « Rattacher à la précédente » (plafond tenu), supprimer une
+  bouteille, quantité. Lancer forme une bouteille par groupe en attente, à la
+  fin de l'inventaire ; on peut AJOUTER des bouteilles après le lancement par
+  les mêmes écrans (l'analyse repart, le temps restant estimé repart de ce
+  lancement) ; les photos d'une bouteille formée ne bougent plus. Le suivi
+  signale les bouteilles ajoutées pas encore lancées — écarté : un viseur
+  dans la page (exige HTTPS) ; garder toutes les photos de la galerie dans le
+  navigateur (elles restent dans la galerie, et le stockage du navigateur est
+  limité).
 
 ---
 

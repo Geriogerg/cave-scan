@@ -20,7 +20,7 @@
           {% for e in r.en_erreur %}<a href="/app/inventaires/{{ i }}/relecture/{{ e.id }}">n°{{ e.position }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</li>
       {% endif %}
       {% if r.signalees %}
-        <li><strong>{{ r.signalees | length }}</strong> avec un problème de paire signalé :
+        <li><strong>{{ r.signalees | length }}</strong> avec un problème de photos signalé :
           {% for e in r.signalees %}<a href="/app/inventaires/{{ i }}/relecture/{{ e.id }}">n°{{ e.position }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</li>
       {% endif %}
       {% if r.pas_encore_extraites %}

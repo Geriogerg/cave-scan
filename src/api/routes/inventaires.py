@@ -29,7 +29,10 @@ def creer(
     nom: Annotated[str, Form(description="Nom de l'inventaire.")],
     maison: Annotated[str, Form(description="Nom de la maison (voir /maisons).")],
     photos: Annotated[list[UploadFile], File(description="Photos JPEG, PNG ou HEIC, dans l'ordre de prise de vue.")],
-    sans_contre: Annotated[bool, Form(description="Étiquettes seules : une photo par bouteille.")] = False,
+    photos_par_bouteille: Annotated[
+        str | None,
+        Form(description="« 2,2,1 » : photos de chaque bouteille, dans l'ordre d'envoi. Sans : une photo par bouteille."),
+    ] = None,
 ):
     cree = creer_inventaire_depuis_envoi(
         base,
@@ -38,7 +41,7 @@ def creer(
         [(photo.filename or "photo", photo.file) for photo in photos],
         stockage,
         request.app.state.configs,
-        sans_contre=sans_contre,
+        photos_par_bouteille=photos_par_bouteille,
     )
     return schemas.depuis_creation(cree)
 

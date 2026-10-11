@@ -19,7 +19,6 @@ from src.extract.fixture_extract import FixtureExtractor
 from src.services.cas_particuliers import (
     ActionRefusee,
     evenements_de,
-    inverser_photos,
     lever_signalement,
     reanalyser,
     separer,
@@ -308,25 +307,7 @@ def test_reanalyser_refuse_si_l_analyse_de_l_inventaire_est_annulee(session, inv
         reanalyser(session, bouteille(session, inventaire_id).id, EXPERT)
 
 
-# --- inverser les photos ----------------------------------------------------------------------
-
-
-def test_inverser_les_photos(session, inventaire_id):
-    cible = bouteille(session, inventaire_id)
-    etiquette, contre = cible.photo_etiquette_id, cible.photo_contre_id
-    inverser_photos(session, cible.id, EXPERT)
-    assert (cible.photo_etiquette_id, cible.photo_contre_id) == (contre, etiquette)
-    assert cible.photo_etiquette.id == contre  # relation à jour
-    assert [e.type for e in evenements_de(session, cible.id)] == ["inversion_photos"]
-
-
-def test_inverser_refuse_une_bouteille_a_une_seule_photo(session, nom_maison, dossier_photos, stockage):
-    cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Seules", stockage, sans_contre=True)
-    with pytest.raises(ActionRefusee, match="une seule photo"):
-        inverser_photos(session, bouteille(session, cree.inventaire_id).id, EXPERT)
-
-
-# --- signaler un problème de paire ----------------------------------------------------------
+# --- signaler un problème de photos (« Inverser les photos » a disparu avec les rôles, 0166) ---
 
 
 def test_une_bouteille_signalee_ne_peut_pas_etre_validee(session, inventaire_id):
@@ -336,13 +317,13 @@ def test_une_bouteille_signalee_ne_peut_pas_etre_validee(session, inventaire_id)
     assert cible.statut == "extraite"  # elle n'est plus validée
     assert signaler_paire(session, cible.id, EXPERT) is False
 
-    with pytest.raises(ValidationRefusee, match="problème de paire"):
+    with pytest.raises(ValidationRefusee, match="problème de photos"):
         valider(session, cible.id, EXPERT)
-    with pytest.raises(ValidationRefusee, match="problème de paire"):
+    with pytest.raises(ValidationRefusee, match="problème de photos"):
         valider_en_relecture(session, cible.id, EXPERT, {}, version_de(session, cible.id))
     for autre in charger_inventaire(session, inventaire_id).bouteilles[1:]:
         valider(session, autre.id, EXPERT)
-    with pytest.raises(ValidationRefusee, match=r"1 bouteille\(s\) avec un problème de paire signalé \(n°1\)"):
+    with pytest.raises(ValidationRefusee, match=r"1 bouteille\(s\) avec un problème de photos signalé \(n°1\)"):
         valider_inventaire(session, inventaire_id, EXPERT)
 
     assert lever_signalement(session, cible.id, EXPERT) is True
@@ -362,7 +343,7 @@ def test_separer_cree_une_seconde_bouteille_liee_aux_memes_photos_et_l_export_pr
 
     nouvelle = separer(session, source.id, 1, EXPERT)
 
-    assert (nouvelle.photo_etiquette_id, nouvelle.photo_contre_id) == (source.photo_etiquette_id, source.photo_contre_id)
+    assert nouvelle.groupe_id == source.groupe_id and nouvelle.photos == source.photos  # les mêmes photos
     assert nouvelle.separee_de_id == source.id and nouvelle.identifiant == f"{source.identifiant}-2"
     assert (source.quantite, nouvelle.quantite) == (5, 1)  # la somme est conservée
     inventaire = charger_inventaire(session, propre)
@@ -585,7 +566,7 @@ def test_la_version_d_affichage_est_preparee_une_fois_et_sans_metadonnees(sessio
 
     from src.services.envoi import photo_a_servir
 
-    photo = bouteille(session, inventaire_id).photo_etiquette
+    photo = bouteille(session, inventaire_id).photos[0]
     premiere = photo_a_servir(session, stockage, inventaire_id, photo.id, "reduite")
     cache = stockage / "reduites" / f"{photo.empreinte}.jpg"
     instant = cache.stat().st_mtime_ns

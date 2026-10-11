@@ -15,8 +15,8 @@ import pytest
 from sqlalchemy import LargeBinary, func, inspect, select
 
 from src.config.maison import ConfigInvalide
-from src.donnees.modeles import Base, ConfigVersion, FicheBouteille, Inventaire, Photo
-from src.io.photos import PhotosInvalides, apparier_photos
+from src.donnees.modeles import Base, ConfigVersion, FicheBouteille, GroupePhotos, Inventaire, Photo
+from src.io.photos import PhotosInvalides, grouper_photos
 from src.services.inventaires import charger_inventaire, config_figee, creer_inventaire
 from tests.conftest import CONFIG_TEST
 
@@ -54,17 +54,19 @@ def test_creation_complete(session, nom_maison, dossier_photos, stockage):
 def test_l_identifiant_stable_est_celui_des_photos(session, nom_maison, dossier_photos, stockage):
     """Même identifiant qu'en session 1 (decisions.md 0065), désormais en base."""
     cree = creer(session, nom_maison, dossier_photos, stockage)
-    attendus = [vues.identifiant for vues in apparier_photos(dossier_photos).bouteilles]
+    attendus = [vues.identifiant for vues in grouper_photos(dossier_photos).bouteilles]
     bouteilles = charger_inventaire(session, cree.inventaire_id).bouteilles
     assert [b.identifiant for b in bouteilles] == attendus
 
 
-def test_les_paires_suivent_l_ordre_de_prise_de_vue(session, nom_maison, dossier_photos, stockage):
+def test_chaque_bouteille_a_ses_photos_dans_l_ordre(session, nom_maison, dossier_photos, stockage):
+    """Une bouteille = un groupe de photos (decisions.md 0166) : celles de son sous-dossier."""
     cree = creer(session, nom_maison, dossier_photos, stockage)
-    premiere = charger_inventaire(session, cree.inventaire_id).bouteilles[0]
-    assert premiere.photo_etiquette.nom_origine == "bouteille_01_etiquette.jpg"
-    assert premiere.photo_contre.nom_origine == "bouteille_01_contre.jpg"
-    assert premiere.photo_etiquette.prise_de_vue is not None
+    bouteilles = charger_inventaire(session, cree.inventaire_id).bouteilles
+    assert [[p.nom_origine for p in b.photos] for b in bouteilles] == [["1_etiquette.jpg", "2_contre.jpg"]] * 6
+    assert [b.groupe.numero for b in bouteilles] == [1, 2, 3, 4, 5, 6]
+    assert [p.rang for p in bouteilles[0].photos] == [1, 2]
+    assert bouteilles[0].photos[0].prise_de_vue is not None  # gardée pour information
 
 
 # --- photos sur disque, nommées par leur empreinte (decisions.md 0074) ---------------------
@@ -106,22 +108,38 @@ def test_une_photo_partagee_par_deux_inventaires_n_est_stockee_qu_une_fois(sessi
 
 def test_la_meme_photo_deposee_deux_fois_est_detectee(session, nom_maison, dossier_photos, stockage):
     """Critère d'acceptation : par empreinte, quel que soit le nom du fichier."""
-    shutil.copy(dossier_photos / "bouteille_02_etiquette.jpg", dossier_photos / "zz_copie_etiquette.jpg")
-    shutil.copy(dossier_photos / "bouteille_03_contre.jpg", dossier_photos / "zz_copie_contre.jpg")
+    shutil.copy(dossier_photos / "bouteille_02" / "1_etiquette.jpg", dossier_photos / "zz_copie_etiquette.jpg")
+    shutil.copy(dossier_photos / "bouteille_03" / "2_contre.jpg", dossier_photos / "zz_copie_contre.jpg")
     with pytest.raises(PhotosInvalides, match="déposée deux fois") as capture:
         creer(session, nom_maison, dossier_photos, stockage)
-    assert "bouteille_02_etiquette.jpg" in str(capture.value)
+    assert "1_etiquette.jpg et zz_copie_etiquette.jpg" in str(capture.value)
     assert compter(session, Inventaire) == 0
     assert list(stockage.iterdir()) == []
 
 
-def test_nombre_impair_refuse_sans_rien_ecrire(session, nom_maison, dossier_photos, stockage):
-    (dossier_photos / "bouteille_06_contre.jpg").unlink()
-    with pytest.raises(PhotosInvalides, match="IMPAIR"):
+def test_trop_de_photos_pour_une_bouteille_refuse_sans_rien_ecrire(session, nom_maison, dossier_photos, stockage):
+    """Chaque photo se paie : au-delà du plafond de la maison, on s'arrête AVANT
+    tout appel (decisions.md 0159)."""
+    from PIL import Image
+
+    for rang in range(3):  # 2 + 3 = 5 photos, plafond 4
+        Image.new("RGB", (8, 8), (rang, 200, 10)).save(dossier_photos / "bouteille_06" / f"{rang + 3}_vue.jpg")
+    with pytest.raises(PhotosInvalides, match="plafond de 4 photos") as capture:
         creer(session, nom_maison, dossier_photos, stockage)
+    assert "bouteille_06/ : 5 photos" in str(capture.value)
     assert compter(session, Inventaire) == 0
     assert compter(session, ConfigVersion) == 0
+    assert compter(session, GroupePhotos) == 0
     assert list(stockage.iterdir()) == []
+
+
+def test_une_photo_a_la_racine_est_une_bouteille_d_une_photo(session, nom_maison, dossier_photos, stockage):
+    from PIL import Image
+
+    Image.new("RGB", (8, 8), "navy").save(dossier_photos / "zz_seule.jpg")
+    cree = creer(session, nom_maison, dossier_photos, stockage)
+    derniere = charger_inventaire(session, cree.inventaire_id).bouteilles[-1]
+    assert cree.nb_bouteilles == 7 and [p.nom_origine for p in derniere.photos] == ["zz_seule.jpg"]
 
 
 def test_config_invalide_refusee_sans_rien_ecrire(session, nom_maison, dossier_photos, stockage, tmp_path):

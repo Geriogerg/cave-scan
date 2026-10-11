@@ -21,6 +21,7 @@ from src.donnees.modeles import (
     EnregistrementImmuable,
     Extraction,
     FicheBouteille,
+    GroupePhotos,
     Inventaire,
     Maison,
     Photo,
@@ -95,16 +96,16 @@ def peupler(session):
     inventaire = Inventaire(maison=maison, config_version=config, nom="Cave A")
     session.add(inventaire)
     session.flush()
+    groupe = GroupePhotos(inventaire_id=inventaire.id, numero=1)  # une bouteille = ses photos (0166)
     photos = [
         Photo(inventaire_id=inventaire.id, chemin=f"{i}.jpg", empreinte=str(i) * 64,
-              nom_origine=f"IMG_{i}.jpg", ordre=i)
+              nom_origine=f"IMG_{i}.jpg", ordre=i, groupe=groupe, rang=i + 1)
         for i in range(2)
     ]
     session.add_all(photos)
     session.flush()
     bouteille = FicheBouteille(
-        inventaire_id=inventaire.id, identifiant="B-0000000001",
-        photo_etiquette_id=photos[0].id, photo_contre_id=photos[1].id, position=1,
+        inventaire_id=inventaire.id, identifiant="B-0000000001", groupe=groupe, position=1,
     )
     session.add(bouteille)
     session.flush()
@@ -119,10 +120,7 @@ def peupler(session):
 
 def test_les_cles_etrangeres_sont_verifiees(session):
     """SQLite ne les vérifie pas par défaut : une bouteille orpheline passerait."""
-    session.add(FicheBouteille(
-        inventaire_id=999, identifiant="B-X", photo_etiquette_id=998,
-        photo_contre_id=997, position=1,
-    ))
+    session.add(FicheBouteille(inventaire_id=999, identifiant="B-X", groupe_id=998, position=1))
     with pytest.raises(IntegrityError):
         session.commit()
 
@@ -271,13 +269,24 @@ def test_la_migration_0002_garde_les_donnees_d_une_base_existante(tmp_path):
 
     moteur = create_engine(url)
     with moteur.begin() as connexion:
+        # 0006 : la paire étiquette / contre-étiquette devient le groupe de photos de
+        # la bouteille, dans le même ordre ; l'identifiant ne bouge pas.
         assert connexion.exec_driver_sql(
-            "SELECT identifiant, photo_etiquette_id, photo_contre_id FROM bouteille"
-        ).fetchall() == [("B-1", 1, 2)]
+            "SELECT b.identifiant, p.id, p.rang FROM bouteille b JOIN photo p ON p.groupe_id = b.groupe_id "
+            "ORDER BY p.rang"
+        ).fetchall() == [("B-1", 1, 1), ("B-1", 2, 2)]
         # 0003 : l'inventaire existant reçoit l'état d'extraction par défaut.
         assert connexion.exec_driver_sql("SELECT extraction FROM inventaire").scalar() == "non_lancee"
+        # 0002 puis 0006 : une bouteille d'une seule photo est possible.
         connexion.exec_driver_sql(
-            "INSERT INTO bouteille (id, inventaire_id, identifiant, photo_etiquette_id, "
-            "photo_contre_id, position, quantite, statut) VALUES (2, 1, 'B-2', 2, NULL, 2, 1, 'a_extraire')"
+            "INSERT INTO groupe_photos (id, inventaire_id, numero, quantite, cree_le) VALUES (2, 1, 2, 1, '2026-01-01')"
+        )
+        connexion.exec_driver_sql(
+            "INSERT INTO photo (id, inventaire_id, chemin, empreinte, nom_origine, ordre, groupe_id, rang) "
+            "VALUES (3, 1, 'p3.jpg', 'h3', 'p3.jpg', 3, 2, 1)"
+        )
+        connexion.exec_driver_sql(
+            "INSERT INTO bouteille (id, inventaire_id, identifiant, groupe_id, position, quantite, statut) "
+            "VALUES (2, 1, 'B-2', 2, 2, 1, 'a_extraire')"
         )
     moteur.dispose()

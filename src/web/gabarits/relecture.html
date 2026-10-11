@@ -38,26 +38,26 @@
 <div class="relecture-grille" data-relecture tabindex="-1"
      data-precedente="{{ adresse_precedente or '' }}" data-suivante="{{ adresse_suivante or '' }}">
   <section class="photos" aria-label="Photos de la bouteille">
+    {#- Toutes les photos de la bouteille, dans l'ordre de l'expert (decisions.md 0166). #}
+    {% set photos = b.photos %}{% set premiere = photos[0] %}
     <div class="visionneuse" data-visionneuse>
-      <img id="photo-active" src="/inventaires/{{ i }}/photos/{{ b.photo_etiquette_id }}?taille=reduite"
-           data-originale="/inventaires/{{ i }}/photos/{{ b.photo_etiquette_id }}?taille=originale"
-           alt="Étiquette de la bouteille n°{{ b.position }}" draggable="false">
+      <img id="photo-active" src="/inventaires/{{ i }}/photos/{{ premiere.id }}?taille=reduite"
+           data-originale="/inventaires/{{ i }}/photos/{{ premiere.id }}?taille=originale"
+           alt="Photo 1 sur {{ photos | length }} de la bouteille n°{{ b.position }}" draggable="false">
     </div>
     <div class="commandes-photo">
-      {% for role, libelle, photo_id in [("etiquette", "Étiquette", b.photo_etiquette_id), ("contre", "Contre-étiquette", b.photo_contre_id)] %}
-        {% if photo_id %}
-        <button type="button" class="vignette-photo{% if loop.first %} active{% endif %}" data-photo="{{ role }}" tabindex="-1"
-                data-reduite="/inventaires/{{ i }}/photos/{{ photo_id }}?taille=reduite"
-                data-originale="/inventaires/{{ i }}/photos/{{ photo_id }}?taille=originale"
-                data-libelle="{{ libelle }} de la bouteille n°{{ b.position }}">
-          <img src="/inventaires/{{ i }}/photos/{{ photo_id }}?taille=miniature" alt="">
-          <span>{{ libelle }}</span>
+      {% for photo in photos %}
+        <button type="button" class="vignette-photo{% if loop.first %} active{% endif %}" data-photo="{{ loop.index }}" tabindex="-1"
+                data-reduite="/inventaires/{{ i }}/photos/{{ photo.id }}?taille=reduite"
+                data-originale="/inventaires/{{ i }}/photos/{{ photo.id }}?taille=originale"
+                data-libelle="Photo {{ loop.index }} sur {{ photos | length }} de la bouteille n°{{ b.position }}">
+          <img src="/inventaires/{{ i }}/photos/{{ photo.id }}?taille=miniature" alt="">
+          <span>Photo {{ loop.index }}</span>
         </button>
-        {% endif %}
       {% endfor %}
       <p class="aide-photo">
-        Molette, double-clic ou <kbd>Z</kbd> : zoom · glisser : déplacer{% if b.photo_contre_id %} · <kbd>E</kbd> : autre photo{% endif %}<br>
-        <a id="lien-original" href="/inventaires/{{ i }}/photos/{{ b.photo_etiquette_id }}?taille=originale" target="_blank" rel="noopener">Ouvrir l'original en pleine résolution</a>
+        Molette, double-clic ou <kbd>Z</kbd> : zoom · glisser : déplacer{% if photos | length > 1 %} · <kbd>E</kbd> / <kbd>Maj+E</kbd> : photo suivante / précédente{% endif %}<br>
+        <a id="lien-original" href="/inventaires/{{ i }}/photos/{{ premiere.id }}?taille=originale" target="_blank" rel="noopener">Ouvrir l'original en pleine résolution</a>
       </p>
     </div>
   </section>
@@ -68,13 +68,6 @@
     <div id="messages" class="messages" aria-live="polite">
       {% if erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
       {% if fait %}<p class="message ok">{{ fait }}</p>{% endif %}
-      {% if inversee and b.statut not in ("a_extraire", "en_cours") %}
-        <form class="proposition" method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/reanalyser" data-action>
-          {% include "_filtre_cache.html" %}
-          <span>Réanalyser la bouteille avec les photos dans le bon ordre ?</span>
-          <button class="bouton petit">Réanalyser maintenant</button>
-        </form>
-      {% endif %}
     </div>
 
     {#- novalidate : le serveur juge chaque saisie et dit pourquoi il la refuse ; le

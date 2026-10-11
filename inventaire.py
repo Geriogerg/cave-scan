@@ -122,8 +122,7 @@ def _fiche(session: Session, arguments: argparse.Namespace) -> None:
         f"Bouteille n°{bouteille.position} — {bouteille.identifiant} — {bouteille.statut} — "
         f"inventaire n°{bouteille.inventaire.id} « {bouteille.inventaire.nom} »"
     )
-    contre = bouteille.photo_contre.nom_origine if bouteille.photo_contre else "(pas de contre-étiquette)"
-    print(f"Photos : {bouteille.photo_etiquette.nom_origine} + {contre}\n")
+    print(f"Photos : {' + '.join(photo.nom_origine for photo in bouteille.photos)}\n")
 
     print(f"  {'champ':<18} {'lu par le modèle':<34} valeur courante")
     for champ in champs_corrigeables(config):
@@ -226,7 +225,7 @@ def _stats(session: Session, arguments: argparse.Namespace) -> None:
         )
     print(
         f"Cas particuliers : {stats.nb_reanalysees} réanalysée(s), {stats.nb_separees} née(s) d'une "
-        f"séparation, {stats.nb_signalees} paire(s) signalée(s)"
+        f"séparation, {stats.nb_signalees} problème(s) de photos signalé(s)"
     )
 
 

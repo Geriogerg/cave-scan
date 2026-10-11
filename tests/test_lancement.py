@@ -74,8 +74,8 @@ def test_dev_py_api_et_worker_extraient_un_inventaire(tmp_path, processus):
     photos = generer_photos_fictives(tmp_path / "photos", 3)
     cree = httpx.post(
         f"{url}/inventaires",
-        data={"nom": "Démo", "maison": "Maison Test"},
-        files=[("photos", (f.name, f.read_bytes(), "image/jpeg")) for f in sorted(photos.iterdir())],
+        data={"nom": "Démo", "maison": "Maison Test", "photos_par_bouteille": "2,2,2"},  # une bouteille = ses photos
+        files=[("photos", (f.name, f.read_bytes(), "image/jpeg")) for d in sorted(photos.iterdir()) for f in sorted(d.iterdir())],
         timeout=30,
     )
     assert cree.status_code == 201, cree.text

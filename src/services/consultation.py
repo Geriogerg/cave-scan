@@ -157,8 +157,7 @@ class FicheComplete:
     notes: Any
     historique: list[Correction]
     nb_extractions: int
-    photo_etiquette_id: int
-    photo_contre_id: int | None
+    photos: list[int]  # ses photos, dans l'ordre de l'expert (decisions.md 0166)
     precedente_id: int | None
     suivante_id: int | None
     version: str = ""
@@ -195,8 +194,7 @@ def fiche_bouteille(session: Session, inventaire_id: int, bouteille_id: int) -> 
         notes=modele.notes,
         historique=historique,
         nb_extractions=len(extractions_de(bouteille)),
-        photo_etiquette_id=bouteille.photo_etiquette_id,
-        photo_contre_id=bouteille.photo_contre_id,
+        photos=[photo.id for photo in bouteille.photos],
         precedente_id=voisines_[0],
         suivante_id=voisines_[1],
         version=version_de(session, bouteille.id),
@@ -367,7 +365,7 @@ class FicheRelecture:
     version: str  # l'état affiché : un enregistrement fait ailleurs depuis est signalé
     champs: list[ChampRelecture]
     doutes_ailleurs: list[str]  # doutes du modèle sur des champs que la maison n'affiche pas
-    doute_paire: bool  # le modèle doute lui-même que les deux photos aillent ensemble
+    doute_paire: bool  # le modèle doute lui-même que les photos montrent la même bouteille
     notes_modele: str
     erreur: str | None  # bouteille en erreur : la raison, en clair
     en_attente: bool  # réanalyse demandée, pas encore faite
@@ -489,8 +487,7 @@ def raison_de_l_erreur(bouteille: FicheBouteille) -> str:
 def _photos_de(session: Session, bouteille_id: int | None) -> list[int]:
     if bouteille_id is None:
         return []
-    bouteille = session.get(FicheBouteille, bouteille_id)
-    return [photo for photo in (bouteille.photo_etiquette_id, bouteille.photo_contre_id) if photo is not None]
+    return [photo.id for photo in session.get(FicheBouteille, bouteille_id).photos]
 
 
 def _fusionnees_a_l_export(

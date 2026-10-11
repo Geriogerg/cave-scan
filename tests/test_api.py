@@ -43,11 +43,20 @@ def api(tmp_path):
         yield client
 
 
-def envoyer(api, dossier: Path, nom="Cave Dupont", maison="Maison Test", sans_contre=False):
-    fichiers = [("photos", (p.name, p.read_bytes(), "image/jpeg")) for p in sorted(dossier.iterdir())]
+def envoyer(api, dossier: Path, nom="Cave Dupont", maison="Maison Test"):
+    """Le dossier comme la ligne de commande le lit : une photo à la racine = une
+    bouteille, un sous-dossier = une bouteille et ses photos (decisions.md 0166),
+    envoyé d'un coup avec `photos_par_bouteille`."""
+    from src.io.photos import cle_naturelle
+
+    fichiers, tailles = [], []
+    for entree in sorted(dossier.iterdir(), key=lambda p: cle_naturelle(p.name)):
+        photos = sorted(entree.iterdir(), key=lambda p: cle_naturelle(p.name)) if entree.is_dir() else [entree]
+        fichiers += [("photos", (p.name, p.read_bytes(), "image/jpeg")) for p in photos]
+        tailles.append(str(len(photos)))
     return api.post(
         "/inventaires",
-        data={"nom": nom, "maison": maison, "sans_contre": str(sans_contre).lower()},
+        data={"nom": nom, "maison": maison, "photos_par_bouteille": ",".join(tailles)},
         files=fichiers,
     )
 
@@ -148,14 +157,22 @@ def verifier_erreur(reponse, statut, code, extrait):
     assert extrait in corps["message"]
 
 
-def test_nombre_impair_de_photos_refuse(api, dossier_photos):
-    (dossier_photos / "bouteille_06_contre.jpg").unlink()
-    verifier_erreur(envoyer(api, dossier_photos), 422, "photos_invalides", "IMPAIR")
+def test_un_regroupement_qui_ne_correspond_pas_aux_photos_est_refuse(api, dossier_photos):
+    """On ne devine jamais quelle photo va avec quelle bouteille (decisions.md 0166)."""
+    fichiers = [("photos", (f"{i}.jpg", (dossier_photos / "bouteille_01" / "1_etiquette.jpg").read_bytes(), "image/jpeg")) for i in range(3)]
+    reponse = api.post("/inventaires", data={"nom": "Cave", "maison": "Maison Test", "photos_par_bouteille": "2,2"}, files=fichiers)
+    verifier_erreur(reponse, 422, "envoi_refuse", "ne correspond pas aux 3 photos")
     assert api.get("/inventaires").json() == []  # rien n'a été créé
 
 
+def test_sans_regroupement_une_photo_par_bouteille(api, dossier_photos):
+    fichiers = [("photos", (p.name, p.read_bytes(), "image/jpeg")) for p in sorted((dossier_photos / "bouteille_01").iterdir())]
+    reponse = api.post("/inventaires", data={"nom": "Cave", "maison": "Maison Test"}, files=fichiers)
+    assert reponse.status_code == 201 and reponse.json()["nb_bouteilles"] == 2
+
+
 def test_un_fichier_qui_n_est_pas_une_image_est_refuse(api, dossier_photos):
-    (dossier_photos / "bouteille_06_contre.jpg").write_bytes(b"ceci n'est pas une photo")
+    (dossier_photos / "bouteille_06" / "2_contre.jpg").write_bytes(b"ceci n'est pas une photo")
     verifier_erreur(envoyer(api, dossier_photos), 422, "envoi_refuse", "n'est pas une image lisible")
 
 
@@ -163,22 +180,21 @@ def test_une_photo_heic_d_iphone_est_acceptee(api, dossier_photos):
     """decisions.md 0158 : lue, stockée telle quelle, affichée en JPEG."""
     from PIL import Image
 
-    jpeg = dossier_photos / "bouteille_06_contre.jpg"
+    jpeg = dossier_photos / "bouteille_06" / "2_contre.jpg"
     with Image.open(jpeg) as image:
-        image.save(dossier_photos / "bouteille_06_contre.heic", format="HEIF")
+        image.save(dossier_photos / "bouteille_06" / "2_contre.heic", format="HEIF")
     jpeg.unlink()
     reponse = envoyer(api, dossier_photos)
     assert reponse.status_code == 201, reponse.text
     inventaire_id = reponse.json()["id"]
     bouteille = api.get(f"/inventaires/{inventaire_id}/bouteilles").json()["bouteilles"][-1]
     fiche = api.get(f"/inventaires/{inventaire_id}/bouteilles/{bouteille['id']}").json()
-    affichee = api.get(fiche["photos"]["contre_etiquette"])
+    affichee = api.get(fiche["photos"][1]["reduite"])
     assert affichee.status_code == 200 and affichee.headers["content-type"] == "image/jpeg"
 
 
 def test_photos_en_double_refusees(api, dossier_photos):
-    shutil.copy(dossier_photos / "bouteille_01_etiquette.jpg", dossier_photos / "bouteille_07_etiquette.jpg")
-    shutil.copy(dossier_photos / "bouteille_01_contre.jpg", dossier_photos / "bouteille_07_contre.jpg")
+    shutil.copytree(dossier_photos / "bouteille_01", dossier_photos / "bouteille_07")
     verifier_erreur(envoyer(api, dossier_photos), 422, "photos_invalides", "deux fois")
 
 
@@ -275,7 +291,8 @@ def test_fiche_d_une_bouteille_voisines_et_photos(api, extrait):
     assert api.get(f"/inventaires/{extrait}/bouteilles/{ids[0]}").json()["precedente_id"] is None
     assert fiche["position"] == 2 and fiche["historique"] == []
     assert "estimation" not in fiche["valeurs_modele"]  # le modèle ne la remplit jamais
-    for lien in (fiche["photos"]["etiquette"], fiche["photos"]["contre_etiquette_originale"]):
+    assert [photo["numero"] for photo in fiche["photos"]] == [1, 2]  # toutes ses photos, dans l'ordre
+    for lien in (fiche["photos"][0]["reduite"], fiche["photos"][1]["originale"]):
         reponse = api.get(lien)
         assert reponse.status_code == 200 and reponse.headers["content-type"] == "image/jpeg"
 
@@ -292,7 +309,7 @@ def test_une_photo_demandee_via_un_autre_inventaire_est_refusee(api, dossier_pho
     premier = envoyer(api, dossier_photos).json()["id"]
     second = envoyer(api, generer_photos_fictives(tmp_path / "autres", 1), nom="Autre").json()["id"]
     photo = api.get(f"/inventaires/{premier}/bouteilles").json()["bouteilles"][0]["id"]
-    photo_id = api.get(f"/inventaires/{premier}/bouteilles/{photo}").json()["photos"]["etiquette"].rsplit("/", 1)[1]
+    photo_id = api.get(f"/inventaires/{premier}/bouteilles/{photo}").json()["photos"][0]["reduite"].rsplit("/", 1)[1]
 
     assert api.get(f"/inventaires/{premier}/photos/{photo_id}").status_code == 200
     verifier_erreur(api.get(f"/inventaires/{second}/photos/{photo_id}"), 404, "introuvable", f"Aucune photo n°{photo_id}")
@@ -324,7 +341,7 @@ def test_aucune_reponse_ne_contient_de_metadonnees_exif(api, tmp_path):
     fiche = api.get(f"/inventaires/{inventaire_id}/bouteilles").json()["bouteilles"][0]["id"]
     liens = api.get(f"/inventaires/{inventaire_id}/bouteilles/{fiche}").json()["photos"]
 
-    for lien in liens.values():
+    for lien in [lien for photo in liens for lien in (photo["reduite"], photo["originale"])]:
         octets = api.get(lien).content
         servie = Image.open(io.BytesIO(octets))
         assert dict(servie.getexif()) == {} and b"Exif" not in octets
@@ -359,15 +376,18 @@ ROUTES_DOCUMENTEES = {
     "/inventaires/{inventaire_id}/photos": {"post"},
     "/inventaires/{inventaire_id}/photos/deja-recues": {"post"},
     "/inventaires/{inventaire_id}/apercu": {"get"},
-    "/inventaires/{inventaire_id}/photos/{photo_id}/deplacer": {"post"},
-    "/inventaires/{inventaire_id}/paires/{numero}/inverser": {"post"},
-    "/inventaires/{inventaire_id}/retrier": {"post"},
     "/inventaires/{inventaire_id}/finaliser": {"post"},
+    # Session 6 — une bouteille = un groupe de photos (plan validé le 2026-10-11) ;
+    # « déplacer », « inverser une paire », « retrier » et « inverser les photos » disparaissent.
+    "/inventaires/{inventaire_id}/photos/{photo_id}/couper": {"post"},
+    "/inventaires/{inventaire_id}/groupes/{groupe_id}/rattacher": {"post"},
+    "/inventaires/{inventaire_id}/groupes/{groupe_id}/quantite": {"put"},
+    "/inventaires/{inventaire_id}/groupes/{groupe_id}": {"delete"},
+    "/inventaires/{inventaire_id}/bouteilles-en-cours/{cle}/quantite": {"put"},
     # Session 5 — relecture (ajouts approuvés avec le plan, le 2026-10-10).
     "/inventaires/{inventaire_id}/recapitulatif": {"get"},
     "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/revenir": {"post"},
     "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/reanalyser": {"post"},
-    "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/inverser-photos": {"post"},
     "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/signalement": {"post", "delete"},
     "/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/separer": {"post"},
 }

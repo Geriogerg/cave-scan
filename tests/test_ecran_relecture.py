@@ -104,7 +104,8 @@ def test_la_page_d_une_bouteille(api, inventaire, base):
     assert photos and all(p.startswith(f"/inventaires/{inventaire}/photos/") for p in photos)
     # La bouteille suivante est préchargée.
     suivante = base.get(FicheBouteille, seconde)
-    assert f'rel="prefetch" href="/inventaires/{inventaire}/photos/{suivante.photo_etiquette_id}?taille=reduite"' in texte
+    for photo in suivante.photos:  # toutes ses photos (decisions.md 0166)
+        assert f'rel="prefetch" href="/inventaires/{inventaire}/photos/{photo.id}?taille=reduite"' in texte
     assert f'data-suivante="/app/inventaires/{inventaire}/relecture/{seconde}"' in texte
     assert "Ctrl+Entrée" in texte and "Échap" in texte
 
@@ -253,25 +254,25 @@ def test_bouteille_en_erreur_la_raison_en_clair_et_reanalyser(api, dossier_photo
     assert api.get(f"/app/inventaires/{inventaire_id}/relecture/{en_erreur}/attente").headers["HX-Refresh"] == "true"
 
 
-def test_inverser_les_photos_propose_de_reanalyser(api, inventaire, base):
+def test_la_page_montre_toutes_les_photos_numerotees_sans_inversion(api, inventaire, base):
+    """Une bouteille = ses photos, numérotées, sans rôle : « Inverser les photos »
+    a disparu avec les rôles (decisions.md 0166)."""
     premiere = ids(base, inventaire)[0]
-    avant = base.get(FicheBouteille, premiere).photo_etiquette_id
-    reponse = api.post(f"/app/inventaires/{inventaire}/relecture/{premiere}/inverser", follow_redirects=False)
-    assert reponse.status_code == 303
-    texte = api.get(reponse.headers["location"]).text
-    assert "Étiquette et contre-étiquette inversées." in texte and "Réanalyser maintenant" in texte
-    base.expire_all()
-    assert base.get(FicheBouteille, premiere).photo_contre_id == avant
+    texte = ouvrir(api, inventaire, premiere)
+    for numero, photo in enumerate(base.get(FicheBouteille, premiere).photos, start=1):
+        assert f'data-photo="{numero}"' in texte and f"/photos/{photo.id}?taille=miniature" in texte
+    assert "Photo 2 sur 2 de la bouteille" in texte and "Inverser" not in texte
+    assert api.post(f"/app/inventaires/{inventaire}/relecture/{premiere}/inverser").status_code in (404, 405)
 
 
 def test_signaler_une_paire_empeche_la_validation(api, inventaire, base):
     premiere = ids(base, inventaire)[0]
     api.post(f"/app/inventaires/{inventaire}/relecture/{premiere}/signaler", data={"motif": "décalage"})
     texte = ouvrir(api, inventaire, premiere)
-    assert "Problème de paire signalé : cette bouteille ne peut pas être validée." in texte
+    assert "Problème de photos signalé : cette bouteille ne peut pas être validée." in texte
     refus = api.post(f"/app/inventaires/{inventaire}/relecture/{premiere}/valider", data=formulaire(texte), headers=HX)
-    assert refus.status_code == 409 and "problème de paire" in refus.text
-    assert "problème de paire signalé : décalage" in texte  # historique
+    assert refus.status_code == 409 and "problème de photos" in refus.text
+    assert "problème de photos signalé : décalage" in texte  # historique
     api.post(f"/app/inventaires/{inventaire}/relecture/{premiere}/lever-signalement")
     ok = api.post(f"/app/inventaires/{inventaire}/relecture/{premiere}/valider",
                   data=formulaire(ouvrir(api, inventaire, premiere)), headers=HX)

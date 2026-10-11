@@ -1,20 +1,33 @@
-"""Dépôt des photos d'un inventaire en BROUILLON, une par une (decisions.md 0126-0134).
+"""Dépôt des photos, bouteille par bouteille (decisions.md 0126, 0127, 0134, 0166, 0167).
 
-Le parcours de l'expert : créer le brouillon (nom, maison), envoyer les photos —
-en plusieurs fois, sur un réseau qui coupe —, vérifier et corriger l'ordre des
-paires, puis FINALISER : les paires deviennent des bouteilles et l'extraction
-démarre. Ensuite, plus aucune photo ne bouge.
+Le parcours de l'expert : créer l'inventaire en brouillon (nom, maison), puis
+envoyer ses photos — en plusieurs fois, sur un réseau qui coupe —, chacune
+rattachée à SA bouteille :
+
+- mode appareil photo : la bouteille en cours, ses photos à la suite, sa
+  quantité (« × N »), puis « Bouteille suivante » ;
+- mode galerie ou ordinateur : « Bouteille 1 → ses photos », « Bouteille 2 → … ».
+
+Tant qu'elle n'est pas lancée, une bouteille est un GROUPE de photos en attente,
+désigné par une clé que donne l'appareil (les photos d'une même bouteille
+arrivent parfois dans le désordre) et numéroté dans l'ordre de prise de vue. On
+peut encore retirer une photo, couper un groupe en deux, rattacher un groupe au
+précédent, en supprimer un, changer sa quantité.
+
+« Lancer l'analyse » forme une bouteille par groupe en attente et lance
+l'extraction. Après le lancement, on peut AJOUTER des bouteilles par les mêmes
+écrans : elles prennent place à la fin. Les photos d'une bouteille formée ne
+bougent plus.
 
 Fonctions de service, utilisées à la fois par les pages et par l'API JSON. Tout
 garde-fou est vérifié ICI, côté serveur, même si le navigateur l'affiche aussi.
-
 Concurrence : chaque modification commence par prendre le verrou d'écriture sur
-la ligne de l'inventaire (`_verrouiller`), pour que deux photos arrivant en même
-temps reçoivent deux positions distinctes (0134).
+la ligne de l'inventaire (`_verrouiller`, 0134).
 """
 
 from __future__ import annotations
 
+import re
 import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -22,29 +35,34 @@ from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO
 
-from sqlalchemy import select, update
+from sqlalchemy import exists, func, select, update
 from sqlalchemy.orm import Session
 
 from src.config.maison import lire_config, plier
-from src.donnees.modeles import FicheBouteille, Inventaire, Photo, maintenant
-from src.donnees.stockage import chemin_stocke, empreinte_fichier, stocker
-from src.io.photos import PhotosBouteille, cle_naturelle, date_de_prise_de_vue
+from src.donnees.modeles import FicheBouteille, GroupePhotos, Inventaire, Photo, maintenant
+from src.donnees.stockage import empreinte_fichier, stocker
+from src.io.photos import date_de_prise_de_vue
 from src.services import envoi
 from src.services.envoi import EnvoiRefuse, verifier_image
-from src.services.inventaires import _maison, _version_de_config, charger_inventaire
+from src.services.inventaires import (
+    _maison,
+    _version_de_config,
+    actualiser_statut,
+    bouteille_du_groupe,
+    charger_inventaire,
+    config_figee,
+)
 from src.services.pilotage import LancementRefuse
 
-TRI_DATE = "date de prise de vue"
-TRI_NOM = "nom de fichier"
-TRI_MANUEL = "ordre corrigé à la main"
+MOTIF_CLE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 
 class DepotFerme(ValueError):
-    """L'inventaire n'est plus un brouillon : ses photos ne bougent plus."""
+    """Le dépôt n'est pas possible : bouteille déjà formée, inventaire fermé."""
 
 
 class ModificationRefusee(ValueError):
-    """Déplacement ou inversion impossible (position hors liste, paire incomplète…)."""
+    """Coupure, rattachement ou retrait impossible (photo ou bouteille absente…)."""
 
 
 # --- créer le brouillon --------------------------------------------------------------------------
@@ -58,9 +76,7 @@ class BrouillonCree:
     avertissements: list[str] = field(default_factory=list)
 
 
-def creer_brouillon(
-    session: Session, maison: str, config_path: str | Path, nom: str, sans_contre: bool = False
-) -> BrouillonCree:
+def creer_brouillon(session: Session, maison: str, config_path: str | Path, nom: str) -> BrouillonCree:
     """Un inventaire vide en brouillon. La config de la maison est figée dès
     maintenant, comme pour un inventaire créé d'un coup (decisions.md 0073)."""
     if not nom.strip():
@@ -72,9 +88,7 @@ def creer_brouillon(
     version, nouvelle, avertissements = _version_de_config(
         session, maison_bd, config, texte, Path(config_path).name
     )
-    inventaire = Inventaire(
-        maison=maison_bd, config_version=version, nom=nom.strip(), statut="brouillon", sans_contre=sans_contre
-    )
+    inventaire = Inventaire(maison=maison_bd, config_version=version, nom=nom.strip(), statut="brouillon")
     session.add(inventaire)
     session.commit()
     return BrouillonCree(inventaire.id, version.numero, nouvelle, [*config.avertissements, *avertissements])
@@ -86,10 +100,11 @@ def creer_brouillon(
 @dataclass(frozen=True)
 class PhotoRecue:
     photo_id: int
-    position: int
+    bouteille: str  # la clé du groupe (de la bouteille) qui l'a reçue
+    numero: int  # le numéro de cette bouteille dans le dépôt
+    rang: int  # sa place parmi les photos de la bouteille
     nom: str
     deja_recue: bool  # même contenu ou même fichier d'origine : rien n'a été ajouté
-    prise_de_vue: datetime | None
 
 
 def ajouter_photo(
@@ -98,17 +113,23 @@ def ajouter_photo(
     flux: BinaryIO,
     nom_origine: str,
     stockage: Path,
+    bouteille: str,
+    numero: int,
+    quantite: int | None = None,
     prise_de_vue: datetime | None = None,
     signature: str | None = None,
 ) -> PhotoRecue:
-    """Ajoute UNE photo au brouillon. Idempotent : une photo déjà reçue (même
-    contenu, ou même fichier d'origine) n'est jamais enregistrée deux fois.
+    """Ajoute UNE photo à la bouteille `bouteille` (sa clé), créée au besoin avec
+    le numéro `numero`. Idempotent : une photo déjà reçue (même contenu, ou même
+    fichier d'origine) n'est jamais enregistrée deux fois.
 
-    `prise_de_vue` : la date lue par le navigateur AVANT toute réduction
-    (decisions.md 0129) ; à défaut, celle du fichier reçu. Refus avec une raison
-    claire : pas une image, HEIC, trop lourde, trop de photos, plus un brouillon.
+    Refus avec une raison claire : pas une image, trop lourde, trop de photos
+    pour une bouteille (plafond de la maison), bouteille déjà analysée.
     """
-    _brouillon(session, inventaire_id)  # refuser tôt, avant de lire le fichier
+    cle = _cle_valide(bouteille)
+    if numero < 1:
+        raise EnvoiRefuse("Numéro de bouteille invalide.")
+    _depot_ouvert(charger_inventaire(session, inventaire_id))  # refuser tôt, avant de lire le fichier
     nom_origine = Path(str(nom_origine or "photo").replace("\\", "/")).name or "photo"
 
     with tempfile.TemporaryDirectory(prefix="cave-scan-depot-") as temporaire:
@@ -131,27 +152,43 @@ def ajouter_photo(
     )
     if deja is not None:
         session.commit()
-        return PhotoRecue(deja.id, deja.ordre, deja.nom_origine, True, deja.prise_de_vue)
+        return PhotoRecue(deja.id, deja.groupe.cle or "", deja.groupe.numero, deja.rang, deja.nom_origine, True)
 
-    photos = _photos(session, inventaire_id)
-    if len(photos) >= envoi.NOMBRE_MAX:
+    groupe = session.scalar(select(GroupePhotos).where(GroupePhotos.inventaire_id == inventaire_id, GroupePhotos.cle == cle))
+    if groupe is None:
+        groupe = GroupePhotos(inventaire_id=inventaire_id, cle=cle, numero=numero, quantite=_quantite(quantite) or 1)
+        session.add(groupe)
+        session.flush()
+    elif _formee(session, groupe):
         session.rollback()
-        raise EnvoiRefuse(f"Cet inventaire a déjà {len(photos)} photos : {envoi.NOMBRE_MAX} au maximum.")
+        raise DepotFerme(
+            f"La bouteille n°{groupe.numero} est déjà analysée : ses photos ne changent plus. "
+            f"Ajoutez cette photo à une nouvelle bouteille."
+        )
+    plafond = config_figee(inventaire).photos_max_par_bouteille
+    if len(groupe.photos) >= plafond:
+        session.rollback()
+        raise EnvoiRefuse(
+            f"Bouteille n°{groupe.numero} : {plafond} photos au plus (plafond de la maison). "
+            f"Commencez une nouvelle bouteille, ou retirez une photo."
+        )
+    if quantite is not None:
+        groupe.quantite = _quantite(quantite)
+    ordre = (session.scalar(select(func.max(Photo.ordre)).where(Photo.inventaire_id == inventaire_id)) or 0) + 1
     photo = Photo(
         inventaire_id=inventaire_id,
         chemin=relatif,
         empreinte=empreinte,
         nom_origine=nom_origine[:255],
         prise_de_vue=date,
-        ordre=len(photos) + 1,  # à la fin ; le tri automatique la replace
+        ordre=ordre,  # ordre d'arrivée
         signature_envoi=(signature or None) and signature[:300],
+        groupe=groupe,
+        rang=len(groupe.photos) + 1,
     )
     session.add(photo)
-    session.flush()
-    if not inventaire.ordre_manuel:
-        _renumeroter(session, _ordre_automatique([*photos, photo]))
     session.commit()
-    return PhotoRecue(photo.id, photo.ordre, photo.nom_origine, False, photo.prise_de_vue)
+    return PhotoRecue(photo.id, cle, groupe.numero, photo.rang, photo.nom_origine, False)
 
 
 def signatures_deja_recues(session: Session, inventaire_id: int, signatures: Sequence[str]) -> list[str]:
@@ -168,175 +205,200 @@ def signatures_deja_recues(session: Session, inventaire_id: int, signatures: Seq
     return [signature for signature in signatures if signature in recues]
 
 
-# --- corriger l'ordre ----------------------------------------------------------------------------
+def definir_quantite(session: Session, inventaire_id: int, bouteille: str, quantite: int) -> None:
+    """« × N » d'une bouteille en attente (mode appareil photo : saisie sur place)."""
+    _verrouiller(session, inventaire_id)
+    groupe = _groupe_en_attente(session, inventaire_id, cle=_cle_valide(bouteille))
+    groupe.quantite = _quantite(quantite)
+    session.commit()
+
+
+# --- corriger les bouteilles en attente ------------------------------------------------------------
 
 
 def supprimer_photo(session: Session, inventaire_id: int, photo_id: int) -> None:
-    """Retire une photo du brouillon. Son fichier reste dans le stockage (0133)."""
+    """Retire une photo d'une bouteille en attente ; une bouteille qui n'a plus de
+    photo disparaît. Le fichier reste dans le stockage (0133)."""
     _verrouiller(session, inventaire_id)
-    photo = _photo_du_brouillon(session, inventaire_id, photo_id)
+    photo = _photo_en_attente(session, inventaire_id, photo_id)
+    groupe = photo.groupe
+    groupe.photos.remove(photo)
     session.delete(photo)
     session.flush()
-    _renumeroter(session, _photos(session, inventaire_id))
+    if groupe.photos:
+        _renumeroter(session, groupe, list(groupe.photos))
+    else:
+        session.delete(groupe)
     session.commit()
 
 
-def deplacer_photo(session: Session, inventaire_id: int, photo_id: int, position: int) -> None:
-    """Place la photo à `position` (1 = la première) ; les autres suivent."""
-    inventaire = _verrouiller(session, inventaire_id)
-    photo = _photo_du_brouillon(session, inventaire_id, photo_id)
-    photos = _photos(session, inventaire_id)
-    if not 1 <= position <= len(photos):
+def couper(session: Session, inventaire_id: int, photo_id: int) -> None:
+    """« Nouvelle bouteille à partir de cette photo » : la photo et celles qui la
+    suivent forment une bouteille à part, juste après (l'expert avait oublié
+    « Bouteille suivante »)."""
+    _verrouiller(session, inventaire_id)
+    photo = _photo_en_attente(session, inventaire_id, photo_id)
+    groupe = photo.groupe
+    photos = list(groupe.photos)
+    index = photos.index(photo)
+    if index == 0:
         session.rollback()
-        raise ModificationRefusee(f"Position {position} impossible : choisir entre 1 et {len(photos)}.")
-    photos.remove(photo)
-    photos.insert(position - 1, photo)
-    inventaire.ordre_manuel = True
-    _renumeroter(session, photos)
+        raise ModificationRefusee("C'est déjà la première photo de sa bouteille : rien à couper.")
+    attente = groupes_en_attente(session, inventaire_id)
+    nouveau = GroupePhotos(inventaire_id=inventaire_id, numero=groupe.numero + 1, quantite=1)
+    session.add(nouveau)
+    # Les groupes suivants reculent d'un numéro : l'ordre de prise de vue est gardé.
+    for suivant in attente[attente.index(groupe) + 1 :]:
+        suivant.numero += 1
+    session.flush()
+    _deplacer(session, photos[index:], nouveau)
+    _renumeroter(session, groupe, photos[:index])
     session.commit()
 
 
-def inverser_paire(session: Session, inventaire_id: int, numero: int) -> None:
-    """Échange l'étiquette et la contre-étiquette de la paire n° `numero`."""
-    inventaire = _verrouiller(session, inventaire_id)
-    if inventaire.sans_contre:
+def rattacher(session: Session, inventaire_id: int, groupe_id: int) -> None:
+    """« Rattacher à la bouteille précédente » (« Bouteille suivante » appuyé trop
+    tôt) : ses photos passent à la fin de la bouteille en attente qui précède."""
+    _verrouiller(session, inventaire_id)
+    groupe = _groupe_en_attente(session, inventaire_id, groupe_id=groupe_id)
+    attente = groupes_en_attente(session, inventaire_id)
+    rang = attente.index(groupe)
+    if rang == 0:
         session.rollback()
-        raise ModificationRefusee("Cet inventaire n'a que des étiquettes : il n'y a pas de paire à inverser.")
-    photos = _photos(session, inventaire_id)
-    rang = 2 * (numero - 1)
-    if numero < 1 or rang + 1 >= len(photos):
+        raise ModificationRefusee("C'est la première bouteille en attente : aucune bouteille avant elle.")
+    precedent = attente[rang - 1]
+    plafond = config_figee(charger_inventaire(session, inventaire_id)).photos_max_par_bouteille
+    if len(precedent.photos) + len(groupe.photos) > plafond:
         session.rollback()
-        raise ModificationRefusee(f"La paire n°{numero} n'existe pas ou n'a qu'une photo.")
-    photos[rang], photos[rang + 1] = photos[rang + 1], photos[rang]
-    inventaire.ordre_manuel = True
-    _renumeroter(session, photos)
+        raise ModificationRefusee(
+            f"Ensemble, ces deux bouteilles auraient {len(precedent.photos) + len(groupe.photos)} photos : "
+            f"{plafond} au plus (plafond de la maison). Retirez d'abord des photos."
+        )
+    _deplacer(session, list(groupe.photos), precedent, a_la_suite=True)
+    session.delete(groupe)
     session.commit()
 
 
-def retrier(session: Session, inventaire_id: int) -> None:
-    """Revient à l'ordre automatique (date de prise de vue, nom, arrivée)."""
-    inventaire = _verrouiller(session, inventaire_id)
-    inventaire.ordre_manuel = False
-    _renumeroter(session, _ordre_automatique(_photos(session, inventaire_id)))
+def supprimer_groupe(session: Session, inventaire_id: int, groupe_id: int) -> None:
+    """Supprime une bouteille en attente et ses photos (les fichiers restent dans
+    le stockage, 0133). L'écran demande confirmation."""
+    _verrouiller(session, inventaire_id)
+    groupe = _groupe_en_attente(session, inventaire_id, groupe_id=groupe_id)
+    for photo in list(groupe.photos):
+        session.delete(photo)
+    session.delete(groupe)
     session.commit()
 
 
-# --- voir les paires ------------------------------------------------------------------------
+def quantite_du_groupe(session: Session, inventaire_id: int, groupe_id: int, quantite: int) -> None:
+    """La quantité d'une bouteille en attente, depuis l'écran de vérification."""
+    _verrouiller(session, inventaire_id)
+    _groupe_en_attente(session, inventaire_id, groupe_id=groupe_id).quantite = _quantite(quantite)
+    session.commit()
+
+
+# --- voir les bouteilles en attente ----------------------------------------------------------
 
 
 @dataclass(frozen=True)
-class Paire:
-    numero: int
-    etiquette: Photo
-    contre_etiquette: Photo | None  # None : étiquettes seules, ou photo sans sa paire
+class BouteilleEnAttente:
+    groupe: GroupePhotos
+    numero: int  # sa future position dans l'inventaire
+    photos: list[Photo]
 
 
 @dataclass(frozen=True)
 class Apercu:
     inventaire: Inventaire
-    photos: list[Photo]
-    paires: list[Paire]
-    tri: str
-    anomalies: list[str]
+    bouteilles: list[BouteilleEnAttente]  # en attente, dans l'ordre
+    deja_formees: int  # bouteilles déjà dans l'inventaire (analysées ou en cours)
+    nb_photos: int  # photos en attente
+    photos_max: int  # plafond de la maison
+    prochain_numero: int  # pour la prochaine bouteille de l'appareil
     peut_lancer: bool
+    anomalies: list[str]
 
 
 def apercu(session: Session, inventaire_id: int) -> Apercu:
-    """Les paires telles qu'elles deviendront des bouteilles, et ce qui cloche."""
+    """Les bouteilles en attente telles qu'elles seront formées, et ce qui cloche."""
     session.expire_all()
     inventaire = charger_inventaire(session, inventaire_id)
-    photos = _photos(session, inventaire_id)
-    pas = 1 if inventaire.sans_contre else 2
-    paires = [
-        Paire(rang // pas + 1, photos[rang], photos[rang + 1] if pas == 2 and rang + 1 < len(photos) else None)
-        for rang in range(0, len(photos), pas)
+    attente = groupes_en_attente(session, inventaire_id)
+    formees = session.scalar(select(func.count(FicheBouteille.id)).where(FicheBouteille.inventaire_id == inventaire_id))
+    bouteilles = [
+        BouteilleEnAttente(groupe=g, numero=formees + rang, photos=list(g.photos))
+        for rang, g in enumerate(attente, start=1)
     ]
-    sans_date = [p for p in photos if p.prise_de_vue is None]
-    tri = TRI_MANUEL if inventaire.ordre_manuel else (TRI_NOM if sans_date else TRI_DATE)
-
+    numero_max = session.scalar(select(func.max(GroupePhotos.numero)).where(GroupePhotos.inventaire_id == inventaire_id))
     anomalies = []
-    if not photos:
+    if not bouteilles and inventaire.statut == "brouillon":
         anomalies.append("Aucune photo pour l'instant.")
-    if photos and not inventaire.sans_contre and len(photos) % 2:
-        anomalies.append(_message_impair(len(photos)))
-    if sans_date and len(photos) > 1:
-        anomalies.append(
-            f"{len(sans_date)} photo(s) sans date de prise de vue : les photos sont rangées par nom "
-            f"de fichier. Vérifiez bien l'ordre des paires."
-        )
-    if inventaire.ordre_manuel:
-        anomalies.append(
-            "Ordre corrigé à la main : les photos ajoutées depuis sont placées à la fin. "
-            "« Retrier automatiquement » revient au classement par date."
-        )
     return Apercu(
         inventaire=inventaire,
-        photos=photos,
-        paires=paires,
-        tri=tri,
+        bouteilles=bouteilles,
+        deja_formees=formees,
+        nb_photos=sum(len(b.photos) for b in bouteilles),
+        photos_max=config_figee(inventaire).photos_max_par_bouteille,
+        prochain_numero=(numero_max or 0) + 1,
+        peut_lancer=bool(bouteilles),
         anomalies=anomalies,
-        peut_lancer=inventaire.statut == "brouillon"
-        and bool(photos)
-        and (inventaire.sans_contre or len(photos) % 2 == 0),
     )
 
 
-# --- finaliser -------------------------------------------------------------------------------
+def groupes_en_attente(session: Session, inventaire_id: int) -> list[GroupePhotos]:
+    """Les groupes de photos qui ne sont pas encore des bouteilles, dans l'ordre
+    de prise de vue."""
+    formee = exists().where(FicheBouteille.groupe_id == GroupePhotos.id)
+    return list(
+        session.scalars(
+            select(GroupePhotos)
+            .where(GroupePhotos.inventaire_id == inventaire_id, ~formee)
+            .order_by(GroupePhotos.numero, GroupePhotos.id)
+        )
+    )
+
+
+# --- lancer ----------------------------------------------------------------------------------
 
 
 def finaliser(session: Session, inventaire_id: int, stockage: Path) -> int:
-    """Vérifie les garde-fous, forme les bouteilles et lance l'extraction.
-    Renvoie le nombre de bouteilles. Ensuite, le brouillon est fermé."""
-    inventaire = _verrouiller(session, inventaire_id)
-    photos = _photos(session, inventaire_id)
-    if not photos:
-        session.rollback()
-        raise LancementRefuse("Aucune photo : ajoutez les photos des bouteilles avant de lancer l'analyse.")
-    if not inventaire.sans_contre and len(photos) % 2:
-        session.rollback()
-        raise LancementRefuse(_message_impair(len(photos)))
+    """Forme une bouteille par groupe en attente, à la fin de l'inventaire, et
+    lance (ou relance) l'extraction. Renvoie le nombre de bouteilles formées.
 
-    pas = 1 if inventaire.sans_contre else 2
-    groupes = [photos[rang : rang + pas] for rang in range(0, len(photos), pas)]
-    for position, groupe in enumerate(groupes, start=1):
-        etiquette, contre = groupe[0], (groupe[1] if len(groupe) > 1 else None)
-        vues = PhotosBouteille(
-            etiquette=chemin_stocke(stockage, etiquette.chemin),
-            contre_etiquette=chemin_stocke(stockage, contre.chemin) if contre else None,
-        )
-        session.add(
-            FicheBouteille(
-                inventaire_id=inventaire_id,
-                identifiant=vues.identifiant,  # même calcul qu'en ligne de commande (0065)
-                photo_etiquette_id=etiquette.id,
-                photo_contre_id=contre.id if contre else None,
-                position=position,
-            )
-        )
-    inventaire.statut = "ouvert"
+    Premier lancement : le brouillon devient un inventaire ouvert. Ajout après
+    le lancement : un inventaire validé redevient ouvert, et une analyse
+    terminée, annulée ou arrêtée repart pour les nouvelles bouteilles.
+    """
+    inventaire = _verrouiller(session, inventaire_id)
+    attente = groupes_en_attente(session, inventaire_id)
+    if not attente:
+        session.rollback()
+        raise LancementRefuse("Aucune bouteille en attente : ajoutez des photos avant de lancer l'analyse.")
+    bouteilles = list(inventaire.bouteilles)
+    position = max((b.position for b in bouteilles), default=0)
+    rien_en_cours = not any(b.statut in ("a_extraire", "en_cours") for b in bouteilles)
+    for groupe in attente:
+        position += 1
+        session.add(bouteille_du_groupe(groupe, position, stockage))
+    session.flush()
+    if inventaire.statut == "brouillon" or inventaire.extraction != "lancee" or rien_en_cours:
+        # Le temps restant estimé repart de ce lancement.
+        inventaire.extraction_lancee_le = maintenant()
     inventaire.extraction = "lancee"
-    inventaire.extraction_lancee_le = maintenant()
+    inventaire.motif_arret = None
+    inventaire.statut = "ouvert"
+    session.expire(inventaire, ["bouteilles"])
+    actualiser_statut(inventaire)
     session.commit()
-    return len(groupes)
+    return len(attente)
 
 
 # --- outils ------------------------------------------------------------------------------
 
 
-def _message_impair(nombre: int) -> str:
-    return (
-        f"Nombre impair de photos ({nombre}) : chaque bouteille demande une étiquette ET une "
-        f"contre-étiquette. Supprimez la photo en trop ou ajoutez celle qui manque, puis "
-        f"lancez l'analyse."
-    )
-
-
-def _brouillon(session: Session, inventaire_id: int) -> Inventaire:
-    inventaire = charger_inventaire(session, inventaire_id)
-    if inventaire.statut != "brouillon":
-        raise DepotFerme(
-            "L'analyse de cet inventaire est lancée : ses photos ne peuvent plus être modifiées."
-        )
+def _depot_ouvert(inventaire: Inventaire) -> Inventaire:
+    """On peut déposer dans un brouillon, et ajouter des bouteilles à un inventaire
+    lancé (decisions.md 0167)."""
     return inventaire
 
 
@@ -350,38 +412,77 @@ def _verrouiller(session: Session, inventaire_id: int) -> Inventaire:
     )
     session.expire_all()
     try:
-        return _brouillon(session, inventaire_id)
+        return _depot_ouvert(charger_inventaire(session, inventaire_id))
     except Exception:
         session.rollback()
         raise
 
 
-def _photos(session: Session, inventaire_id: int) -> list[Photo]:
-    return list(session.scalars(select(Photo).where(Photo.inventaire_id == inventaire_id).order_by(Photo.ordre)))
+def _cle_valide(cle: str) -> str:
+    cle = (cle or "").strip()
+    if not MOTIF_CLE.match(cle):
+        raise EnvoiRefuse("Bouteille non reconnue : rechargez la page puis renvoyez la photo.")
+    return cle
 
 
-def _photo_du_brouillon(session: Session, inventaire_id: int, photo_id: int) -> Photo:
+def _quantite(valeur: int | None) -> int | None:
+    if valeur is None:
+        return None
+    if isinstance(valeur, bool) or not isinstance(valeur, int) or valeur < 1:
+        raise EnvoiRefuse(f"Quantité invalide : « {valeur} » (entier ≥ 1 attendu).")
+    return valeur
+
+
+def _formee(session: Session, groupe: GroupePhotos) -> bool:
+    return session.scalar(select(exists().where(FicheBouteille.groupe_id == groupe.id)))
+
+
+def _groupe_en_attente(
+    session: Session, inventaire_id: int, cle: str | None = None, groupe_id: int | None = None
+) -> GroupePhotos:
+    if cle is not None:
+        groupe = session.scalar(select(GroupePhotos).where(GroupePhotos.inventaire_id == inventaire_id, GroupePhotos.cle == cle))
+    else:
+        groupe = session.get(GroupePhotos, groupe_id)
+    if groupe is None or groupe.inventaire_id != inventaire_id:
+        session.rollback()
+        raise ModificationRefusee("Cette bouteille n'existe pas (ou plus) dans cet inventaire.")
+    if _formee(session, groupe):
+        session.rollback()
+        raise DepotFerme(f"La bouteille n°{groupe.numero} est déjà analysée : ses photos ne changent plus.")
+    return groupe
+
+
+def _photo_en_attente(session: Session, inventaire_id: int, photo_id: int) -> Photo:
     photo = session.get(Photo, photo_id)
     if photo is None or photo.inventaire_id != inventaire_id:
         session.rollback()
         raise envoi.PhotoIntrouvable(f"Aucune photo n°{photo_id} dans l'inventaire n°{inventaire_id}.")
+    if _formee(session, photo.groupe):
+        session.rollback()
+        raise DepotFerme("Cette photo appartient à une bouteille déjà analysée : elle ne bouge plus.")
     return photo
 
 
-def _ordre_automatique(photos: list[Photo]) -> list[Photo]:
-    """Date de prise de vue, puis nom, puis ordre d'arrivée — ou, si une seule
-    photo n'a pas de date, nom puis arrivée pour toutes (decisions.md 0068, 0128)."""
-    if all(photo.prise_de_vue is not None for photo in photos):
-        return sorted(photos, key=lambda p: (p.prise_de_vue, cle_naturelle(p.nom_origine), p.id))
-    return sorted(photos, key=lambda p: (cle_naturelle(p.nom_origine), p.id))
+def _deplacer(session: Session, photos: list[Photo], vers: GroupePhotos, a_la_suite: bool = False) -> None:
+    """Change des photos de groupe, en deux temps : la contrainte d'unicité
+    (groupe, rang) refuserait un échange direct."""
+    depart = len(vers.photos) if a_la_suite else 0
+    for i, photo in enumerate(photos, start=1):
+        photo.rang = -i
+    session.flush()
+    for i, photo in enumerate(photos, start=1):
+        photo.groupe = vers
+        photo.rang = depart + i
+    session.flush()
 
 
-def _renumeroter(session: Session, photos: list[Photo]) -> None:
-    """Positions 1..n dans l'ordre donné. En deux temps : la contrainte d'unicité
-    (inventaire, ordre) refuserait un échange direct de deux positions."""
-    for rang, photo in enumerate(photos, start=1):
-        photo.ordre = -rang
+def _renumeroter(session: Session, groupe: GroupePhotos, photos: list[Photo]) -> None:
+    """Rangs 1..n dans l'ordre donné, en deux temps (contrainte d'unicité)."""
+    for i, photo in enumerate(photos, start=1):
+        photo.rang = -i
     session.flush()
-    for rang, photo in enumerate(photos, start=1):
-        photo.ordre = rang
+    for i, photo in enumerate(photos, start=1):
+        photo.rang = i
     session.flush()
+    session.expire(groupe, ["photos"])

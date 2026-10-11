@@ -89,8 +89,10 @@ def ordinateur():
 
 def inventaire_extrait(url, tmp_path, nombre):
     photos = generer_photos_fictives(tmp_path / "photos", nombre)
-    fichiers = [("photos", (p.name, p.read_bytes(), "image/jpeg")) for p in sorted(photos.iterdir())]
-    cree = httpx.post(f"{url}/inventaires", data={"nom": "Vente clavier", "maison": "Maison Test"}, files=fichiers, timeout=60)
+    # Une bouteille = ses photos (decisions.md 0166) : chaque sous-dossier en contient deux.
+    fichiers = [("photos", (p.name, p.read_bytes(), "image/jpeg")) for d in sorted(photos.iterdir()) for p in sorted(d.iterdir())]
+    donnees = {"nom": "Vente clavier", "maison": "Maison Test", "photos_par_bouteille": ",".join(["2"] * nombre)}
+    cree = httpx.post(f"{url}/inventaires", data=donnees, files=fichiers, timeout=60)
     assert cree.status_code == 201, cree.text
     inventaire_id = cree.json()["id"]
     httpx.post(f"{url}/inventaires/{inventaire_id}/lancer")

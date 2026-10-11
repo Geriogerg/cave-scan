@@ -477,14 +477,14 @@ def from_tool_input(charge: dict[str, Any], config: ConfigMaison | None = None) 
         if colonne.source == "modele_best_effort" and colonne.cle not in bouteille.champs_a_verifier:
             bouteille.champs_a_verifier.append(colonne.cle)
 
-    # Paire de photos incohérente selon le modèle : signalée pour relecture,
+    # Photos d'une autre bouteille selon le modèle : signalées pour relecture,
     # jamais corrigée en silence (guide, étape 4.4 ; decisions.md 0069).
     if str(charge.get(PHOTOS_MEME_BOUTEILLE) or "").strip().casefold() == "non":
         if DOUTE_PAIRE_PHOTOS not in bouteille.champs_a_verifier:
             bouteille.champs_a_verifier.append(DOUTE_PAIRE_PHOTOS)
         signalement = (
-            "Le modèle signale que les photos appariées ne semblent pas montrer "
-            "la même bouteille : vérifier l'appariement."
+            "Le modèle signale que ces photos ne semblent pas montrer la même "
+            "bouteille : vérifier le regroupement des photos."
         )
         bouteille.notes = f"{bouteille.notes} {signalement}".strip()
 

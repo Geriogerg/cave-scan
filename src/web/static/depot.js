@@ -1,14 +1,18 @@
-/* Envoi des photos, une par une (guide de session 4 ; decisions.md 0127-0130).
+/* Dépôt des photos, bouteille par bouteille (guides des sessions 4 et 6 ;
+ * decisions.md 0127, 0130, 0166, 0167).
  *
- * Du JavaScript simple, sans framework : le navigateur l'impose pour préparer
- * les photos et les envoyer fichier par fichier. Aucun garde-fou ici : le
- * serveur décide de tout (image lisible, HEIC, doublon, taille) et ce script
- * affiche sa réponse. Il ne fait que :
- *   1. lire la date de prise de vue dans l'EXIF de l'ORIGINAL, avant toute
- *      réduction (la réduction l'efface) ;
- *   2. réduire la photo si l'option est cochée ;
- *   3. demander au serveur ce qu'il a déjà reçu, puis envoyer le reste, au plus
- *      3 à la fois, en réessayant après une coupure ;
+ * Du JavaScript simple, sans framework : le navigateur l'impose pour prendre et
+ * envoyer des photos une par une. Aucun garde-fou ici : le serveur décide de
+ * tout (image lisible, plafond de photos, bouteille déjà analysée, doublon) et
+ * ce script affiche sa réponse. Il ne fait que :
+ *   1. rattacher chaque photo à SA bouteille : la bouteille en cours (mode
+ *      appareil photo) ou une carte « Bouteille N » (mode galerie) ; chaque
+ *      bouteille a une clé, donnée ici, et un numéro dans l'ordre de prise de vue ;
+ *   2. garder dans le navigateur (IndexedDB) les photos prises depuis la page
+ *      jusqu'à ce que le serveur les ait reçues : elles n'existent nulle part
+ *      ailleurs. La bouteille en cours survit à un rechargement ;
+ *   3. envoyer, au plus 3 à la fois, en réessayant après une coupure, et
+ *      demander d'abord au serveur ce qu'il a déjà reçu ;
  *   4. garder l'écran allumé et reprendre au retour sur la page.
  */
 (function () {
@@ -17,107 +21,512 @@
   var racine = document.querySelector("[data-depot]");
   if (!racine) return;
   var inventaire = racine.dataset.inventaire;
+  var maximum = parseInt(racine.dataset.max, 10) || 4;
+  var prochainServeur = parseInt(racine.dataset.prochain, 10) || 1;
+  var attenteServeur = lireJson(racine.dataset.attente);  // clé -> photos déjà reçues
   var tailleCible = parseInt(racine.dataset.taille, 10) || 2500;
-  var dejaAuServeur = parseInt(racine.dataset.deja, 10) || 0;
   var SIMULTANES = 3;
+  var CLE_ETAT = "cave-scan-depot-" + inventaire;
 
   var caseReduire = document.getElementById("reduire");
   var liste = document.getElementById("envois");
   var resumeTexte = document.getElementById("resume-texte");
+  var resumeInitial = resumeTexte.textContent;
   var barre = document.getElementById("barre");
   var garderOuvert = document.getElementById("garder-ouvert");
-  var versOrdre = document.getElementById("vers-ordre");
+  var memoireIndisponible = document.getElementById("memoire-indisponible");
+  var versVerification = document.getElementById("vers-verification");
 
-  var file = [];       // { fichier, signature, etat, message, essais, ligne }
+  var file = [];       // les envois : { bouteille, fichier, nom, signature, etat, message, essais, ligne, idb }
   var actifs = 0;
   var verrouEcran = null;
 
   function api(chemin) { return "/inventaires/" + inventaire + chemin; }
+  function lireJson(texte) { try { return JSON.parse(texte || "{}") || {}; } catch (e) { return {}; } }
 
-  // --- choisir des photos --------------------------------------------------------------------
+  // --- l'état du dépôt : la bouteille en cours, les cartes de la galerie ----------------------------
 
-  ["galerie", "camera"].forEach(function (id) {
-    document.getElementById(id).addEventListener("change", function (evenement) {
-      ajouter(Array.prototype.slice.call(evenement.target.files));
-      evenement.target.value = "";  // pouvoir reprendre la même photo
-    });
-  });
+  var etat = lireEtat();
 
-  function ajouter(fichiers) {
-    var nouveaux = [];
-    fichiers.forEach(function (fichier) {
-      var signature = fichier.name + "|" + fichier.size + "|" + fichier.lastModified;
-      if (file.some(function (envoi) { return envoi.signature === signature; })) return;
-      var envoi = { fichier: fichier, signature: signature, etat: "attente", message: "En attente", essais: 0 };
-      envoi.ligne = creerLigne(envoi);
-      file.push(envoi);
-      nouveaux.push(envoi);
-    });
-    if (!nouveaux.length) return;
-    // Reprise après une coupure : ce que le serveur a déjà ne repart pas.
-    fetch(api("/photos/deja-recues"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ signatures: nouveaux.map(function (e) { return e.signature; }) }),
-    })
-      .then(function (reponse) { return reponse.ok ? reponse.json() : { deja_recues: [] }; })
-      .then(function (corps) {
-        nouveaux.forEach(function (envoi) {
-          if (corps.deja_recues.indexOf(envoi.signature) >= 0) marquer(envoi, "deja", "Déjà reçue");
-        });
-      })
-      .catch(function () { /* hors ligne : le serveur dédoublonnera de toute façon */ })
-      .then(pomper);
+  function lireEtat() {
+    var lu = null;
+    try { lu = JSON.parse(localStorage.getItem(CLE_ETAT)); } catch (e) { /* stockage refusé */ }
+    lu = lu || {};
+    return {
+      mode: lu.mode === "galerie" ? "galerie" : "appareil",
+      enCours: lu.enCours || null,
+      precedentes: lu.precedentes || [],
+      galerie: lu.galerie || [],
+      prochain: Math.max(lu.prochain || 1, prochainServeur),
+    };
   }
 
-  // --- la file d'envoi -----------------------------------------------------------------------
+  function sauver() {
+    try { localStorage.setItem(CLE_ETAT, JSON.stringify(etat)); } catch (e) { /* stockage refusé : la page reste utilisable */ }
+  }
+
+  function nouvelleCle() {
+    var aleatoire = window.crypto && crypto.randomUUID ? crypto.randomUUID()
+      : Date.now().toString(36) + Math.random().toString(36).slice(2);
+    return aleatoire.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64);
+  }
+
+  function nouvelleBouteille() {
+    var bouteille = { cle: nouvelleCle(), numero: etat.prochain, quantite: 1, recues: 0, quantiteAEnvoyer: false };
+    etat.prochain += 1;
+    return bouteille;
+  }
+
+  function toutes() {
+    return (etat.enCours ? [etat.enCours] : []).concat(etat.precedentes, etat.galerie);
+  }
+
+  function enAttenteLocale(bouteille) {
+    return file.filter(function (envoi) {
+      return envoi.bouteille.cle === bouteille.cle && ["attente", "actif", "reessai"].indexOf(envoi.etat) >= 0;
+    }).length;
+  }
+
+  function nombrePhotos(bouteille) { return bouteille.recues + enAttenteLocale(bouteille); }
+
+  // Au chargement : le serveur dit ce qu'il a déjà. Une bouteille qu'il n'attend
+  // plus (lancée, ou supprimée à la vérification) et sans envoi en cours est
+  // terminée : la page passe à une nouvelle.
+  function reconcilier() {
+    function encoreAttendue(bouteille) {
+      if (Object.prototype.hasOwnProperty.call(attenteServeur, bouteille.cle)) {
+        bouteille.recues = attenteServeur[bouteille.cle];
+        return true;
+      }
+      if (enAttenteLocale(bouteille)) return true;
+      if (bouteille.recues > 0) return false;  // reçue puis lancée ou supprimée
+      bouteille.recues = 0;
+      return true;  // pas encore de photo : elle attend la première
+    }
+    if (etat.enCours && !encoreAttendue(etat.enCours)) etat.enCours = null;
+    etat.precedentes = etat.precedentes.filter(encoreAttendue);
+    etat.galerie = etat.galerie.filter(encoreAttendue);
+    if (!etat.enCours) etat.enCours = nouvelleBouteille();
+    sauver();
+  }
+
+  // --- garder les photos prises dans le navigateur (IndexedDB) -------------------------------------
+
+  var base = ouvrirBase();
+
+  function ouvrirBase() {
+    return new Promise(function (ok, ko) {
+      if (!window.indexedDB) { ko(new Error("indisponible")); return; }
+      var demande = indexedDB.open("cave-scan-depot", 1);
+      demande.onupgradeneeded = function () {
+        var magasin = demande.result.createObjectStore("photos", { keyPath: "id", autoIncrement: true });
+        magasin.createIndex("inventaire", "inventaire");
+      };
+      demande.onsuccess = function () { ok(demande.result); };
+      demande.onerror = function () { ko(demande.error); };
+    });
+  }
+
+  function transaction(mode, faire) {
+    return base.then(function (bd) {
+      return new Promise(function (ok, ko) {
+        var t = bd.transaction("photos", mode);
+        var resultat = faire(t.objectStore("photos"));
+        t.oncomplete = function () { ok(resultat && resultat.result); };
+        t.onerror = function () { ko(t.error); };
+        t.onabort = function () { ko(t.error); };
+      });
+    });
+  }
+
+  function garder(envoi) {
+    return transaction("readwrite", function (magasin) {
+      return magasin.add({
+        inventaire: inventaire, cle: envoi.bouteille.cle, numero: envoi.bouteille.numero,
+        nom: envoi.nom, signature: envoi.signature, fichier: envoi.fichier,
+      });
+    }).then(function (id) { envoi.idb = id; })
+      .catch(function () { memoireIndisponible.hidden = false; });
+  }
+
+  function oublier(envoi) {
+    if (envoi.idb == null) return;
+    var id = envoi.idb;
+    envoi.idb = null;
+    transaction("readwrite", function (magasin) { return magasin.delete(id); }).catch(function () {});
+  }
+
+  function photosGardees() {
+    return transaction("readonly", function (magasin) {
+      return magasin.index("inventaire").getAll(inventaire);
+    }).catch(function () { return []; });
+  }
+
+  // --- mode appareil photo -----------------------------------------------------------------------
+
+  var titreEnCours = document.getElementById("titre-en-cours");
+  var compteur = document.getElementById("compteur");
+  var vignettesEnCours = document.getElementById("vignettes-en-cours");
+  var boutonPhoto = document.getElementById("bouton-photo");
+  var camera = document.getElementById("camera");
+  var champQuantite = document.getElementById("quantite");
+  var precedentes = document.getElementById("precedentes");
+
+  camera.addEventListener("change", function (evenement) {
+    var fichiers = Array.prototype.slice.call(evenement.target.files);
+    evenement.target.value = "";
+    fichiers.forEach(function (fichier) { ajouter(etat.enCours, fichier, true); });
+  });
+
+  document.querySelectorAll("[data-quantite]").forEach(function (bouton) {
+    bouton.addEventListener("click", function () {
+      changerQuantite(etat.enCours, (etat.enCours.quantite || 1) + parseInt(bouton.dataset.quantite, 10));
+    });
+  });
+  champQuantite.addEventListener("change", function () {
+    changerQuantite(etat.enCours, parseInt(champQuantite.value, 10));
+  });
+
+  document.getElementById("suivante").addEventListener("click", function () {
+    if (!nombrePhotos(etat.enCours)) {
+      afficherResume("Prenez au moins une photo de cette bouteille avant de passer à la suivante.");
+      return;
+    }
+    etat.precedentes.unshift(etat.enCours);
+    etat.enCours = nouvelleBouteille();
+    sauver();
+    afficherAppareil();
+  });
+
+  function reprendre(bouteille) {
+    etat.precedentes = etat.precedentes.filter(function (b) { return b !== bouteille; });
+    if (nombrePhotos(etat.enCours)) etat.precedentes.unshift(etat.enCours);
+    else etat.prochain = Math.max(etat.prochain - 1, etat.enCours.numero);  // numéro jamais utilisé : rendu
+    etat.enCours = bouteille;
+    sauver();
+    afficherAppareil();
+  }
+
+  function afficherAppareil() {
+    var bouteille = etat.enCours;
+    var nombre = nombrePhotos(bouteille);
+    titreEnCours.textContent = "Bouteille " + bouteille.numero;
+    compteur.textContent = nombre + " / " + maximum + " photo" + (nombre > 1 ? "s" : "");
+    champQuantite.value = bouteille.quantite;
+    var plein = nombre >= maximum;
+    boutonPhoto.classList.toggle("inactif", plein);
+    boutonPhoto.textContent = plein ? "Plafond de " + maximum + " photos atteint" : "Prendre une photo";
+    camera.disabled = plein;
+    afficherVignettes(vignettesEnCours, bouteille);
+
+    precedentes.textContent = "";
+    etat.precedentes.forEach(function (b) {
+      var ligne = document.createElement("li");
+      ligne.className = "precedente";
+      var texte = document.createElement("span");
+      var enCours = enAttenteLocale(b);
+      texte.textContent = "Bouteille " + b.numero + " · " + nombrePhotos(b) + " photo(s)"
+        + (b.quantite > 1 ? " · × " + b.quantite : "") + (enCours ? " · envoi en cours" : " · reçue");
+      var bouton = document.createElement("button");
+      bouton.type = "button";
+      bouton.className = "lien";
+      bouton.textContent = "Reprendre";
+      bouton.addEventListener("click", function () { reprendre(b); });
+      ligne.appendChild(texte);
+      ligne.appendChild(bouton);
+      precedentes.appendChild(ligne);
+    });
+  }
+
+  // --- mode galerie ou ordinateur -----------------------------------------------------------------
+
+  var cartes = document.getElementById("bouteilles-galerie");
+
+  document.getElementById("ajouter-bouteille").addEventListener("click", function () {
+    etat.galerie.push(nouvelleBouteille());
+    sauver();
+    afficherGalerie();
+  });
+
+  function afficherGalerie() {
+    cartes.textContent = "";
+    etat.galerie.forEach(function (bouteille) {
+      var carte = document.createElement("li");
+      carte.className = "carte-galerie";
+      var tete = document.createElement("div");
+      tete.className = "en-cours-tete";
+      var titre = document.createElement("strong");
+      titre.textContent = "Bouteille " + bouteille.numero;
+      var nombre = document.createElement("span");
+      nombre.className = "compteur";
+      nombre.textContent = nombrePhotos(bouteille) + " / " + maximum + " photo(s)";
+      tete.appendChild(titre);
+      tete.appendChild(nombre);
+      carte.appendChild(tete);
+
+      var vignettes = document.createElement("ul");
+      vignettes.className = "vignettes-depot";
+      afficherVignettes(vignettes, bouteille);
+      carte.appendChild(vignettes);
+
+      var actions = document.createElement("div");
+      actions.className = "actions-galerie";
+      var etiquette = document.createElement("label");
+      etiquette.className = "bouton" + (nombrePhotos(bouteille) >= maximum ? " inactif" : "");
+      etiquette.textContent = "Ajouter ses photos";
+      var choix = document.createElement("input");
+      choix.type = "file";
+      choix.multiple = true;
+      choix.accept = "image/*,.heic,.heif";
+      choix.className = "cache";
+      choix.disabled = nombrePhotos(bouteille) >= maximum;
+      choix.addEventListener("change", function (evenement) {
+        var fichiers = Array.prototype.slice.call(evenement.target.files);
+        evenement.target.value = "";
+        fichiers.forEach(function (fichier) { ajouter(bouteille, fichier, false); });
+      });
+      etiquette.appendChild(choix);
+      actions.appendChild(etiquette);
+
+      var quantite = document.createElement("label");
+      quantite.className = "quantite-galerie";
+      quantite.textContent = "× ";
+      var champ = document.createElement("input");
+      champ.type = "text";
+      champ.inputMode = "numeric";
+      champ.size = 3;
+      champ.value = bouteille.quantite;
+      champ.setAttribute("aria-label", "Quantité de la bouteille " + bouteille.numero);
+      champ.addEventListener("change", function () { changerQuantite(bouteille, parseInt(champ.value, 10)); });
+      quantite.appendChild(champ);
+      actions.appendChild(quantite);
+
+      if (!nombrePhotos(bouteille)) {
+        var retirer = document.createElement("button");
+        retirer.type = "button";
+        retirer.className = "lien";
+        retirer.textContent = "Retirer cette carte";
+        retirer.addEventListener("click", function () {
+          etat.galerie = etat.galerie.filter(function (b) { return b !== bouteille; });
+          if (!etat.galerie.length) etat.galerie.push(nouvelleBouteille());
+          sauver();
+          afficherGalerie();
+        });
+        actions.appendChild(retirer);
+      }
+      carte.appendChild(actions);
+      cartes.appendChild(carte);
+    });
+  }
+
+  function afficherVignettes(conteneur, bouteille) {
+    conteneur.textContent = "";
+    file.forEach(function (envoi) {
+      if (envoi.bouteille.cle !== bouteille.cle || envoi.etat === "refusee") return;
+      var element = document.createElement("li");
+      element.className = "vignette-depot " + envoi.etat;
+      element.title = envoi.nom + " — " + envoi.message;
+      if (envoi.apercu) {
+        var image = document.createElement("img");
+        image.src = envoi.apercu;
+        image.alt = envoi.nom;
+        element.appendChild(image);
+      } else {
+        element.textContent = envoi.nom;
+      }
+      conteneur.appendChild(element);
+    });
+    var anciennes = bouteille.recues - file.filter(function (envoi) {
+      return envoi.bouteille.cle === bouteille.cle && (envoi.etat === "ok");
+    }).length;
+    if (anciennes > 0) {
+      var note = document.createElement("li");
+      note.className = "vignette-depot deja";
+      note.textContent = "+ " + anciennes + " déjà reçue(s)";
+      conteneur.appendChild(note);
+    }
+  }
+
+  // --- changer de mode ----------------------------------------------------------------------------
+
+  var boutonsMode = Array.prototype.slice.call(document.querySelectorAll("[data-mode]"));
+  boutonsMode.forEach(function (bouton) {
+    bouton.addEventListener("click", function () { choisirMode(bouton.dataset.mode); });
+  });
+
+  function choisirMode(mode) {
+    etat.mode = mode;
+    // La première carte n'est créée qu'ici : créée d'avance, elle prendrait un
+    // numéro et la bouteille suivante de l'appareil photo en sauterait un.
+    if (mode === "galerie" && !etat.galerie.length) etat.galerie.push(nouvelleBouteille());
+    sauver();
+    boutonsMode.forEach(function (bouton) {
+      var actif = bouton.dataset.mode === mode;
+      bouton.classList.toggle("actif", actif);
+      bouton.setAttribute("aria-selected", actif ? "true" : "false");
+    });
+    document.querySelectorAll("[data-panneau]").forEach(function (panneau) {
+      panneau.hidden = panneau.dataset.panneau !== mode;
+    });
+    afficherGalerie();
+  }
+
+  // --- quantité (« × N ») ----------------------------------------------------------------------------
+
+  function changerQuantite(bouteille, valeur) {
+    if (!(valeur >= 1)) valeur = 1;
+    bouteille.quantite = valeur;
+    bouteille.quantiteAEnvoyer = true;
+    sauver();
+    rafraichir();
+    envoyerQuantites();
+  }
+
+  // Une bouteille déjà connue du serveur reçoit sa quantité tout de suite ; sinon
+  // elle partira avec sa première photo.
+  function envoyerQuantites() {
+    toutes().forEach(function (bouteille) {
+      if (!bouteille.quantiteAEnvoyer || !bouteille.recues || bouteille.envoiQuantite) return;
+      bouteille.envoiQuantite = true;
+      var valeur = bouteille.quantite;
+      fetch(api("/bouteilles-en-cours/" + encodeURIComponent(bouteille.cle) + "/quantite"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantite: valeur }),
+      }).then(function (reponse) {
+        if (reponse.ok && bouteille.quantite === valeur) bouteille.quantiteAEnvoyer = false;
+        else if (reponse.status >= 400 && reponse.status < 500) {
+          return reponse.json().then(function (corps) { afficherResume(corps.message || "Quantité refusée."); });
+        }
+      }).catch(function () { /* coupure : nouvel essai au retour du réseau */ })
+        .then(function () { delete bouteille.envoiQuantite; sauver(); });
+    });
+  }
+
+  // --- ajouter une photo à une bouteille -----------------------------------------------------------
+
+  function ajouter(bouteille, fichier, depuisLaPage) {
+    var signature = fichier.name + "|" + fichier.size + "|" + fichier.lastModified;
+    if (file.some(function (envoi) { return envoi.signature === signature; })) return;
+    var envoi = {
+      bouteille: bouteille, fichier: fichier, nom: fichier.name || "photo.jpg", signature: signature,
+      etat: "attente", message: "En attente", essais: 0, idb: null,
+      apercu: window.URL && URL.createObjectURL ? URL.createObjectURL(fichier) : null,
+    };
+    if (nombrePhotos(bouteille) >= maximum) {
+      envoi.ligne = creerLigne(envoi);
+      marquer(envoi, "refusee", "Bouteille " + bouteille.numero + " : " + maximum
+        + " photos au plus. Ajoutez celle-ci à une autre bouteille.");
+      return;
+    }
+    envoi.ligne = creerLigne(envoi);
+    file.push(envoi);
+    // Prise depuis la page, la photo n'existe que dans le navigateur : gardée
+    // jusqu'à sa réception. (Une photo de la galerie reste dans la galerie.)
+    var avant = depuisLaPage ? garder(envoi) : Promise.resolve();
+    avant.then(function () {
+      return fetch(api("/photos/deja-recues"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatures: [signature] }),
+      }).then(function (reponse) { return reponse.ok ? reponse.json() : { deja_recues: [] }; })
+        .then(function (corps) { if (corps.deja_recues.indexOf(signature) >= 0) terminer(envoi, "deja", "Déjà reçue"); })
+        .catch(function () { /* hors ligne : le serveur dédoublonnera de toute façon */ });
+    }).then(function () { rafraichir(); pomper(); });
+    rafraichir();
+  }
+
+  // Au retour sur la page : les photos prises et pas encore reçues repartent.
+  function reprendreLesPhotosGardees() {
+    return photosGardees().then(function (gardees) {
+      gardees.forEach(function (garde) {
+        var bouteille = toutes().filter(function (b) { return b.cle === garde.cle; })[0];
+        if (!bouteille) {
+          bouteille = { cle: garde.cle, numero: garde.numero, quantite: 1, recues: 0, quantiteAEnvoyer: false };
+          etat.precedentes.push(bouteille);
+        }
+        var envoi = {
+          bouteille: bouteille, fichier: garde.fichier, nom: garde.nom, signature: garde.signature,
+          etat: "attente", message: "Reprise après interruption", essais: 0, idb: garde.id,
+          apercu: window.URL && URL.createObjectURL ? URL.createObjectURL(garde.fichier) : null,
+        };
+        envoi.ligne = creerLigne(envoi);
+        file.push(envoi);
+      });
+      if (gardees.length) afficherResume(gardees.length + " photo(s) prise(s) ici et pas encore reçue(s) : l'envoi reprend.");
+    });
+  }
+
+  // --- la file d'envoi ---------------------------------------------------------------------------
 
   function pomper() {
+    envoyerQuantites();
     if (!navigator.onLine) {
       afficherResume("Connexion perdue : l'envoi reprendra tout seul dès son retour.");
       return;
     }
     while (actifs < SIMULTANES) {
-      var suivant = file.find(function (envoi) { return envoi.etat === "attente"; });
+      var suivant = file.find(function (envoi) { return envoi.etat === "attente" && !doitAttendre(envoi); });
       if (!suivant) break;
       envoyer(suivant);
     }
-    afficherResume();
+    rafraichir();
+  }
+
+  // Les photos d'UNE bouteille partent une à la fois, dans l'ordre où elles ont
+  // été prises : le serveur les range dans l'ordre d'arrivée (« Photo 1 sur 3 »).
+  // Plusieurs bouteilles, elles, partent en parallèle.
+  function doitAttendre(envoi) {
+    var avant = file.slice(0, file.indexOf(envoi));
+    return avant.some(function (autre) {
+      return autre.bouteille.cle === envoi.bouteille.cle && ["attente", "actif", "reessai"].indexOf(autre.etat) >= 0;
+    });
   }
 
   function envoyer(envoi) {
     actifs += 1;
     marquer(envoi, "actif", "Préparation…");
     garderEcranAllume();
-    preparer(envoi.fichier)
+    var quantite = envoi.bouteille.quantite;
+    preparer(envoi.fichier, envoi.nom)
       .then(function (prete) {
         marquer(envoi, "actif", "Envoi…");
         var donnees = new FormData();
         donnees.append("fichier", prete.contenu, prete.nom);
-        if (prete.date) donnees.append("prise_de_vue", prete.date);
+        donnees.append("bouteille", envoi.bouteille.cle);
+        donnees.append("numero", envoi.bouteille.numero);
+        donnees.append("quantite", quantite);
         donnees.append("signature", envoi.signature);
         return fetch(api("/photos"), { method: "POST", body: donnees });
       })
       .then(function (reponse) {
         if (reponse.ok) {
           return reponse.json().then(function (corps) {
-            if (corps.deja_recue) marquer(envoi, "deja", "Déjà reçue");
-            else marquer(envoi, "ok", "Envoyée");
+            if (corps.deja_recue) { terminer(envoi, "deja", "Déjà reçue"); return; }
+            envoi.bouteille.recues += 1;
+            if (envoi.bouteille.quantite === quantite) envoi.bouteille.quantiteAEnvoyer = false;
+            terminer(envoi, "ok", "Envoyée");
           });
         }
         if (reponse.status >= 400 && reponse.status < 500) {
           // Refusée par le serveur : la raison est affichée, jamais ignorée.
           return reponse.json()
             .catch(function () { return { message: "Refusée par le serveur." }; })
-            .then(function (corps) { marquer(envoi, "refusee", corps.message || "Refusée par le serveur."); });
+            .then(function (corps) { terminer(envoi, "refusee", corps.message || "Refusée par le serveur."); });
         }
         throw new Error("serveur " + reponse.status);
       })
       .catch(function () { reessayerPlusTard(envoi); })
       .then(function () {
         actifs -= 1;
+        sauver();
         pomper();
       });
+  }
+
+  function terminer(envoi, etatFinal, message) {
+    oublier(envoi);  // reçue (ou refusée, avec sa raison affichée) : plus besoin de la garder
+    marquer(envoi, etatFinal, message);
   }
 
   function reessayerPlusTard(envoi) {
@@ -133,7 +542,6 @@
   window.addEventListener("offline", function () { afficherResume(); });
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState !== "visible") return;
-    // Retour sur la page : les envois suspendus repartent tout de suite.
     file.forEach(function (envoi) { if (envoi.etat === "reessai") envoi.etat = "attente"; });
     pomper();
   });
@@ -141,19 +549,16 @@
     if (enCours()) { evenement.preventDefault(); evenement.returnValue = ""; }
   });
 
-  // --- préparer une photo --------------------------------------------------------------------
+  // --- préparer une photo --------------------------------------------------------------------------
 
-  function preparer(fichier) {
-    // La date AVANT toute réduction : la réduction efface l'EXIF (0129).
-    return lireDate(fichier).then(function (date) {
-      if (!caseReduire.checked) return { contenu: fichier, nom: fichier.name, date: date };
-      return reduire(fichier)
-        .then(function (reduit) {
-          if (!reduit) return { contenu: fichier, nom: fichier.name, date: date };
-          return { contenu: reduit, nom: fichier.name.replace(/\.[^.]*$/, "") + ".jpg", date: date };
-        })
-        .catch(function () { return { contenu: fichier, nom: fichier.name, date: date }; });
-    });
+  function preparer(fichier, nom) {
+    if (!caseReduire.checked) return Promise.resolve({ contenu: fichier, nom: nom });
+    return reduire(fichier)
+      .then(function (reduit) {
+        if (!reduit) return { contenu: fichier, nom: nom };
+        return { contenu: reduit, nom: nom.replace(/\.[^.]*$/, "") + ".jpg" };
+      })
+      .catch(function () { return { contenu: fichier, nom: nom }; });
   }
 
   function reduire(fichier) {
@@ -167,54 +572,6 @@
       toile.getContext("2d").drawImage(image, 0, 0, toile.width, toile.height);
       return new Promise(function (ok) { toile.toBlob(ok, "image/jpeg", 0.9); });
     });
-  }
-
-  // Date de prise de vue dans l'EXIF d'un JPEG : DateTimeOriginal, sinon DateTime.
-  function lireDate(fichier) {
-    return fichier.slice(0, 256 * 1024).arrayBuffer().then(function (tampon) {
-      try {
-        var vue = new DataView(tampon);
-        if (vue.getUint16(0) !== 0xFFD8) return null;  // pas un JPEG
-        var position = 2;
-        while (position + 10 <= vue.byteLength) {
-          var marqueur = vue.getUint16(position);
-          if ((marqueur & 0xFF00) !== 0xFF00 || marqueur === 0xFFDA) return null;
-          if (marqueur === 0xFFE1 && vue.getUint32(position + 4) === 0x45786966) {  // « Exif »
-            return dateTiff(vue, position + 10);
-          }
-          position += 2 + vue.getUint16(position + 2);
-        }
-      } catch (e) { /* EXIF tronqué ou illisible : pas de date */ }
-      return null;
-    }).catch(function () { return null; });
-  }
-
-  function dateTiff(vue, debut) {
-    var petit = vue.getUint16(debut) === 0x4949;  // « II » : petit-boutiste
-    function u16(o) { return vue.getUint16(debut + o, petit); }
-    function u32(o) { return vue.getUint32(debut + o, petit); }
-    function lireIfd(decalage) {
-      var entrees = {};
-      var nombre = u16(decalage);
-      for (var i = 0; i < nombre; i += 1) {
-        var e = decalage + 2 + i * 12;
-        entrees[u16(e)] = { type: u16(e + 2), compte: u32(e + 4), valeur: e + 8 };
-      }
-      return entrees;
-    }
-    function texte(entree) {
-      if (!entree || entree.type !== 2) return null;
-      var ou = entree.compte > 4 ? u32(entree.valeur) : entree.valeur;
-      var s = "";
-      for (var i = 0; i < entree.compte - 1; i += 1) s += String.fromCharCode(vue.getUint8(debut + ou + i));
-      return s;
-    }
-    var ifd0 = lireIfd(u32(4));
-    var brute = null;
-    if (ifd0[0x8769]) brute = texte(lireIfd(u32(ifd0[0x8769].valeur))[0x9003]);
-    brute = brute || texte(ifd0[0x0132]);
-    var m = brute && brute.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-    return m ? m[1] + "-" + m[2] + "-" + m[3] + "T" + m[4] + ":" + m[5] + ":" + m[6] : null;
   }
 
   // --- garder l'écran allumé -------------------------------------------------------------------
@@ -235,31 +592,37 @@
     ligne.className = "envoi attente";
     var nom = document.createElement("span");
     nom.className = "envoi-nom";
-    nom.textContent = envoi.fichier.name;
-    var etat = document.createElement("span");
-    etat.className = "envoi-etat";
-    etat.textContent = "En attente";
+    nom.textContent = "Bouteille " + envoi.bouteille.numero + " · " + envoi.nom;
+    var etatEnvoi = document.createElement("span");
+    etatEnvoi.className = "envoi-etat";
+    etatEnvoi.textContent = envoi.message;
     ligne.appendChild(nom);
-    ligne.appendChild(etat);
+    ligne.appendChild(etatEnvoi);
     liste.insertBefore(ligne, liste.firstChild);
     return ligne;
   }
 
-  function marquer(envoi, etat, message) {
-    envoi.etat = etat;
+  function marquer(envoi, etatEnvoi, message) {
+    envoi.etat = etatEnvoi;
     envoi.message = message;
-    envoi.ligne.className = "envoi " + etat;
+    envoi.ligne.className = "envoi " + etatEnvoi;
     envoi.ligne.querySelector(".envoi-etat").textContent = message;
-    envoi.ligne.dataset.etat = etat;
-    afficherResume();
+    envoi.ligne.dataset.etat = etatEnvoi;
+    rafraichir();
   }
 
   function enCours() {
     return file.some(function (envoi) { return ["attente", "actif", "reessai"].indexOf(envoi.etat) >= 0; });
   }
 
-  function compter(etat) {
-    return file.filter(function (envoi) { return envoi.etat === etat; }).length;
+  function compter(etatEnvoi) {
+    return file.filter(function (envoi) { return envoi.etat === etatEnvoi; }).length;
+  }
+
+  function rafraichir() {
+    afficherAppareil();
+    afficherGalerie();
+    afficherResume();
   }
 
   function afficherResume(message) {
@@ -270,16 +633,14 @@
     if (compter("deja")) parties.push(compter("deja") + " déjà reçue(s)");
     if (compter("refusee")) parties.push(compter("refusee") + " refusée(s) — voir la raison");
     if (total - termines) parties.push((total - termines) + " en cours");
-    resumeTexte.textContent = message || (total
-      ? parties.join(" · ")
-      : dejaAuServeur + " photo(s) déjà reçue(s) pour cet inventaire.");
+    resumeTexte.textContent = message || (total ? parties.join(" · ") : resumeInitial);
     barre.hidden = !total;
     barre.max = total || 1;
     barre.value = termines;
 
     var occupe = enCours();
-    versOrdre.classList.toggle("inactif", occupe);
-    versOrdre.setAttribute("aria-disabled", occupe ? "true" : "false");
+    versVerification.classList.toggle("inactif", occupe);
+    versVerification.setAttribute("aria-disabled", occupe ? "true" : "false");
     racine.dataset.etat = occupe ? "envoi" : "repos";
     if (!occupe) {
       garderOuvert.hidden = true;
@@ -287,10 +648,20 @@
     }
   }
 
-  versOrdre.addEventListener("click", function (evenement) {
+  versVerification.addEventListener("click", function (evenement) {
     if (enCours()) {
       evenement.preventDefault();
-      afficherResume("Attendez la fin de l'envoi avant de vérifier l'ordre.");
+      afficherResume("Attendez la fin de l'envoi avant de vérifier les bouteilles.");
     }
+  });
+
+  // --- démarrage -------------------------------------------------------------------------------
+
+  base.catch(function () { /* signalé à la première photo prise depuis la page */ });
+  reprendreLesPhotosGardees().then(function () {
+    reconcilier();
+    choisirMode(etat.mode);
+    rafraichir();
+    pomper();
   });
 })();

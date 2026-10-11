@@ -27,7 +27,7 @@ from src.donnees.stockage import chemin_stocke
 from src.extract.base import Extractor
 from src.extract.fixture_extract import FixtureExtractor, generer_photos_fictives
 from src.extract.schema import Bouteille, Couleur, Format
-from src.io.photos import PhotosBouteille, apparier_photos, grouper_photos
+from src.io.photos import PhotosBouteille, grouper_photos
 from src.normalize.normalize import REGLES, normalize
 from src.services.inventaires import charger_inventaire, lister_inventaires
 from src.services.relecture import valeurs_modele
@@ -76,9 +76,8 @@ def test_normalize_est_l_identite_en_v0():
 
 
 # --- photos ---------------------------------------------------------------
-# Les tests « un sous-dossier par bouteille » et « dossier plat = une image par
-# bouteille » encodaient la convention remplacée par decisions.md 0023
-# (appariement par ordre). Leurs successeurs sont dans tests/test_photos.py.
+# Une bouteille = un groupe de photos : une photo à la racine, ou un
+# sous-dossier (decisions.md 0166). Le détail est dans tests/test_photos.py.
 
 
 def test_dossier_sans_image_leve_une_erreur(tmp_path):
@@ -310,19 +309,19 @@ def test_identifiant_stable_et_insensible_au_renommage(tmp_path):
     etiquette, contre = tmp_path / "a.jpg", tmp_path / "b.jpg"
     etiquette.write_bytes(b"photo etiquette")
     contre.write_bytes(b"photo contre")
-    premier = PhotosBouteille(etiquette=etiquette, contre_etiquette=contre).identifiant
+    premier = PhotosBouteille(photos=(etiquette, contre), nom="a").identifiant
 
-    assert PhotosBouteille(etiquette=etiquette, contre_etiquette=contre).identifiant == premier
+    assert PhotosBouteille(photos=(etiquette, contre), nom="a").identifiant == premier
     renommee = etiquette.rename(tmp_path / "IMG_9999.jpg")
-    assert PhotosBouteille(etiquette=renommee, contre_etiquette=contre).identifiant == premier
+    assert PhotosBouteille(photos=(renommee, contre), nom="b").identifiant == premier
     contre.write_bytes(b"autre photo")
-    assert PhotosBouteille(etiquette=renommee, contre_etiquette=contre).identifiant != premier
+    assert PhotosBouteille(photos=(renommee, contre), nom="b").identifiant != premier
 
 
 def test_chaque_bouteille_recoit_l_identifiant_de_ses_photos(tmp_path, dossier_photos, monkeypatch):
     """En base et à l'export, posé par l'outil, jamais par le modèle."""
     base, sortie = tmp_path / "cave.db", tmp_path / "listing.xlsx"
-    attendus = [vues.identifiant for vues in apparier_photos(dossier_photos).bouteilles]
+    attendus = [vues.identifiant for vues in grouper_photos(dossier_photos).bouteilles]
     brancher(monkeypatch, fixtures())
 
     assert lancer("--photos", dossier_photos, "--base", base, "--sortie", sortie) == 0
@@ -334,8 +333,8 @@ def test_chaque_bouteille_recoit_l_identifiant_de_ses_photos(tmp_path, dossier_p
 def test_photos_en_double_arretent_avant_tout_appel(tmp_path, dossier_photos, monkeypatch, capsys):
     """Une photo copiée deux fois : on s'arrête avant de payer deux fois — et
     avant même de créer le client du modèle ou l'inventaire."""
-    shutil.copy(dossier_photos / "bouteille_02_etiquette.jpg", dossier_photos / "copie_etiquette.jpg")
-    shutil.copy(dossier_photos / "bouteille_02_contre.jpg", dossier_photos / "copie_contre.jpg")
+    shutil.copy(dossier_photos / "bouteille_02" / "1_etiquette.jpg", dossier_photos / "copie_etiquette.jpg")
+    shutil.copy(dossier_photos / "bouteille_02" / "2_contre.jpg", dossier_photos / "copie_contre.jpg")
     base = tmp_path / "cave.db"
     clients = []
     monkeypatch.setattr(run_v0, "_extracteur", lambda *arguments: clients.append(1) or fixtures())
@@ -398,25 +397,25 @@ def test_la_quantite_corrigee_par_l_expert_s_additionne_a_l_export(tmp_path, mon
     assert colonne_excel(sortie, "quantite") == [3]
 
 
-# --- photos vérifiées avant tout appel (decisions.md 0068) ----------------------
+# --- photos vérifiées avant tout appel (decisions.md 0159, 0166) ------------------
 
 
 def test_photos_invalides_signalees_sans_cle_ni_appel(tmp_path, capsys, monkeypatch):
     """Le refus arrive AVANT la création du client du modèle : aucune clé
-    n'est nécessaire pour apprendre qu'il manque une photo."""
+    n'est nécessaire pour apprendre qu'une bouteille a trop de photos."""
     from PIL import Image
 
     for variable in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY"):
         monkeypatch.delenv(variable, raising=False)
-    dossier = tmp_path / "photos"
-    dossier.mkdir()
-    for nom in ("IMG_0001.jpg", "IMG_0002.jpg", "IMG_0003.jpg"):
-        Image.new("RGB", (8, 8)).save(dossier / nom, "JPEG")
+    dossier = tmp_path / "photos" / "bouteille_01"
+    dossier.mkdir(parents=True)
+    for rang in range(5):  # plafond de la maison : 4
+        Image.new("RGB", (8, 8), (rang, 0, 0)).save(dossier / f"IMG_000{rang}.jpg", "JPEG")
 
-    code = run_v0.main(["--photos", str(dossier), "--sortie", str(tmp_path / "l.xlsx")])
+    code = run_v0.main(["--photos", str(tmp_path / "photos"), "--sortie", str(tmp_path / "l.xlsx")])
 
     assert code == 2
-    assert "IMPAIR" in capsys.readouterr().err
+    assert "plafond de 4 photos" in capsys.readouterr().err
     assert not (tmp_path / "l.xlsx").exists()
 
 
@@ -486,14 +485,18 @@ def test_une_option_remplacee_dit_par_quoi_la_remplacer(options, capsys):
     assert "unrecognized arguments" not in erreur
 
 
-# --- étiquettes seules : --sans-contre (decisions.md 0108) ---------------------------------
+# --- une photo à la racine = une bouteille (decisions.md 0166, qui remplace 0108) -----------
 
 
-def test_sans_contre_une_photo_par_bouteille_de_bout_en_bout(tmp_path, monkeypatch, capsys):
-    """Un dossier d'étiquettes seules, en nombre impair : une bouteille par photo,
-    le modèle ne reçoit aucune contre-étiquette, l'export a une ligne par photo."""
-    photos = generer_photos_fictives(tmp_path / "photos", 2)
-    (photos / "bouteille_02_contre.jpg").unlink()
+def test_une_photo_a_la_racine_une_bouteille_de_bout_en_bout(tmp_path, monkeypatch, capsys):
+    """Un dossier d'étiquettes seules, à plat, en nombre impair : une bouteille par
+    photo, le modèle reçoit une photo par bouteille, l'export a une ligne par photo."""
+    from PIL import Image
+
+    photos = tmp_path / "photos"
+    photos.mkdir()
+    for rang in range(3):
+        Image.new("RGB", (8, 8), (rang * 60, 10, 10)).save(photos / f"etiquette_{rang + 1}.jpg", "JPEG")
     base, sortie = tmp_path / "cave.db", tmp_path / "l.xlsx"
     recues = []
 
@@ -505,12 +508,18 @@ def test_sans_contre_une_photo_par_bouteille_de_bout_en_bout(tmp_path, monkeypat
     source = fixtures()
     brancher(monkeypatch, Espion(source._charges, source.config))
 
-    code = lancer("--photos", photos, "--sans-contre", "--base", base, "--sortie", sortie)
+    code = lancer("--photos", photos, "--base", base, "--sortie", sortie)
 
     assert code == 0
-    assert "(sans contre-étiquette)" in capsys.readouterr().out
+    assert "1. B-" in capsys.readouterr().out
     assert recues == [1, 1, 1]  # une photo par bouteille, rien d'autre
-    assert requete(base, "SELECT count(*) FROM bouteille WHERE photo_contre_id IS NULL") == [(3,)]
+    assert requete(base, "SELECT count(*) FROM photo GROUP BY groupe_id") == [(1,), (1,), (1,)]
     assert len(colonne_excel(sortie, "id")) == 3
     assert inventaire.main(["fiche", "1", "1", "--base", str(base)]) == 0
-    assert "(pas de contre-étiquette)" in capsys.readouterr().out
+    assert "Photos : etiquette_1.jpg" in capsys.readouterr().out
+
+
+def test_l_option_sans_contre_dit_par_quoi_elle_est_remplacee(capsys):
+    code = run_v0.main(["--photos", "data/photos", "--sans-contre"])
+    erreur = capsys.readouterr().err
+    assert code == 2 and "sous-dossier" in erreur and "unrecognized arguments" not in erreur

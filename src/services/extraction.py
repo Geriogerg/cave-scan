@@ -157,11 +157,8 @@ def traiter_reservee(
     ouverte pendant l'appel au modèle (decisions.md 0113).
     """
     bouteille = charger_bouteille(session, bouteille_id)
-    photos = [
-        chemin_stocke(stockage, photo.chemin)
-        for photo in (bouteille.photo_etiquette, bouteille.photo_contre)
-        if photo is not None  # inventaire d'étiquettes seules (0108)
-    ]
+    # Toutes ses photos, dans l'ordre de l'expert (decisions.md 0164, 0166).
+    photos = [chemin_stocke(stockage, photo.chemin) for photo in bouteille.photos]
     config = config_figee(bouteille.inventaire)
     session.commit()
 

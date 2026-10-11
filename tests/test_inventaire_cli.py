@@ -155,7 +155,7 @@ def test_stats_de_relecture(base, capsys):
     code, sortie, _ = lancer(capsys, base, "stats", 1)
     assert code == 0
     assert "Relecture    : 12 s au total, 12.0 s par bouteille (1 chronométrée(s), absences exclues)" in sortie
-    assert "Cas particuliers : 0 réanalysée(s), 0 née(s) d'une séparation, 1 paire(s) signalée(s)" in sortie
+    assert "Cas particuliers : 0 réanalysée(s), 0 née(s) d'une séparation, 1 problème(s) de photos signalé(s)" in sortie
 
 
 def test_inventaire_ou_bouteille_introuvable(base, capsys):

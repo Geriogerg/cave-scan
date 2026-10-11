@@ -3,8 +3,10 @@
 
     python run_v0.py --dry-run
     python run_v0.py --photos data/photos [--manual listing.xlsx] [--nom "Cave X"] [--limite 3]
-    python run_v0.py --photos data/etiquettes --sans-contre     (une photo par bouteille)
     python run_v0.py --inventaire 4 [--manual listing.xlsx]
+
+Dossier de photos : une photo posée à la racine = une bouteille d'une photo ;
+un sous-dossier = une bouteille, avec toutes ses photos (decisions.md 0166).
 
 `--photos` crée un inventaire (config figée, photos stockées), l'extrait, l'exporte.
 `--inventaire ID` reprend un inventaire existant : termine son extraction là où
@@ -77,6 +79,12 @@ OPTIONS_REMPLACEES = {
         "--auto est remplacé par --inventaire ID : il réexporte et rescore depuis "
         "la base sans rappeler le modèle (ajouter --manual pour le score). "
         "Numéros : python inventaire.py lister"
+    ),
+    "sans_contre": (
+        "--sans-contre n'existe plus : chaque photo posée à la racine du dossier est "
+        "déjà une bouteille d'une seule photo. Pour les bouteilles qui ont plusieurs "
+        "photos (contre-étiquette, capsule…), ranger chacune dans son propre "
+        "sous-dossier (decisions.md 0166)."
     ),
 }
 
@@ -152,12 +160,9 @@ def _nouvel_inventaire(arguments: argparse.Namespace) -> int:
     stockage = dossier_stockage()
 
     with session_de_base(arguments.base) as session:
-        # Les photos sont vérifiées (impair, HEIC, doublons) AVANT la création du
-        # client du modèle : un dossier invalide se signale sans clé ni coût.
-        cree = _creer(
-            session, config, chemin_config, arguments.photos, nom, stockage,
-            arguments.limite, arguments.sans_contre,
-        )
+        # Les photos sont vérifiées (formats, plafond, doublons) AVANT la création
+        # du client du modèle : un dossier invalide se signale sans clé ni coût.
+        cree = _creer(session, config, chemin_config, arguments.photos, nom, stockage, arguments.limite)
         extracteur = _extracteur(arguments.backend, config, cree.inventaire_id)
         print(f"Modèle : {extracteur.modele}\n")
         _extraire(session, cree.inventaire_id, extracteur, stockage)
@@ -171,7 +176,6 @@ def _reprendre(arguments: argparse.Namespace) -> int:
         ("--maison", arguments.maison),
         ("--limite", arguments.limite),
         ("--nom", arguments.nom),
-        ("--sans-contre", arguments.sans_contre or None),
     )
     ignorees = [option for option, valeur in creation if valeur is not None]
     if ignorees:
@@ -213,12 +217,9 @@ def _creer(
     nom: str,
     stockage: Path,
     limite: int | None,
-    sans_contre: bool = False,
 ) -> InventaireCree:
     try:
-        cree = creer_inventaire(
-            session, config.maison, chemin_config, photos, nom, stockage, limite, sans_contre
-        )
+        cree = creer_inventaire(session, config.maison, chemin_config, photos, nom, stockage, limite)
     except (PhotosInvalides, NotADirectoryError) as erreur:
         raise Arret(str(erreur)) from None
 
@@ -228,18 +229,9 @@ def _creer(
         if avertissement not in config.avertissements:  # celles-ci, déjà affichées
             print(f"⚠  {avertissement}")
 
-    # L'appariement AVANT l'extraction : une paire décalée se voit ici, pas
-    # après avoir payé tous les appels (decisions.md 0023, 0068).
-    if sans_contre:
-        print(f"{cree.nb_bouteilles} bouteille(s), une photo d'étiquette chacune, tri par {cree.tri} :")
-    else:
-        print(f"Appariement de {cree.nb_bouteilles} paire(s), tri par {cree.tri} :")
-    if cree.sans_date:
-        apercu = ", ".join(cree.sans_date[:3]) + ("…" if len(cree.sans_date) > 3 else "")
-        print(
-            f"  ⚠  {len(cree.sans_date)} photo(s) sans date EXIF ({apercu}) : tri par nom "
-            f"de fichier pour TOUTES — vérifier qu'il suit l'ordre de prise de vue."
-        )
+    # Les bouteilles AVANT l'extraction : une photo mal rangée se voit ici, pas
+    # après avoir payé tous les appels (decisions.md 0166).
+    print(f"{cree.nb_bouteilles} bouteille(s) — une par photo à la racine, une par sous-dossier :")
     for bouteille in lister_bouteilles(session, cree.inventaire_id):
         print(f"  {bouteille.position:>3}. {bouteille.identifiant}  {_photos_de(bouteille)}")
     print()
@@ -311,9 +303,7 @@ def _restituer(session: Session, inventaire_id: int, chemin_manuel: Path | None,
 
 
 def _photos_de(bouteille: FicheBouteille) -> str:
-    if bouteille.photo_contre is None:
-        return f"{bouteille.photo_etiquette.nom_origine} (sans contre-étiquette)"
-    return f"{bouteille.photo_etiquette.nom_origine} + {bouteille.photo_contre.nom_origine}"
+    return " + ".join(photo.nom_origine for photo in bouteille.photos)
 
 
 def _rappel_reprise(inventaire_id: int, base: Path | None) -> None:
@@ -375,7 +365,12 @@ def _analyseur() -> argparse.ArgumentParser:
         help="Tourne hors ligne sur les fixtures : ni clé API, ni réseau, ni photos ; "
         "base temporaire, sauf --base.",
     )
-    mode.add_argument("--photos", type=Path, help="Dossier des photos : crée un nouvel inventaire.")
+    mode.add_argument(
+        "--photos",
+        type=Path,
+        help="Dossier des photos : crée un nouvel inventaire. Une photo à la racine = une bouteille ; "
+        "un sous-dossier = une bouteille avec toutes ses photos.",
+    )
     mode.add_argument(
         "--inventaire",
         type=int,
@@ -406,13 +401,6 @@ def _analyseur() -> argparse.ArgumentParser:
         "sur 3 bouteilles avant d'en lancer 200.",
     )
     analyseur.add_argument(
-        "--sans-contre",
-        action="store_true",
-        help="Le dossier ne contient que des étiquettes : une photo par bouteille, "
-        "sans contre-étiquette. Sans cette option, les photos vont par paires "
-        "étiquette puis contre-étiquette.",
-    )
-    analyseur.add_argument(
         "--maison",
         type=Path,
         help=f"Config JSON de la maison (défaut : {CONFIG_DEFAUT.name}). Figée dans "
@@ -431,6 +419,7 @@ def _analyseur() -> argparse.ArgumentParser:
     analyseur.add_argument("--journal", nargs="?", const="", help=argparse.SUPPRESS)
     analyseur.add_argument("--reprendre", action="store_const", const="", help=argparse.SUPPRESS)
     analyseur.add_argument("--auto", nargs="?", const="", help=argparse.SUPPRESS)
+    analyseur.add_argument("--sans-contre", action="store_const", const="", help=argparse.SUPPRESS)
     return analyseur
 
 

@@ -15,10 +15,8 @@
     {% endfor %}
   </select>
 
-  <label class="case">
-    <input type="checkbox" name="sans_contre" value="true" {% if sans_contre %}checked{% endif %}>
-    Je n'ai que les étiquettes (pas de contre-étiquette) : une photo par bouteille
-  </label>
+  <p class="aide">Ensuite, chaque bouteille avec ses photos : l'étiquette, la contre-étiquette s'il y en a une,
+    la capsule, la bouteille entière…</p>
 </form>
 {% endblock %}
 {% block actions %}

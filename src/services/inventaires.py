@@ -1,10 +1,11 @@
 """Inventaires : création, config figée (guide de session 2).
 
 Un inventaire, c'est une maison, une version FIGÉE de sa config, des photos
-copiées dans le stockage, et les bouteilles qu'elles forment par paires.
-Mêmes garde-fous qu'en session 1 — nombre impair, format illisible, photos en
-sous-dossier — plus un : la même photo déposée deux fois (decisions.md 0074).
-Rien n'est écrit tant que tout n'a pas été vérifié.
+copiées dans le stockage, et les bouteilles qu'elles forment : une bouteille =
+un groupe de photos (decisions.md 0166). Garde-fous : format illisible, photos
+rangées trop profond, trop de photos pour une bouteille (plafond de la maison),
+la même photo déposée deux fois (decisions.md 0074). Rien n'est écrit tant que
+tout n'a pas été vérifié.
 """
 
 from __future__ import annotations
@@ -22,9 +23,9 @@ from src.config.maison import (
     lire_config,
     plier,
 )
-from src.donnees.modeles import ConfigVersion, FicheBouteille, Inventaire, Maison, Photo
-from src.donnees.stockage import empreinte_fichier, stocker
-from src.io.photos import PhotosInvalides, apparier_photos
+from src.donnees.modeles import ConfigVersion, FicheBouteille, GroupePhotos, Inventaire, Maison, Photo
+from src.donnees.stockage import chemin_stocke, empreinte_fichier, stocker
+from src.io.photos import PhotosBouteille, PhotosInvalides, Regroupement, grouper_photos, identifiant_de
 
 
 class InventaireIntrouvable(LookupError):
@@ -39,8 +40,6 @@ class InventaireCree:
     nb_bouteilles: int
     config_numero: int
     nouvelle_config: bool
-    tri: str
-    sans_date: list[str] = field(default_factory=list)
     avertissements: list[str] = field(default_factory=list)
 
 
@@ -52,26 +51,47 @@ def creer_inventaire(
     nom: str,
     stockage: Path,
     limite: int | None = None,
-    sans_contre: bool = False,
 ) -> InventaireCree:
     """Enregistre la config (nouvelle version si son contenu a changé), copie les
-    photos dans le stockage et forme les bouteilles par paires.
+    photos dans le stockage et forme les bouteilles : une par photo posée à la
+    racine du dossier, une par sous-dossier (decisions.md 0166).
 
-    `limite` ne garde que les N premières bouteilles (decisions.md 0084) — le
-    contrôle du nombre impair porte quand même sur tout le dossier.
-    `sans_contre` : une photo par bouteille, sans contre-étiquette (0108).
+    `limite` ne garde que les N premières bouteilles (decisions.md 0084) — les
+    contrôles portent quand même sur tout le dossier.
     """
+    lire_config_de_la_maison(maison, config_path)  # une config invalide s'arrête avant les photos
+    regroupement = grouper_photos(dossier_photos)  # formats, HEIC illisible, trop profond : refus
+    return creer_inventaire_depuis_groupes(
+        session, maison, config_path, regroupement, nom, stockage, limite, str(Path(dossier_photos).resolve())
+    )
+
+
+def lire_config_de_la_maison(maison: str, config_path: str | Path) -> tuple[ConfigMaison, str]:
     config, texte = lire_config(config_path)
     if plier(config.maison) != plier(maison):
         raise ValueError(
             f"La config {Path(config_path).name} décrit « {config.maison} », pas « {maison} »."
         )
+    return config, texte
 
-    appariement = apparier_photos(dossier_photos, sans_contre)  # impair, HEIC, sous-dossier : refus
-    paires = appariement.bouteilles[:limite] if limite else appariement.bouteilles
-    images = [
-        photo for vues in paires for photo in (vues.etiquette, vues.contre_etiquette) if photo is not None
-    ]
+
+def creer_inventaire_depuis_groupes(
+    session: Session,
+    maison: str,
+    config_path: str | Path,
+    regroupement: Regroupement,
+    nom: str,
+    stockage: Path,
+    limite: int | None = None,
+    dossier_source: str | None = None,
+) -> InventaireCree:
+    """Les bouteilles déjà formées (un dossier regroupé, ou les photos envoyées
+    d'un coup à l'API) deviennent un inventaire. Tout est vérifié avant
+    d'écrire."""
+    config, texte = lire_config_de_la_maison(maison, config_path)
+    refuser_les_groupes_trop_grands(regroupement.bouteilles, config.photos_max_par_bouteille)
+    bouteilles = regroupement.bouteilles[:limite] if limite else regroupement.bouteilles
+    images = [photo for vues in bouteilles for photo in vues.photos]
     empreintes = {image: empreinte_fichier(image) for image in images}
     _refuser_les_photos_en_double(images, empreintes)
 
@@ -80,48 +100,65 @@ def creer_inventaire(
     version, nouvelle, avertissements = _version_de_config(
         session, maison_bd, config, texte, Path(config_path).name
     )
-    inventaire = Inventaire(
-        maison=maison_bd,
-        config_version=version,
-        nom=nom,
-        dossier_source=str(Path(dossier_photos).resolve()),
-    )
+    inventaire = Inventaire(maison=maison_bd, config_version=version, nom=nom, dossier_source=dossier_source)
     session.add(inventaire)
     session.flush()
 
-    photos: dict[Path, Photo] = {}
-    for ordre, image in enumerate(images, start=1):
-        photos[image] = Photo(
-            inventaire_id=inventaire.id,
-            chemin=stocker(image, stockage, empreintes[image]),
-            empreinte=empreintes[image],
-            nom_origine=image.name,
-            prise_de_vue=appariement.dates.get(image),
-            ordre=ordre,
+    ordre = 0
+    for position, vues in enumerate(bouteilles, start=1):
+        groupe = GroupePhotos(inventaire_id=inventaire.id, numero=position)
+        session.add(groupe)
+        for rang, image in enumerate(vues.photos, start=1):
+            ordre += 1
+            session.add(
+                Photo(
+                    inventaire_id=inventaire.id,
+                    chemin=stocker(image, stockage, empreintes[image]),
+                    empreinte=empreintes[image],
+                    nom_origine=image.name,
+                    prise_de_vue=regroupement.dates.get(image),
+                    ordre=ordre,
+                    groupe=groupe,
+                    rang=rang,
+                )
+            )
+        session.add(
+            FicheBouteille(inventaire_id=inventaire.id, identifiant=vues.identifiant, groupe=groupe, position=position)
         )
-    session.add_all(photos.values())
-    session.flush()
-
-    session.add_all(
-        FicheBouteille(
-            inventaire_id=inventaire.id,
-            identifiant=vues.identifiant,
-            photo_etiquette_id=photos[vues.etiquette].id,
-            photo_contre_id=photos[vues.contre_etiquette].id if vues.contre_etiquette else None,
-            position=position,
-        )
-        for position, vues in enumerate(paires, start=1)
-    )
     session.commit()
 
     return InventaireCree(
         inventaire_id=inventaire.id,
-        nb_bouteilles=len(paires),
+        nb_bouteilles=len(bouteilles),
         config_numero=version.numero,
         nouvelle_config=nouvelle,
-        tri=appariement.tri,
-        sans_date=appariement.sans_date,
         avertissements=[*config.avertissements, *avertissements],
+    )
+
+
+def refuser_les_groupes_trop_grands(bouteilles: list[PhotosBouteille], maximum: int) -> None:
+    """Chaque photo envoyée au modèle se paie : au-delà du plafond de la maison,
+    on s'arrête AVANT tout appel (decisions.md 0159)."""
+    trop = [vues for vues in bouteilles if len(vues.photos) > maximum]
+    if trop:
+        detail = " ; ".join(f"{vues.nom} : {len(vues.photos)} photos" for vues in trop[:5])
+        raise PhotosInvalides(
+            f"{len(trop)} bouteille(s) dépassent le plafond de {maximum} photos par bouteille fixé par la "
+            f"maison ({detail}). Retirer les photos en trop, ou relever le plafond dans la configuration."
+        )
+
+
+def bouteille_du_groupe(groupe: GroupePhotos, position: int, stockage: Path) -> FicheBouteille:
+    """La bouteille que forme un groupe de photos déposé : identifiant calculé sur
+    le CONTENU de ses photos, comme en ligne de commande (decisions.md 0065), et
+    la quantité saisie à la capture."""
+    chemins = [chemin_stocke(stockage, photo.chemin) for photo in groupe.photos]
+    return FicheBouteille(
+        inventaire_id=groupe.inventaire_id,
+        identifiant=identifiant_de(chemins),
+        groupe=groupe,
+        position=position,
+        quantite=groupe.quantite,
     )
 
 
@@ -152,7 +189,7 @@ def config_figee(inventaire: Inventaire) -> ConfigMaison:
 
 
 def _refuser_les_photos_en_double(images: list[Path], empreintes: dict[Path, str]) -> None:
-    """Une photo copiée deux fois décalerait toutes les paires suivantes."""
+    """Une photo copiée deux fois mêlerait deux bouteilles."""
     vues: dict[str, Path] = {}
     doublons = []
     for image in images:
@@ -163,8 +200,8 @@ def _refuser_les_photos_en_double(images: list[Path], empreintes: dict[Path, str
         raise PhotosInvalides(
             "La même photo est déposée deux fois (contenu identique) : "
             + " ; ".join(doublons)
-            + ". Retirer la copie puis relancer : sinon toutes les paires suivantes "
-            "seraient décalées."
+            + ". Retirer la copie puis relancer : une photo ne peut appartenir qu'à "
+            "une bouteille."
         )
 
 

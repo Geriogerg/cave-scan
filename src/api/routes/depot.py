@@ -1,12 +1,13 @@
-"""Dépôt des photos dans un brouillon : créer, envoyer une photo à la fois,
-corriger l'ordre, voir les paires, finaliser (decisions.md 0126-0134).
+"""Dépôt des photos, bouteille par bouteille : créer le brouillon, envoyer une
+photo à la fois pour SA bouteille, corriger les bouteilles en attente, lancer
+leur analyse — aussi pour ajouter des bouteilles après le lancement
+(decisions.md 0126-0134, 0166, 0167).
 
 Mêmes fonctions de service que les pages de l'application web.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
@@ -16,12 +17,14 @@ from src.api.dependances import SessionBase, Stockage
 from src.services.depot import (
     ajouter_photo,
     apercu,
+    couper,
     creer_brouillon,
-    deplacer_photo,
+    definir_quantite,
     finaliser,
-    inverser_paire,
-    retrier,
+    quantite_du_groupe,
+    rattacher,
     signatures_deja_recues,
+    supprimer_groupe,
     supprimer_photo,
 )
 from src.services.envoi import config_de_la_maison
@@ -32,9 +35,7 @@ routeur = APIRouter(tags=["Dépôt des photos"], responses=schemas.REPONSES_ERRE
 
 @routeur.post("/brouillons", status_code=201, response_model=schemas.BrouillonReponse, summary="Créer un inventaire en brouillon")
 def creer(demande: schemas.BrouillonDemande, base: SessionBase, request: Request):
-    cree = creer_brouillon(
-        base, demande.maison, config_de_la_maison(request.app.state.configs, demande.maison), demande.nom, demande.sans_contre
-    )
+    cree = creer_brouillon(base, demande.maison, config_de_la_maison(request.app.state.configs, demande.maison), demande.nom)
     return schemas.BrouillonReponse(
         id=cree.inventaire_id,
         config_numero=cree.config_numero,
@@ -46,22 +47,23 @@ def creer(demande: schemas.BrouillonDemande, base: SessionBase, request: Request
 @routeur.post(
     "/inventaires/{inventaire_id}/photos",
     response_model=schemas.PhotoRecueReponse,
-    summary="Envoyer UNE photo (idempotent)",
+    summary="Envoyer UNE photo d'une bouteille (idempotent)",
 )
 def envoyer(
     inventaire_id: int,
     base: SessionBase,
     stockage: Stockage,
     fichier: Annotated[UploadFile, File(description="La photo, JPEG, PNG ou HEIC.")],
-    prise_de_vue: Annotated[
-        datetime | None, Form(description="Date de prise de vue lue AVANT toute réduction (ISO 8601).")
-    ] = None,
+    bouteille: Annotated[str, Form(max_length=64, description="Clé de la bouteille, donnée par l'appareil.")],
+    numero: Annotated[int, Form(ge=1, description="Numéro de la bouteille dans l'ordre de prise de vue.")],
+    quantite: Annotated[int | None, Form(ge=1, description="« × N » saisi à la capture.")] = None,
     signature: Annotated[
         str | None, Form(max_length=300, description="Signature du fichier d'origine : nom|taille|date.")
     ] = None,
 ):
     recue = ajouter_photo(
-        base, inventaire_id, fichier.file, fichier.filename or "photo", stockage, prise_de_vue, signature
+        base, inventaire_id, fichier.file, fichier.filename or "photo", stockage,
+        bouteille=bouteille, numero=numero, quantite=quantite, signature=signature,
     )
     return schemas.depuis_photo_recue(recue)
 
@@ -75,7 +77,7 @@ def deja_recues(inventaire_id: int, demande: schemas.SignaturesDemande, base: Se
     return schemas.SignaturesReponse(deja_recues=signatures_deja_recues(base, inventaire_id, demande.signatures))
 
 
-@routeur.get("/inventaires/{inventaire_id}/apercu", response_model=schemas.ApercuReponse, summary="Les paires et les anomalies")
+@routeur.get("/inventaires/{inventaire_id}/apercu", response_model=schemas.ApercuReponse, summary="Les bouteilles en attente")
 def voir(inventaire_id: int, base: SessionBase):
     return schemas.depuis_apercu(apercu(base, inventaire_id))
 
@@ -89,37 +91,59 @@ def supprimer(inventaire_id: int, photo_id: int, base: SessionBase):
 
 
 @routeur.post(
-    "/inventaires/{inventaire_id}/photos/{photo_id}/deplacer",
+    "/inventaires/{inventaire_id}/photos/{photo_id}/couper",
     response_model=schemas.ApercuReponse,
-    summary="Déplacer une photo",
+    summary="Nouvelle bouteille à partir de cette photo",
 )
-def deplacer(inventaire_id: int, photo_id: int, demande: schemas.DeplacementDemande, base: SessionBase):
-    deplacer_photo(base, inventaire_id, photo_id, demande.position)
+def couper_le_groupe(inventaire_id: int, photo_id: int, base: SessionBase):
+    couper(base, inventaire_id, photo_id)
     return schemas.depuis_apercu(apercu(base, inventaire_id))
 
 
 @routeur.post(
-    "/inventaires/{inventaire_id}/paires/{numero}/inverser",
+    "/inventaires/{inventaire_id}/groupes/{groupe_id}/rattacher",
     response_model=schemas.ApercuReponse,
-    summary="Inverser étiquette et contre-étiquette d'une paire",
+    summary="Rattacher à la bouteille précédente",
 )
-def inverser(inventaire_id: int, numero: int, base: SessionBase):
-    inverser_paire(base, inventaire_id, numero)
+def rattacher_le_groupe(inventaire_id: int, groupe_id: int, base: SessionBase):
+    rattacher(base, inventaire_id, groupe_id)
     return schemas.depuis_apercu(apercu(base, inventaire_id))
 
 
-@routeur.post(
-    "/inventaires/{inventaire_id}/retrier", response_model=schemas.ApercuReponse, summary="Revenir à l'ordre automatique"
+@routeur.put(
+    "/inventaires/{inventaire_id}/groupes/{groupe_id}/quantite",
+    response_model=schemas.ApercuReponse,
+    summary="Quantité d'une bouteille en attente",
 )
-def remettre_en_ordre(inventaire_id: int, base: SessionBase):
-    retrier(base, inventaire_id)
+def quantite_en_attente(inventaire_id: int, groupe_id: int, demande: schemas.QuantiteDeBouteille, base: SessionBase):
+    quantite_du_groupe(base, inventaire_id, groupe_id, demande.quantite)
+    return schemas.depuis_apercu(apercu(base, inventaire_id))
+
+
+@routeur.put(
+    "/inventaires/{inventaire_id}/bouteilles-en-cours/{cle}/quantite",
+    response_model=schemas.ApercuReponse,
+    summary="Quantité de la bouteille en cours (par sa clé)",
+)
+def quantite_par_cle(inventaire_id: int, cle: str, demande: schemas.QuantiteDeBouteille, base: SessionBase):
+    definir_quantite(base, inventaire_id, cle, demande.quantite)
+    return schemas.depuis_apercu(apercu(base, inventaire_id))
+
+
+@routeur.delete(
+    "/inventaires/{inventaire_id}/groupes/{groupe_id}",
+    response_model=schemas.ApercuReponse,
+    summary="Supprimer une bouteille en attente et ses photos",
+)
+def supprimer_le_groupe(inventaire_id: int, groupe_id: int, base: SessionBase):
+    supprimer_groupe(base, inventaire_id, groupe_id)
     return schemas.depuis_apercu(apercu(base, inventaire_id))
 
 
 @routeur.post(
     "/inventaires/{inventaire_id}/finaliser",
     response_model=schemas.Finalisation,
-    summary="Lancer l'analyse : former les bouteilles et démarrer l'extraction",
+    summary="Lancer l'analyse des bouteilles en attente (aussi après un premier lancement)",
 )
 def lancer_l_analyse(inventaire_id: int, base: SessionBase, stockage: Stockage):
     nombre = finaliser(base, inventaire_id, stockage)

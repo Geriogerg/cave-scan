@@ -24,11 +24,13 @@ if TYPE_CHECKING:
 
 
 def generer_photos_fictives(dossier: Path, nombre_bouteilles: int) -> Path:
-    """2 × N petites images DISTINCTES, datées dans l'ordre, pour le dry-run.
+    """N bouteilles de 2 petites images DISTINCTES chacune, une par sous-dossier
+    (`bouteille_01/1_etiquette.jpg`, `2_contre.jpg`), pour le dry-run.
 
-    Le dry-run exerce ainsi le vrai chemin de création — appariement par date de
-    prise de vue, empreintes, stockage (decisions.md 0085) — tandis que
-    l'extracteur de fixtures, lui, ignore leur contenu.
+    Le dry-run exerce ainsi le vrai chemin de création — regroupement par
+    sous-dossier, empreintes, stockage (decisions.md 0085, 0166) — tandis que
+    l'extracteur de fixtures, lui, ignore leur contenu. Mêmes images qu'avant
+    les groupes : mêmes identifiants de bouteilles.
     """
     from PIL import Image
 
@@ -40,8 +42,10 @@ def generer_photos_fictives(dossier: Path, nombre_bouteilles: int) -> Path:
         exif = Image.Exif()
         exif[0x0132] = f"2026:01:01 10:{rang // 60:02d}:{rang % 60:02d}"  # date de l'image
         exif[0x010E] = f"photo fictive {rang + 1}"  # rend chaque fichier unique
-        role = "etiquette" if rang % 2 == 0 else "contre"
-        image.save(dossier / f"bouteille_{rang // 2 + 1:02d}_{role}.jpg", "JPEG", exif=exif.tobytes())
+        bouteille = dossier / f"bouteille_{rang // 2 + 1:02d}"
+        bouteille.mkdir(exist_ok=True)
+        nom = "1_etiquette.jpg" if rang % 2 == 0 else "2_contre.jpg"
+        image.save(bouteille / nom, "JPEG", exif=exif.tobytes())
     return dossier
 
 

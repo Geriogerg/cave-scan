@@ -22,7 +22,6 @@ from fastapi.responses import RedirectResponse, Response
 
 from src.api.dependances import AuteurEcran, Formulaire, SessionBase
 from src.services.cas_particuliers import (
-    inverser_photos,
     lever_signalement,
     reanalyser,
     separer,
@@ -51,8 +50,7 @@ FILTRE = "a_verifier"
 # Après une action, un message court (jamais un texte arbitraire dans l'adresse).
 MESSAGES_FAIT = {
     "reanalyse": "Réanalyse demandée : la bouteille repasse par le modèle. Vos corrections restent prioritaires.",
-    "inversee": "Étiquette et contre-étiquette inversées.",
-    "signalee": "Problème de paire signalé : cette bouteille ne peut plus être validée, elle attend au récapitulatif.",
+    "signalee": "Problème de photos signalé : cette bouteille ne peut plus être validée, elle attend au récapitulatif.",
     "levee": "Signalement levé : la bouteille peut de nouveau être validée.",
     "separee": "Bouteille séparée. Ajustez l'état et la description de cet exemplaire.",
 }
@@ -107,7 +105,7 @@ def entrer(inventaire_id: int, base: SessionBase, filtre: Filtre = None):
 def afficher(request: Request, inventaire_id: int, bouteille_id: int, base: SessionBase, auteur: AuteurEcran,
              filtre: Filtre = None, fait: Filtre = None):
     return _page_bouteille(request, base, inventaire_id, bouteille_id, filtre == FILTRE,
-                           fait=MESSAGES_FAIT.get(fait or ""), inversee=fait == "inversee", auteur=auteur)
+                           fait=MESSAGES_FAIT.get(fait or ""), auteur=auteur)
 
 
 @routeur.get("/app/inventaires/{inventaire_id}/relecture/{bouteille_id}/attente")
@@ -227,7 +225,7 @@ def _entier(texte: str | None) -> int | None:
 
 
 def _action(request: Request, base, inventaire_id: int, bouteille_id: int, saisies: dict, faire, fait: str):
-    """Une action de la page (réanalyser, inverser, signaler, séparer) : faite, puis
+    """Une action de la page (réanalyser, signaler, séparer) : faite, puis
     retour sur la bouteille avec un message ; refusée, la page dit pourquoi."""
     bouteille_de(base, inventaire_id, bouteille_id)
     filtre = saisies.get("_filtre") == FILTRE
@@ -243,13 +241,6 @@ def demander_reanalyse(request: Request, inventaire_id: int, bouteille_id: int,
                        base: SessionBase, auteur: AuteurEcran, saisies: Formulaire):
     return _action(request, base, inventaire_id, bouteille_id, saisies,
                    lambda: reanalyser(base, bouteille_id, auteur) and None, "reanalyse")
-
-
-@routeur.post("/app/inventaires/{inventaire_id}/relecture/{bouteille_id}/inverser")
-def inverser(request: Request, inventaire_id: int, bouteille_id: int,
-             base: SessionBase, auteur: AuteurEcran, saisies: Formulaire):
-    return _action(request, base, inventaire_id, bouteille_id, saisies,
-                   lambda: inverser_photos(base, bouteille_id, auteur), "inversee")
 
 
 @routeur.post("/app/inventaires/{inventaire_id}/relecture/{bouteille_id}/signaler")

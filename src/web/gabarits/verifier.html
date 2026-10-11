@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block titre %}Vérifier — {{ vue.inventaire.nom }}{% endblock %}
+{% block fil %}<span class="fil">{{ vue.inventaire.nom }}</span>{% endblock %}
+{% block contenu %}
+<h1>Vérifier les bouteilles</h1>
+<p class="aide">
+  Chaque carte deviendra une bouteille, avec ces photos, dans cet ordre. Une photo d'une autre bouteille ?
+  « Nouvelle bouteille à partir d'ici ». Une bouteille coupée en deux ? « Rattacher à la précédente ».
+</p>
+{% include "_en_attente.html" %}
+{% endblock %}

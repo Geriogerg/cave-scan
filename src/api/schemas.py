@@ -49,8 +49,6 @@ class InventaireCreeReponse(BaseModel):
     nb_bouteilles: int
     config_numero: int
     nouvelle_config: bool
-    tri: str
-    sans_date: list[str]
     avertissements: list[str]
 
 
@@ -60,8 +58,6 @@ def depuis_creation(cree: InventaireCree) -> InventaireCreeReponse:
         nb_bouteilles=cree.nb_bouteilles,
         config_numero=cree.config_numero,
         nouvelle_config=cree.nouvelle_config,
-        tri=cree.tri,
-        sans_date=cree.sans_date,
         avertissements=cree.avertissements,
     )
 
@@ -214,17 +210,16 @@ class CorrectionHistorique(BaseModel):
 
 
 class EvenementHistorique(BaseModel):
-    type: str = Field(description="reanalyse, inversion_photos, signalement_paire, signalement_leve, separation")
+    type: str = Field(description="reanalyse, signalement_paire, signalement_leve, separation (inversion_photos : historique d'avant les groupes de photos)")
     auteur: str
     le: datetime
     detail: Any = None
 
 
-class LiensPhotos(BaseModel):
-    etiquette: str
-    etiquette_originale: str
-    contre_etiquette: str | None
-    contre_etiquette_originale: str | None
+class LienPhoto(BaseModel):
+    numero: int = Field(description="Sa place parmi les photos de la bouteille (« Photo 1 sur 3 »).")
+    reduite: str
+    originale: str
 
 
 class BouteilleDetail(BaseModel):
@@ -243,7 +238,7 @@ class BouteilleDetail(BaseModel):
     historique: list[CorrectionHistorique]
     evenements: list[EvenementHistorique]
     nb_extractions: int
-    photos: LiensPhotos
+    photos: list[LienPhoto] = Field(description="Toutes ses photos, dans l'ordre de l'expert.")
     precedente_id: int | None
     suivante_id: int | None
     version: str = Field(description="L'état affiché : à renvoyer pour être prévenu d'une modification faite ailleurs.")
@@ -255,11 +250,6 @@ class BouteilleDetail(BaseModel):
 def depuis_fiche(fiche: FicheComplete) -> BouteilleDetail:
     b = fiche.bouteille
     base = f"/inventaires/{b.inventaire_id}/photos"
-
-    def lien(photo_id: int | None, originale: bool) -> str | None:
-        if photo_id is None:
-            return None
-        return f"{base}/{photo_id}" + ("?taille=originale" if originale else "")
 
     return BouteilleDetail(
         id=b.id,
@@ -288,12 +278,10 @@ def depuis_fiche(fiche: FicheComplete) -> BouteilleDetail:
             EvenementHistorique(type=e.type, auteur=e.auteur, le=e.cree_le, detail=e.detail) for e in fiche.evenements
         ],
         nb_extractions=fiche.nb_extractions,
-        photos=LiensPhotos(
-            etiquette=lien(fiche.photo_etiquette_id, False),
-            etiquette_originale=lien(fiche.photo_etiquette_id, True),
-            contre_etiquette=lien(fiche.photo_contre_id, False),
-            contre_etiquette_originale=lien(fiche.photo_contre_id, True),
-        ),
+        photos=[
+            LienPhoto(numero=numero, reduite=f"{base}/{photo_id}", originale=f"{base}/{photo_id}?taille=originale")
+            for numero, photo_id in enumerate(fiche.photos, start=1)
+        ],
         precedente_id=fiche.precedente_id,
         suivante_id=fiche.suivante_id,
         version=fiche.version,
@@ -374,13 +362,12 @@ class QuantiteDemandee(BaseModel):
     quantite: int = Field(ge=1, examples=[2])
 
 
-# --- dépôt des photos (session 4) ------------------------------------------------------------
+# --- dépôt des photos, bouteille par bouteille (sessions 4 et 6) -------------------------------
 
 
 class BrouillonDemande(BaseModel):
     nom: str = Field(min_length=1, examples=["Vente de printemps"])
     maison: str = Field(examples=["Maison Test"])
-    sans_contre: bool = Field(False, description="Étiquettes seules : une photo par bouteille.")
 
 
 class BrouillonReponse(BaseModel):
@@ -392,10 +379,11 @@ class BrouillonReponse(BaseModel):
 
 class PhotoRecueReponse(BaseModel):
     photo_id: int
-    position: int
+    bouteille: str = Field(description="La clé de la bouteille qui l'a reçue.")
+    numero: int = Field(description="Le numéro de cette bouteille dans le dépôt.")
+    rang: int = Field(description="Sa place parmi les photos de la bouteille.")
     nom: str
     deja_recue: bool = Field(description="Déjà reçue : rien n'a été ajouté.")
-    datee: bool = Field(description="Une date de prise de vue est connue (sa valeur n'est jamais renvoyée).")
 
 
 class SignaturesDemande(BaseModel):
@@ -406,68 +394,75 @@ class SignaturesReponse(BaseModel):
     deja_recues: list[str]
 
 
-class DeplacementDemande(BaseModel):
-    position: int = Field(ge=1, description="1 = la première photo.")
+class QuantiteDeBouteille(BaseModel):
+    quantite: int = Field(ge=1, description="Nombre de bouteilles identiques (« × N »).")
 
 
 class PhotoApercu(BaseModel):
     id: int
-    position: int
+    rang: int
     nom: str
-    datee: bool
     miniature: str
 
 
-class PaireApercu(BaseModel):
-    numero: int
-    etiquette: PhotoApercu
-    contre_etiquette: PhotoApercu | None
+class BouteilleApercu(BaseModel):
+    groupe_id: int
+    cle: str | None = Field(description="La clé donnée par l'appareil (absente pour une bouteille créée par coupure).")
+    numero: int = Field(description="Sa future position dans l'inventaire.")
+    quantite: int
+    photos: list[PhotoApercu]
 
 
 class ApercuReponse(BaseModel):
     inventaire_id: int
     statut: str
-    sans_contre: bool
-    tri: str
-    nb_photos: int
+    nb_photos: int = Field(description="Photos des bouteilles en attente.")
+    deja_formees: int = Field(description="Bouteilles déjà dans l'inventaire.")
+    photos_max: int = Field(description="Plafond de photos par bouteille de la maison.")
+    prochain_numero: int
     peut_lancer: bool
     anomalies: list[str]
-    paires: list[PaireApercu]
+    bouteilles: list[BouteilleApercu] = Field(description="Les bouteilles en attente, pas encore analysées.")
 
 
 def depuis_photo_recue(recue) -> PhotoRecueReponse:
     return PhotoRecueReponse(
         photo_id=recue.photo_id,
-        position=recue.position,
+        bouteille=recue.bouteille,
+        numero=recue.numero,
+        rang=recue.rang,
         nom=recue.nom,
         deja_recue=recue.deja_recue,
-        datee=recue.prise_de_vue is not None,
     )
 
 
 def depuis_apercu(apercu) -> ApercuReponse:
     inventaire_id = apercu.inventaire.id
-
-    def photo(p) -> PhotoApercu | None:
-        if p is None:
-            return None
-        return PhotoApercu(
-            id=p.id,
-            position=p.ordre,
-            nom=p.nom_origine,
-            datee=p.prise_de_vue is not None,
-            miniature=f"/inventaires/{inventaire_id}/photos/{p.id}?taille=miniature",
-        )
-
     return ApercuReponse(
         inventaire_id=inventaire_id,
         statut=apercu.inventaire.statut,
-        sans_contre=apercu.inventaire.sans_contre,
-        tri=apercu.tri,
-        nb_photos=len(apercu.photos),
+        nb_photos=apercu.nb_photos,
+        deja_formees=apercu.deja_formees,
+        photos_max=apercu.photos_max,
+        prochain_numero=apercu.prochain_numero,
         peut_lancer=apercu.peut_lancer,
         anomalies=apercu.anomalies,
-        paires=[PaireApercu(numero=p.numero, etiquette=photo(p.etiquette), contre_etiquette=photo(p.contre_etiquette)) for p in apercu.paires],
+        bouteilles=[
+            BouteilleApercu(
+                groupe_id=b.groupe.id,
+                cle=b.groupe.cle,
+                numero=b.numero,
+                quantite=b.groupe.quantite,
+                photos=[
+                    PhotoApercu(
+                        id=p.id, rang=p.rang, nom=p.nom_origine,
+                        miniature=f"/inventaires/{inventaire_id}/photos/{p.id}?taille=miniature",
+                    )
+                    for p in b.photos
+                ],
+            )
+            for b in apercu.bouteilles
+        ],
     )
 
 

@@ -21,7 +21,7 @@ from src.config.maison import charger_config
 from src.export.excel_writer import ecrire_excel
 from src.extract.base import SortieModele
 from src.extract.fixture_extract import FixtureExtractor
-from src.io.photos import apparier_photos
+from src.io.photos import grouper_photos
 from src.normalize.normalize import normalize
 from src.services.extraction import extraire_bouteille, extraire_inventaire
 from src.services.inventaires import charger_inventaire, creer_inventaire
@@ -78,8 +78,8 @@ def export_comme_en_session_1(dossier, chemin):
     config = charger_config(CONFIG_TEST)
     extracteur = FixtureExtractor(charges(), config)
     bouteilles = []
-    for vues in apparier_photos(dossier).bouteilles:
-        bouteille = normalize(extracteur.extract([vues.etiquette, vues.contre_etiquette]))
+    for vues in grouper_photos(dossier).bouteilles:
+        bouteille = normalize(extracteur.extract(vues.photos))
         bouteille.id = vues.identifiant
         bouteilles.append(bouteille)
     return ecrire_excel(bouteilles, config, chemin)

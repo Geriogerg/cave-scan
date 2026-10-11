@@ -52,14 +52,17 @@ def base(tmp_path):
 
 
 def creer(moteur, tmp_path, nom_maison, nombre, lance=True) -> int:
-    """Un inventaire d'étiquettes seules : `nombre` photos = `nombre` bouteilles."""
+    """Un inventaire d'étiquettes seules : `nombre` photos posées à la racine =
+    `nombre` bouteilles d'une photo (decisions.md 0166)."""
     photos = generer_photos_fictives(tmp_path / f"photos{nombre}", (nombre + 1) // 2)
+    for dossier in sorted(p for p in photos.iterdir() if p.is_dir()):
+        for fichier in sorted(dossier.iterdir()):
+            fichier.rename(photos / f"{dossier.name}_{fichier.name}")
+        dossier.rmdir()
     if nombre % 2:
         sorted(photos.iterdir())[-1].unlink()
     with Session(moteur, expire_on_commit=False) as session:
-        cree = creer_inventaire(
-            session, nom_maison, CONFIG_TEST, photos, "Cave", tmp_path / "stockage", sans_contre=True
-        )
+        cree = creer_inventaire(session, nom_maison, CONFIG_TEST, photos, "Cave", tmp_path / "stockage")
         if lance:
             lancer(session, cree.inventaire_id)
     return cree.inventaire_id
@@ -184,7 +187,7 @@ def chemin_photo(moteur, inventaire_id, position) -> str:
                 FicheBouteille.inventaire_id == inventaire_id, FicheBouteille.position == position
             )
         )
-        return Path(bouteille.photo_etiquette.chemin).name
+        return Path(bouteille.photos[0].chemin).name
 
 
 def test_erreur_passagere_erreur_sur_la_bouteille_seule(base, tmp_path, nom_maison):

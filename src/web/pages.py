@@ -1,5 +1,6 @@
-"""Les écrans de l'expert : accueil, nouvel inventaire, dépôt des photos,
-vérification de l'ordre, suivi (guide de session 4 ; decisions.md 0131).
+"""Les écrans de l'expert : accueil, nouvel inventaire, dépôt des photos
+bouteille par bouteille, vérification des bouteilles en attente, suivi (guides
+des sessions 4 et 6 ; decisions.md 0131, 0167).
 
 Pages générées côté serveur (Jinja2) + HTMX. Comme l'API, chaque route ne fait
 qu'appeler une fonction de service et afficher : aucun garde-fou n'est vérifié
@@ -9,6 +10,7 @@ page, en français, jamais comme un message technique.
 
 from __future__ import annotations
 
+import json
 import mimetypes
 from datetime import UTC, datetime
 from pathlib import Path
@@ -23,13 +25,15 @@ from src.api.erreurs import TRADUCTIONS
 from src.services.consultation import tableau_des_inventaires
 from src.services.depot import (
     apercu,
+    couper,
     creer_brouillon,
-    deplacer_photo,
     finaliser,
-    inverser_paire,
-    retrier,
+    quantite_du_groupe,
+    rattacher,
+    supprimer_groupe,
     supprimer_photo,
 )
+from src.services.depot import ModificationRefusee
 from src.services.envoi import TAILLE_MAX_OCTETS, config_de_la_maison, configs_disponibles
 from src.services.inventaires import charger_inventaire
 from src.services.pilotage import avancement, reprendre
@@ -108,14 +112,12 @@ def creer(
     base: SessionBase,
     nom: Annotated[str, Form()] = "",
     maison: Annotated[str, Form()] = "",
-    sans_contre: Annotated[bool, Form()] = False,
 ):
     try:
-        cree = creer_brouillon(base, maison, config_de_la_maison(request.app.state.configs, maison), nom, sans_contre)
+        cree = creer_brouillon(base, maison, config_de_la_maison(request.app.state.configs, maison), nom)
     except ERREURS_DE_SERVICE as erreur:
         return page(
-            request, "nouveau.html", 422, maisons=_maisons(request, base), erreur=str(erreur),
-            nom=nom, maison=maison, sans_contre=sans_contre,
+            request, "nouveau.html", 422, maisons=_maisons(request, base), erreur=str(erreur), nom=nom, maison=maison,
         )
     return RedirectResponse(f"/app/inventaires/{cree.inventaire_id}/depot", status_code=303)
 
@@ -131,64 +133,73 @@ def ouvrir(inventaire_id: int, base: SessionBase):
     return RedirectResponse(f"/app/inventaires/{inventaire_id}/{suite}", status_code=303)
 
 
-# --- dépôt des photos ---------------------------------------------------------------------------
+# --- dépôt des photos, bouteille par bouteille -----------------------------------------------------
 
 
 @routeur.get("/app/inventaires/{inventaire_id}/depot")
 def depot(request: Request, inventaire_id: int, base: SessionBase):
+    """Le dépôt d'un brouillon, ou l'ajout de bouteilles à un inventaire lancé."""
     vue = apercu(base, inventaire_id)
-    if vue.inventaire.statut != "brouillon":
-        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi", status_code=303)
+    attente = {b.groupe.cle: len(b.photos) for b in vue.bouteilles if b.groupe.cle}
     return page(
         request,
         "depot.html",
         vue=vue,
+        attente=json.dumps(attente),
         reduction=REDUCTION_PAR_DEFAUT,
         taille_reduction=TAILLE_REDUCTION,
         taille_max_mo=TAILLE_MAX_OCTETS // (1024 * 1024),
     )
 
 
-# --- vérification de l'ordre -------------------------------------------------------------------
+# --- vérifier les bouteilles en attente --------------------------------------------------------
 
 
-@routeur.get("/app/inventaires/{inventaire_id}/ordre")
-def ordre(request: Request, inventaire_id: int, base: SessionBase):
-    vue = apercu(base, inventaire_id)
-    if vue.inventaire.statut != "brouillon":
-        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi", status_code=303)
-    return page(request, "ordre.html", vue=vue)
+@routeur.get("/app/inventaires/{inventaire_id}/verifier")
+def verifier(request: Request, inventaire_id: int, base: SessionBase):
+    return page(request, "verifier.html", vue=apercu(base, inventaire_id))
 
 
-def _paires(request: Request, base, inventaire_id: int, action) -> HTMLResponse:
-    """Applique une correction de l'ordre puis renvoie la grille des paires ;
-    un refus s'affiche au-dessus de la grille."""
+def _en_attente(request: Request, base, inventaire_id: int, action) -> HTMLResponse:
+    """Applique une correction aux bouteilles en attente puis les réaffiche ; un
+    refus s'affiche au-dessus, avec sa raison."""
     erreur = None
     try:
         action()
     except ERREURS_DE_SERVICE as refus:
         erreur = str(refus)
-    return page(request, "_paires.html", vue=apercu(base, inventaire_id), erreur=erreur)
+    return page(request, "_en_attente.html", vue=apercu(base, inventaire_id), erreur=erreur)
 
 
-@routeur.post("/app/inventaires/{inventaire_id}/ordre/inverser/{numero}")
-def inverser(request: Request, inventaire_id: int, numero: int, base: SessionBase):
-    return _paires(request, base, inventaire_id, lambda: inverser_paire(base, inventaire_id, numero))
+@routeur.post("/app/inventaires/{inventaire_id}/verifier/retirer-photo/{photo_id}")
+def retirer_photo(request: Request, inventaire_id: int, photo_id: int, base: SessionBase):
+    return _en_attente(request, base, inventaire_id, lambda: supprimer_photo(base, inventaire_id, photo_id))
 
 
-@routeur.post("/app/inventaires/{inventaire_id}/ordre/supprimer/{photo_id}")
-def supprimer(request: Request, inventaire_id: int, photo_id: int, base: SessionBase):
-    return _paires(request, base, inventaire_id, lambda: supprimer_photo(base, inventaire_id, photo_id))
+@routeur.post("/app/inventaires/{inventaire_id}/verifier/couper/{photo_id}")
+def couper_ici(request: Request, inventaire_id: int, photo_id: int, base: SessionBase):
+    return _en_attente(request, base, inventaire_id, lambda: couper(base, inventaire_id, photo_id))
 
 
-@routeur.post("/app/inventaires/{inventaire_id}/ordre/deplacer/{photo_id}")
-def deplacer(request: Request, inventaire_id: int, photo_id: int, base: SessionBase, position: Annotated[int, Form()]):
-    return _paires(request, base, inventaire_id, lambda: deplacer_photo(base, inventaire_id, photo_id, position))
+@routeur.post("/app/inventaires/{inventaire_id}/verifier/rattacher/{groupe_id}")
+def rattacher_a_la_precedente(request: Request, inventaire_id: int, groupe_id: int, base: SessionBase):
+    return _en_attente(request, base, inventaire_id, lambda: rattacher(base, inventaire_id, groupe_id))
 
 
-@routeur.post("/app/inventaires/{inventaire_id}/ordre/retrier")
-def remettre_en_ordre(request: Request, inventaire_id: int, base: SessionBase):
-    return _paires(request, base, inventaire_id, lambda: retrier(base, inventaire_id))
+@routeur.post("/app/inventaires/{inventaire_id}/verifier/supprimer/{groupe_id}")
+def supprimer_bouteille(request: Request, inventaire_id: int, groupe_id: int, base: SessionBase):
+    return _en_attente(request, base, inventaire_id, lambda: supprimer_groupe(base, inventaire_id, groupe_id))
+
+
+@routeur.post("/app/inventaires/{inventaire_id}/verifier/quantite/{groupe_id}")
+def quantite(request: Request, inventaire_id: int, groupe_id: int, base: SessionBase,
+             quantite: Annotated[str, Form()] = ""):
+    def changer():
+        if not quantite.strip().isdigit() or int(quantite) < 1:
+            raise ModificationRefusee(f"Quantité invalide : « {quantite} » (entier ≥ 1 attendu).")
+        quantite_du_groupe(base, inventaire_id, groupe_id, int(quantite))
+
+    return _en_attente(request, base, inventaire_id, changer)
 
 
 @routeur.post("/app/inventaires/{inventaire_id}/lancer")
@@ -196,7 +207,7 @@ def lancer_l_analyse(request: Request, inventaire_id: int, base: SessionBase, st
     try:
         finaliser(base, inventaire_id, stockage)
     except ERREURS_DE_SERVICE as refus:
-        return page(request, "_paires.html", vue=apercu(base, inventaire_id), erreur=str(refus))
+        return page(request, "_en_attente.html", vue=apercu(base, inventaire_id), erreur=str(refus))
     suivi = f"/app/inventaires/{inventaire_id}/suivi"
     if request.headers.get("HX-Request"):
         return Response(status_code=204, headers={"HX-Redirect": suivi})
@@ -211,7 +222,10 @@ def suivi(request: Request, inventaire_id: int, base: SessionBase):
     inventaire = charger_inventaire(base, inventaire_id)
     if inventaire.statut == "brouillon":
         return RedirectResponse(f"/app/inventaires/{inventaire_id}/depot", status_code=303)
-    return page(request, "suivi.html", inventaire=inventaire, etat=avancement(base, inventaire_id))
+    return page(
+        request, "suivi.html", inventaire=inventaire, etat=avancement(base, inventaire_id),
+        en_attente=apercu(base, inventaire_id).bouteilles,
+    )
 
 
 @routeur.get("/app/inventaires/{inventaire_id}/progression")

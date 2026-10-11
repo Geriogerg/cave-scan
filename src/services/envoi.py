@@ -1,10 +1,11 @@
 """Photos par l'API : réception d'un envoi, diffusion sans métadonnées.
 
-Réception (decisions.md 0116) : chaque fichier est réellement OUVERT pour
+Réception (decisions.md 0116, 0166) : chaque fichier est réellement OUVERT pour
 vérifier que c'est une image, sa taille et le nombre de fichiers sont bornés,
-son nom est nettoyé ; puis l'inventaire est créé par `creer_inventaire`, tel
-quel — appariement, nombre impair, doublons : mêmes garde-fous qu'en ligne de
-commande, mêmes messages.
+son nom est nettoyé ; les photos forment des bouteilles dans l'ORDRE D'ENVOI —
+une par photo, ou selon `photos_par_bouteille` (« 2,2,1 ») — et l'inventaire est
+créé par les mêmes garde-fous qu'en ligne de commande (plafond de photos,
+doublons), mêmes messages.
 
 Diffusion (0117) : une photo n'est servie que si elle appartient à
 l'inventaire demandé, rotation EXIF appliquée, et toujours RÉENCODÉE sans
@@ -32,7 +33,8 @@ from src.config.maison import ConfigInvalide, empreinte_config, lire_config, pli
 from src.io import heic  # noqa: F401 — rend le HEIC d'iPhone lisible par Pillow (0158)
 from src.donnees.modeles import ConfigVersion, Maison, Photo
 from src.donnees.stockage import chemin_stocke
-from src.services.inventaires import InventaireCree, charger_inventaire, creer_inventaire
+from src.io.photos import PhotosBouteille, Regroupement, date_de_prise_de_vue
+from src.services.inventaires import InventaireCree, charger_inventaire, creer_inventaire_depuis_groupes
 
 TAILLE_MAX_OCTETS = 30 * 1024 * 1024  # par photo : large pour un téléphone récent
 NOMBRE_MAX = 800  # par inventaire : au moins 600 photos = 300 bouteilles (guide)
@@ -104,11 +106,14 @@ def creer_inventaire_depuis_envoi(
     fichiers: Iterable[tuple[str, BinaryIO]],
     stockage: Path,
     dossier_configs: Path,
-    sans_contre: bool = False,
+    photos_par_bouteille: str | None = None,
     taille_max: int | None = None,
     nombre_max: int | None = None,
 ) -> InventaireCree:
-    """Crée un inventaire à partir de fichiers envoyés (nom d'origine, contenu)."""
+    """Crée un inventaire à partir de fichiers envoyés (nom d'origine, contenu),
+    dans l'ordre d'envoi. `photos_par_bouteille` : « 2,2,1 » = les deux premières
+    photos forment la bouteille 1, les deux suivantes la bouteille 2, la
+    dernière la bouteille 3 ; sans lui, une photo par bouteille."""
     taille_max = taille_max or TAILLE_MAX_OCTETS
     nombre_max = nombre_max or NOMBRE_MAX
     if not nom.strip():
@@ -118,29 +123,49 @@ def creer_inventaire_depuis_envoi(
         raise EnvoiRefuse("Aucune photo envoyée.")
     if len(fichiers) > nombre_max:
         raise EnvoiRefuse(f"{len(fichiers)} photos envoyées : {nombre_max} au maximum par inventaire.")
+    tailles = _tailles_des_bouteilles(photos_par_bouteille, len(fichiers))
     config_path = config_de_la_maison(dossier_configs, maison)
 
     with tempfile.TemporaryDirectory(prefix="cave-scan-envoi-") as temporaire:
-        dossier = Path(temporaire)
-        noms_pris: set[str] = set()
-        for nom_origine, flux in fichiers:
-            cible = dossier / _nom_sur(nom_origine, noms_pris)
+        recus = []
+        for rang, (nom_origine, flux) in enumerate(fichiers, start=1):
+            dossier = Path(temporaire) / f"{rang:04d}"  # un dossier par photo : deux « image.jpg » cohabitent
+            dossier.mkdir()
+            cible = dossier / _nom_sur(nom_origine)
             _copier_borne(flux, cible, taille_max, nom_origine)
-            _verifier_image(cible, nom_origine)
-        return creer_inventaire(
-            session, maison, config_path, dossier, nom.strip(), stockage, sans_contre=sans_contre
+            recus.append(_verifier_image(cible, nom_origine))
+        bouteilles, debut = [], 0
+        for taille in tailles:
+            photos = tuple(recus[debut : debut + taille])
+            bouteilles.append(PhotosBouteille(photos=photos, nom=" + ".join(p.name for p in photos)))
+            debut += taille
+        regroupement = Regroupement(bouteilles=bouteilles, dates={p: date_de_prise_de_vue(p) for p in recus})
+        return creer_inventaire_depuis_groupes(session, maison, config_path, regroupement, nom.strip(), stockage)
+
+
+def _tailles_des_bouteilles(photos_par_bouteille: str | None, nombre: int) -> list[int]:
+    """« 2,2,1 » -> [2, 2, 1] ; vide : une photo par bouteille. La somme doit être
+    exactement le nombre de photos envoyées : on ne devine jamais."""
+    if not (photos_par_bouteille or "").strip():
+        return [1] * nombre
+    try:
+        tailles = [int(morceau) for morceau in photos_par_bouteille.split(",")]
+    except ValueError:
+        raise EnvoiRefuse(
+            f"« photos_par_bouteille » : des nombres séparés par des virgules sont attendus (reçu « {photos_par_bouteille} »)."
+        ) from None
+    if any(taille < 1 for taille in tailles) or sum(tailles) != nombre:
+        raise EnvoiRefuse(
+            f"« photos_par_bouteille » ({photos_par_bouteille}) ne correspond pas aux {nombre} photos envoyées : "
+            f"chaque bouteille a au moins une photo, et le total doit être {nombre}."
         )
+    return tailles
 
 
-def _nom_sur(nom_origine: str, noms_pris: set[str]) -> str:
-    """Le nom du fichier sans aucun chemin ni caractère exotique. Il reste
-    significatif : l'appariement peut trier par nom (photos sans date EXIF)."""
+def _nom_sur(nom_origine: str) -> str:
+    """Le nom du fichier sans aucun chemin ni caractère exotique."""
     nom = Path(str(nom_origine).replace("\\", "/")).name
-    nom = re.sub(r"[^\w .()\-]", "_", nom).strip(" .") or "photo"
-    if nom.casefold() in noms_pris:
-        raise EnvoiRefuse(f"Deux photos portent le même nom : « {nom} ». Renommer l'une d'elles.")
-    noms_pris.add(nom.casefold())
-    return nom
+    return re.sub(r"[^\w .()\-]", "_", nom).strip(" .") or "photo"
 
 
 def _copier_borne(flux: BinaryIO, cible: Path, taille_max: int, nom_origine: str) -> None:
@@ -155,13 +180,16 @@ def _copier_borne(flux: BinaryIO, cible: Path, taille_max: int, nom_origine: str
             sortie.write(bloc)
 
 
-def _verifier_image(chemin: Path, nom_origine: str) -> None:
+def _verifier_image(chemin: Path, nom_origine: str) -> Path:
+    """L'image vérifiée, sous une extension qui correspond à son contenu."""
     attendue = verifier_image(chemin, nom_origine)
     if FAMILLES.get(chemin.suffix.lower()) != attendue:
-        # Extension absente ou trompeuse : on la corrige, l'appariement ne lit
-        # que les extensions d'image reconnues, et l'envoi au modèle se fie à
-        # l'extension pour convertir un HEIC.
-        shutil.move(chemin, chemin.with_name(chemin.name + attendue))
+        # Extension absente ou trompeuse : on la corrige ; l'envoi au modèle se
+        # fie à l'extension pour convertir un HEIC.
+        corrige = chemin.with_name(chemin.name + attendue)
+        shutil.move(chemin, corrige)
+        return corrige
+    return chemin
 
 
 def verifier_image(chemin: Path, nom_origine: str) -> str:

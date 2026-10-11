@@ -1,0 +1,56 @@
+{% set id = vue.inventaire.id %}
+{% set cible = 'hx-target="#en-attente" hx-swap="outerHTML"' %}
+<section id="en-attente" class="en-attente" data-peut-lancer="{{ 'oui' if vue.peut_lancer else 'non' }}">
+  {% if erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
+  {% for anomalie in vue.anomalies %}<p class="message attention">{{ anomalie }}</p>{% endfor %}
+  <p class="aide">
+    {{ vue.bouteilles | length }} bouteille(s) en attente · {{ vue.nb_photos }} photo(s)
+    {% if vue.deja_formees %} · {{ vue.deja_formees }} déjà dans l'inventaire{% endif %}
+    · {{ vue.photos_max }} photos au plus par bouteille
+  </p>
+  <ol class="liste-attente">
+  {% for b in vue.bouteilles %}{% set g = b.groupe %}
+    <li class="carte-attente" id="groupe-{{ g.id }}">
+      <div class="attente-titre">
+        <strong>Bouteille {{ b.numero }}</strong>
+        <form class="quantite-attente" hx-post="/app/inventaires/{{ id }}/verifier/quantite/{{ g.id }}" {{ cible | safe }}>
+          <label>× <input type="text" inputmode="numeric" name="quantite" value="{{ g.quantite }}" size="3"
+                          aria-label="Quantité de la bouteille {{ b.numero }}"></label>
+          <button class="lien" type="submit">Enregistrer</button>
+        </form>
+      </div>
+      <div class="attente-photos">
+        {% for p in b.photos %}
+        <figure class="vignette">
+          <img src="/inventaires/{{ id }}/photos/{{ p.id }}?taille=miniature" alt="Photo {{ loop.index }} de la bouteille {{ b.numero }}" loading="lazy">
+          <figcaption>Photo {{ loop.index }}</figcaption>
+          <div class="vignette-actions">
+            {% if not loop.first %}
+            <button class="bouton petit" hx-post="/app/inventaires/{{ id }}/verifier/couper/{{ p.id }}" {{ cible | safe }}
+                    title="Cette photo et les suivantes forment une autre bouteille">Nouvelle bouteille à partir d'ici</button>
+            {% endif %}
+            <button class="bouton petit danger" hx-post="/app/inventaires/{{ id }}/verifier/retirer-photo/{{ p.id }}" {{ cible | safe }}
+                    hx-confirm="Retirer cette photo ?">Retirer</button>
+          </div>
+        </figure>
+        {% endfor %}
+      </div>
+      <div class="vignette-actions">
+        {% if not loop.first %}
+        <button class="bouton petit" hx-post="/app/inventaires/{{ id }}/verifier/rattacher/{{ g.id }}" {{ cible | safe }}>Rattacher à la précédente</button>
+        {% endif %}
+        <button class="bouton petit danger" hx-post="/app/inventaires/{{ id }}/verifier/supprimer/{{ g.id }}" {{ cible | safe }}
+                hx-confirm="Supprimer la bouteille {{ b.numero }} et ses {{ b.photos | length }} photo(s) ?">Supprimer la bouteille</button>
+      </div>
+    </li>
+  {% else %}
+    <li class="vide">Aucune bouteille en attente.</li>
+  {% endfor %}
+  </ol>
+  <nav class="barre-actions">
+    <a class="bouton" href="/app/inventaires/{{ id }}/depot">Ajouter des photos</a>
+    <button class="bouton principal" id="lancer" {% if not vue.peut_lancer %}disabled{% endif %}
+            hx-post="/app/inventaires/{{ id }}/lancer" {{ cible | safe }}
+            hx-confirm="Lancer l'analyse de {{ vue.bouteilles | length }} bouteille(s) ? Leurs photos ne pourront plus être modifiées.">Lancer l'analyse</button>
+  </nav>
+</section>

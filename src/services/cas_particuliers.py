@@ -1,7 +1,8 @@
 """Les cas particuliers de la relecture (guide de session 5, §5).
 
-Réanalyser, inverser les photos, signaler un problème de paire, séparer une
-bouteille. Chaque action est tracée dans l'historique des événements de la
+Réanalyser, signaler un problème de photos, séparer une bouteille. (« Inverser
+les photos » a disparu avec les rôles étiquette / contre-étiquette : les photos
+d'une bouteille sont numérotées, sans rôle — decisions.md 0164, 0166.) Chaque action est tracée dans l'historique des événements de la
 bouteille (decisions.md 0139) ; aucune ne modifie une extraction ni ne
 supprime une correction. Le modèle n'est jamais appelé ici : réanalyser remet
 la bouteille dans la file d'attente, et c'est le worker qui l'extrait.
@@ -84,39 +85,14 @@ def reanalyser(session: Session, bouteille_id: int, auteur: str) -> bool:
     return True
 
 
-# --- inverser les photos ---------------------------------------------------------------------
-
-
-def inverser_photos(session: Session, bouteille_id: int, auteur: str) -> None:
-    """L'étiquette devient la contre-étiquette et inversement. Rien d'autre ne
-    change : l'écran propose ensuite de réanalyser la bouteille."""
-    auteur = auteur_valide(auteur)
-    bouteille = charger_bouteille(session, bouteille_id)
-    if bouteille.photo_contre_id is None:
-        raise ActionRefusee(f"{_nom(bouteille)} : une seule photo, rien à inverser.")
-    if bouteille.statut == "en_cours":
-        raise ActionRefusee(
-            f"{_nom(bouteille)} : analyse en cours. Attendez sa fin avant d'inverser les photos."
-        )
-    bouteille.photo_etiquette_id, bouteille.photo_contre_id = bouteille.photo_contre_id, bouteille.photo_etiquette_id
-    _tracer(
-        bouteille,
-        "inversion_photos",
-        auteur,
-        {"etiquette": bouteille.photo_etiquette_id, "contre_etiquette": bouteille.photo_contre_id},
-    )
-    session.commit()
-    session.refresh(bouteille)  # relations photo_etiquette / photo_contre à jour
-
-
-# --- signaler un problème de paire ---------------------------------------------------------
+# --- signaler un problème de photos ----------------------------------------------------------
 
 
 def signaler_paire(session: Session, bouteille_id: int, auteur: str, motif: str = "") -> bool:
-    """Les deux photos ne vont pas ensemble (décalage après le lancement) : la
-    bouteille est marquée et ne peut plus être validée (decisions.md 0145). La
-    réparation des paires après lancement est hors périmètre. Renvoie False si
-    elle était déjà signalée."""
+    """Les photos ne montrent pas toutes cette bouteille (photo d'une autre
+    bouteille dans le groupe) : la bouteille est marquée et ne peut plus être
+    validée (decisions.md 0145). Noms internes d'origine (« paire ») gardés :
+    l'historique les porte. Renvoie False si elle était déjà signalée."""
     auteur = auteur_valide(auteur)
     bouteille = charger_bouteille(session, bouteille_id)
     if bouteille.paire_signalee:
@@ -186,8 +162,7 @@ def separer(session: Session, bouteille_id: int, quantite: Any, auteur: str) -> 
     nouvelle = FicheBouteille(
         inventaire=inventaire,
         identifiant=_identifiant_libre(session, inventaire.id, source.identifiant),
-        photo_etiquette_id=source.photo_etiquette_id,
-        photo_contre_id=source.photo_contre_id,
+        groupe_id=source.groupe_id,  # les mêmes photos
         position=source.position + 1,
         quantite=nombre,
         statut="extraite",

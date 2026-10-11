@@ -121,9 +121,6 @@ class Inventaire(Base):
     )
     extraction_lancee_le: Mapped[datetime | None] = mapped_column(DateTime)
     motif_arret: Mapped[str | None] = mapped_column(Text)  # panne systématique
-    # Dépôt (session 4) : une photo par bouteille, et ordre corrigé à la main (0128).
-    sans_contre: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
-    ordre_manuel: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
     maison: Mapped[Maison] = relationship()
     config_version: Mapped[ConfigVersion] = relationship()
@@ -131,6 +128,35 @@ class Inventaire(Base):
         back_populates="inventaire", order_by="FicheBouteille.position"
     )
     photos: Mapped[list[Photo]] = relationship(order_by="Photo.ordre")
+    groupes: Mapped[list[GroupePhotos]] = relationship(order_by="GroupePhotos.numero, GroupePhotos.id")
+
+
+class GroupePhotos(Base):
+    """Les photos d'UNE bouteille, telles que l'expert les a prises (decisions.md
+    0166) : 1 à N photos ordonnées, la quantité saisie à la capture (« × N »).
+
+    Créé au dépôt, avant la bouteille : tant qu'aucune bouteille n'y pointe, il
+    est « en attente » (photos encore en cours d'ajout). Une bouteille née
+    d'une séparation partage le groupe de sa source.
+    """
+
+    __tablename__ = "groupe_photos"
+    __table_args__ = (
+        UniqueConstraint("inventaire_id", "cle"),
+        CheckConstraint("quantite >= 1", name="quantite"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    inventaire_id: Mapped[int] = mapped_column(ForeignKey("inventaire.id"))
+    # Ordre de prise de vue : les bouteilles suivent cet ordre dans l'inventaire.
+    numero: Mapped[int]
+    # Clé donnée par l'appareil qui photographie : les photos d'une même
+    # bouteille la portent, même si elles arrivent dans le désordre.
+    cle: Mapped[str | None] = mapped_column(String(64))
+    quantite: Mapped[int] = mapped_column(default=1)
+    cree_le: Mapped[datetime] = mapped_column(DateTime, default=maintenant)
+
+    photos: Mapped[list[Photo]] = relationship(back_populates="groupe", order_by="Photo.rang")
 
 
 class Photo(Base):
@@ -140,6 +166,7 @@ class Photo(Base):
     __table_args__ = (
         UniqueConstraint("inventaire_id", "empreinte"),  # même photo deux fois : refusée
         UniqueConstraint("inventaire_id", "ordre"),
+        UniqueConstraint("groupe_id", "rang"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -147,11 +174,15 @@ class Photo(Base):
     chemin: Mapped[str] = mapped_column(String(255))  # relatif au stockage
     empreinte: Mapped[str] = mapped_column(String(64))  # SHA-256 du contenu
     nom_origine: Mapped[str] = mapped_column(String(255))
-    prise_de_vue: Mapped[datetime | None] = mapped_column(DateTime)
-    ordre: Mapped[int]
+    prise_de_vue: Mapped[datetime | None] = mapped_column(DateTime)  # information seulement (0166)
+    ordre: Mapped[int]  # ordre d'arrivée dans l'inventaire
     # Signature du fichier d'ORIGINE (nom, taille, date) fournie par le navigateur :
     # ne pas renvoyer une photo déjà reçue après une coupure (decisions.md 0127).
     signature_envoi: Mapped[str | None] = mapped_column(String(300))
+    groupe_id: Mapped[int] = mapped_column(ForeignKey("groupe_photos.id"))
+    rang: Mapped[int]  # place dans le groupe : « Photo 1 sur 3 » pour le modèle
+
+    groupe: Mapped[GroupePhotos] = relationship(back_populates="photos")
 
 
 class FicheBouteille(Base):
@@ -175,9 +206,8 @@ class FicheBouteille(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     inventaire_id: Mapped[int] = mapped_column(ForeignKey("inventaire.id"))
     identifiant: Mapped[str] = mapped_column(String(20))  # « B-… », decisions.md 0065
-    photo_etiquette_id: Mapped[int] = mapped_column(ForeignKey("photo.id"))
-    # Facultative : un inventaire « --sans-contre » n'a que des étiquettes (decisions.md 0108).
-    photo_contre_id: Mapped[int | None] = mapped_column(ForeignKey("photo.id"))
+    # Ses photos (decisions.md 0166) ; partagé avec les bouteilles nées d'une séparation.
+    groupe_id: Mapped[int] = mapped_column(ForeignKey("groupe_photos.id"))
     position: Mapped[int]
     quantite: Mapped[int] = mapped_column(default=1)
     statut: Mapped[str] = mapped_column(String(20), default="a_extraire")
@@ -195,11 +225,15 @@ class FicheBouteille(Base):
     temps_relecture_ms: Mapped[int] = mapped_column(default=0, server_default="0")
 
     inventaire: Mapped[Inventaire] = relationship(back_populates="bouteilles")
-    photo_etiquette: Mapped[Photo] = relationship(foreign_keys=[photo_etiquette_id])
-    photo_contre: Mapped[Photo | None] = relationship(foreign_keys=[photo_contre_id])
+    groupe: Mapped[GroupePhotos] = relationship()
     extractions: Mapped[list[Extraction]] = relationship(order_by="Extraction.id")
     corrections: Mapped[list[Correction]] = relationship(order_by="Correction.id")
     evenements: Mapped[list[EvenementBouteille]] = relationship(order_by="EvenementBouteille.id")
+
+    @property
+    def photos(self) -> list[Photo]:
+        """Ses photos, dans l'ordre où l'expert les a prises."""
+        return list(self.groupe.photos)
 
 
 class LimiteDebit(Base):

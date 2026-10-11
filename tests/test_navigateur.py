@@ -1,15 +1,18 @@
-"""Test de navigation de bout en bout (guide de session 4, §5 ; decisions.md 0135).
+"""Test de navigation de bout en bout (guides des sessions 4 et 6 ; decisions.md
+0135, 0167).
 
 Un vrai navigateur (Chromium, écran de téléphone) contre un vrai `dev.py`
-(application + worker, extracteur factice) : créer un inventaire, envoyer 6
-photos, inverser une paire, lancer, attendre la fin, télécharger l'Excel.
+(application + worker, extracteur factice) : créer un inventaire, photographier
+les bouteilles en mode appareil photo puis en mode galerie, vérifier, lancer,
+attendre la fin, télécharger l'Excel.
 
 C'est aussi le seul test du JavaScript d'envoi :
-- les photos sont RÉDUITES dans le navigateur, ce qui efface leur EXIF, et
-  leurs noms sont dans l'ordre INVERSE de leurs dates : seul un script qui lit
-  la date AVANT la réduction donne le bon ordre ;
+- chaque photo part avec SA bouteille, sa quantité (« × N ») ;
+- les photos sont RÉDUITES dans le navigateur quand l'option est cochée ;
 - les premiers envois échouent comme sur un réseau qui coupe : le script doit
   réessayer, sans rien perdre ;
+- une photo prise pendant une coupure survit à un RECHARGEMENT de la page (elle
+  est gardée dans le navigateur jusqu'à sa réception) ;
 - un fichier qui n'est pas une image est refusé, avec sa raison affichée.
 
 Aucune pause fixe : chaque attente porte sur une condition, avec une limite.
@@ -34,13 +37,11 @@ from tests.test_worker import attendre
 sync_api = pytest.importorskip("playwright.sync_api")
 
 
-def photo_datee(chemin, rang: int):
+def photo(chemin, rang: int):
     """2600 px de large (au-dessus de la cible de 2 500 : le navigateur la
-    réduira), date de prise de vue dans l'EXIF, comme sur un téléphone."""
+    réduira), comme sur un téléphone."""
     image = Image.new("RGB", (2600, 1950), ((rang * 41) % 256, (rang * 83) % 256, (rang * 29) % 256))
-    exif = Image.Exif()
-    exif[0x8769] = {0x9003: f"2026:09:17 15:56:{rang:02d}"}  # DateTimeOriginal
-    image.save(chemin, "JPEG", exif=exif.tobytes(), quality=80)
+    image.save(chemin, "JPEG", quality=80)
     return chemin
 
 
@@ -84,11 +85,14 @@ def telephone():
         navigateur.close()
 
 
+def envoyees(page, nombre):
+    page.wait_for_function(f"document.querySelectorAll('.envoi.ok').length === {nombre}", timeout=60_000)
+
+
 def test_parcours_complet_au_format_telephone(application, telephone, tmp_path):
-    dossier = tmp_path / "galerie"
+    dossier = tmp_path / "photos"
     dossier.mkdir()
-    # Noms dans l'ordre INVERSE des dates : « f » est la plus ancienne.
-    photos = [photo_datee(dossier / f"{'fedcba'[rang - 1]}_photo.jpg", rang) for rang in range(1, 7)]
+    a, b, c, d, e, f = (photo(dossier / f"{nom}.jpg", rang) for rang, nom in enumerate("abcdef", start=1))
     pas_une_image = dossier / "note.jpg"
     pas_une_image.write_bytes(b"ceci n'est pas une photo")
 
@@ -113,39 +117,60 @@ def test_parcours_complet_au_format_telephone(application, telephone, tmp_path):
     page.get_by_label("Nom de la vente").fill("Vente test navigateur")
     page.get_by_role("button", name="Créer et ajouter les photos").click()
     page.wait_for_url("**/depot")
-
-    # 2. Dépôt : réduction cochée, 6 photos + un fichier qui n'est pas une image.
+    inventaire_id = page.url.split("/inventaires/")[1].split("/")[0]
     page.get_by_label("Réduire les photos avant l'envoi").check()
-    page.set_input_files("#galerie", [*photos, pas_une_image])
-    page.wait_for_function("document.querySelectorAll('.envoi.ok').length === 6", timeout=60_000)
-    page.wait_for_selector(".envoi.refusee", timeout=30_000)
-    assert "n'est pas une image lisible" in page.inner_text(".envoi.refusee")
+
+    # 2. Mode appareil photo : bouteille 1 = deux photos, × 3 ; bouteille 2 = une photo.
+    assert page.inner_text("#titre-en-cours") == "Bouteille 1"
+    page.set_input_files("#camera", a)
+    page.set_input_files("#camera", b)
+    page.get_by_role("button", name="Une bouteille de plus").click()
+    page.get_by_role("button", name="Une bouteille de plus").click()
+    assert page.input_value("#quantite") == "3"
+    assert page.inner_text("#compteur") == "2 / 4 photos"
+    assert page.get_by_text("Prendre une photo").bounding_box()["height"] >= 44  # gros boutons, pour le pouce
+    page.get_by_role("button", name="Bouteille suivante").click()
+    assert page.inner_text("#titre-en-cours") == "Bouteille 2"
+    page.set_input_files("#camera", c)
+    envoyees(page, 3)
     assert coupures["restantes"] == 0  # les coupures ont bien eu lieu, et ont été rattrapées
 
-    inventaire_id = page.url.split("/inventaires/")[1].split("/")[0]
-    apercu = httpx.get(f"{application}/inventaires/{inventaire_id}/apercu").json()
-    noms = [p[cote]["nom"] for p in apercu["paires"] for cote in ("etiquette", "contre_etiquette")]
-    # L'ordre des DATES (lues avant réduction), pas celui des noms.
-    assert noms == ["f_photo.jpg", "e_photo.jpg", "d_photo.jpg", "c_photo.jpg", "b_photo.jpg", "a_photo.jpg"]
-    assert apercu["tri"] == "date de prise de vue"
-    pleine = httpx.get(f"{application}/inventaires/{inventaire_id}/photos/{apercu['paires'][0]['etiquette']['id']}?taille=originale")
+    # 3. Coupure franche pendant la bouteille 3, puis la page est rechargée : la
+    #    photo prise, gardée dans le navigateur, repart toute seule au retour.
+    page.get_by_role("button", name="Bouteille suivante").click()
+    coupures["restantes"] = 1000
+    page.set_input_files("#camera", d)
+    page.wait_for_selector(".envoi.reessai", timeout=30_000)
+    page.reload()
+    coupures["restantes"] = 0
+    envoyees(page, 1)
+    assert page.inner_text("#titre-en-cours") == "Bouteille 3"  # la bouteille en cours a survécu
+    assert page.inner_text("#compteur") == "1 / 4 photo"
+
+    # 4. Mode galerie : bouteille 4 = deux photos de la galerie, et un fichier refusé.
+    page.get_by_role("tab", name="Galerie ou ordinateur").click()
+    carte = page.locator(".carte-galerie").first
+    assert "Bouteille 4" in carte.inner_text()
+    carte.locator("input[type=file]").set_input_files([e, f, pas_une_image])
+    envoyees(page, 3)
+    page.wait_for_selector(".envoi.refusee", timeout=30_000)
+    assert "n'est pas une image lisible" in page.inner_text(".envoi.refusee")
+
+    vue = httpx.get(f"{application}/inventaires/{inventaire_id}/apercu").json()
+    assert [[p["nom"] for p in bouteille["photos"]] for bouteille in vue["bouteilles"]] == [
+        ["a.jpg", "b.jpg"], ["c.jpg"], ["d.jpg"], ["e.jpg", "f.jpg"]
+    ]
+    assert [bouteille["quantite"] for bouteille in vue["bouteilles"]] == [3, 1, 1, 1]
+    pleine = httpx.get(f"{application}/inventaires/{inventaire_id}/photos/{vue['bouteilles'][0]['photos'][0]['id']}?taille=originale")
     assert max(Image.open(io.BytesIO(pleine.content)).size) == 2500  # réduite dans le navigateur
 
-    # 3. Vérifier l'ordre, inverser la paire n°2.
-    page.get_by_role("link", name="Vérifier l'ordre").click()
-    page.wait_for_url("**/ordre")
-    assert page.locator(".paire").count() == 3
+    # 5. Vérifier, lancer, suivre jusqu'à la fin, télécharger l'Excel.
+    page.get_by_role("link", name="Vérifier et lancer").click()
+    page.wait_for_url("**/verifier")
+    assert page.locator(".carte-attente").count() == 4
     lancer = page.get_by_role("button", name="Lancer l'analyse")
-    assert lancer.bounding_box()["height"] >= 44  # gros boutons, pour le pouce
-    page.locator(".paire").nth(1).get_by_role("button", name="Inverser").click()
-    attendre(
-        lambda: httpx.get(f"{application}/inventaires/{inventaire_id}/apercu").json()["paires"][1]["etiquette"]["nom"]
-        == "c_photo.jpg",
-        message="paire inversée",
-    )
-
-    # 4. Lancer, suivre jusqu'à la fin, télécharger l'Excel.
-    page.get_by_role("button", name="Lancer l'analyse").click()
+    assert lancer.bounding_box()["height"] >= 44
+    lancer.click()
     page.wait_for_url("**/suivi")
     page.get_by_text("Analyse terminée").wait_for(timeout=60_000)
     with page.expect_download() as telechargement:
@@ -154,4 +179,6 @@ def test_parcours_complet_au_format_telephone(application, telephone, tmp_path):
     assert fichier.suggested_filename == f"inventaire_{inventaire_id}.xlsx"
     fichier.save_as(tmp_path / fichier.suggested_filename)
     feuille = load_workbook(tmp_path / fichier.suggested_filename).active
-    assert feuille.max_row - 1 == 3  # 3 bouteilles
+    assert feuille.max_row - 1 == 4  # 4 bouteilles
+    quantites = [feuille.cell(row=r, column=2).value for r in range(2, 6)]
+    assert quantites == [3, 1, 1, 1]  # « × 3 » saisi à la capture

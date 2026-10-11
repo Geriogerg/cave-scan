@@ -62,19 +62,18 @@ def test_valider_avec_le_temps_de_relecture(api, inventaire):
     assert api.post(chemin(inventaire, bouteilles(api, inventaire)[1], "/valider"), headers=AUTEUR).status_code == 200
 
 
-def test_signalement_reanalyse_inversion_separation(api, inventaire):
+def test_signalement_reanalyse_separation(api, inventaire):
     premiere, seconde = bouteilles(api, inventaire)[:2]
 
     signalee = api.post(chemin(inventaire, premiere, "/signalement"), json={"motif": "décalage"}, headers=AUTEUR)
     assert signalee.status_code == 200 and signalee.json()["paire_signalee"] is True
     assert signalee.json()["evenements"][0]["detail"] == {"motif": "décalage"}
-    verifier_erreur(api.post(chemin(inventaire, premiere, "/valider"), headers=AUTEUR), 409, "validation_refusee", "problème de paire")
+    verifier_erreur(api.post(chemin(inventaire, premiere, "/valider"), headers=AUTEUR), 409, "validation_refusee", "problème de photos")
     levee = api.delete(chemin(inventaire, premiere, "/signalement"), headers=AUTEUR)
     assert levee.status_code == 200 and levee.json()["paire_signalee"] is False
 
     avant = api.get(chemin(inventaire, premiere)).json()["photos"]
-    inversee = api.post(chemin(inventaire, premiere, "/inverser-photos"), headers=AUTEUR).json()
-    assert inversee["photos"]["etiquette"] == avant["contre_etiquette"]
+    assert api.post(chemin(inventaire, premiere, "/inverser-photos"), headers=AUTEUR).status_code in (404, 405)
 
     reanalyse = api.post(chemin(inventaire, seconde, "/reanalyser"), headers=AUTEUR)
     assert reanalyse.status_code == 200 and reanalyse.json()["statut"] == "a_extraire"
@@ -83,7 +82,7 @@ def test_signalement_reanalyse_inversion_separation(api, inventaire):
     nouvelle = api.post(chemin(inventaire, premiere, "/separer"), json={"quantite": 2}, headers=AUTEUR)
     assert nouvelle.status_code == 201
     assert nouvelle.json()["quantite"] == 2 and nouvelle.json()["separee_de_id"] == premiere
-    assert nouvelle.json()["photos"] == inversee["photos"]  # mêmes photos
+    assert nouvelle.json()["photos"] == avant  # mêmes photos
     verifier_erreur(api.post(chemin(inventaire, premiere, "/separer"), json={"quantite": 4}, headers=AUTEUR),
                     409, "action_refusee", "on peut en séparer 3 au plus")
 

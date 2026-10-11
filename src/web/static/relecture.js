@@ -3,7 +3,7 @@
  * Du JavaScript simple, sans framework, seulement là où le navigateur l'impose :
  *   1. raccourcis clavier — les raccourcis à une lettre et les flèches sont
  *      désactivés pendant la saisie dans un champ ;
- *   2. zoom et déplacement dans la photo, bascule étiquette / contre-étiquette,
+ *   2. zoom et déplacement dans la photo, passage d'une photo à l'autre,
  *      chargement de l'original pour lire les petits caractères ;
  *   3. état de l'enregistrement : chaque champ est enregistré à sa sortie par
  *      HTMX ; ce script affiche l'état, réessaie après une coupure, et bloque le
@@ -307,7 +307,7 @@
         break;
       case "e": case "E":
         evenement.preventDefault();
-        basculerPhoto();
+        basculerPhoto(evenement.shiftKey ? -1 : 1);
         break;
       case "?":
         evenement.preventDefault();
@@ -383,10 +383,11 @@
     appliquer();
   }
 
-  function basculerPhoto() {
+  // E : photo suivante ; Maj+E : précédente (toutes les photos de la bouteille, 0166).
+  function basculerPhoto(sens) {
     if (vignettes.length < 2) return;
     var active = vignettes.findIndex(function (v) { return v.classList.contains("active"); });
-    montrer(vignettes[(active + 1) % vignettes.length]);
+    montrer(vignettes[(active + sens + vignettes.length) % vignettes.length]);
   }
 
   vignettes.forEach(function (vignette) {

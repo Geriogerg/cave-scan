@@ -55,7 +55,6 @@ h1 { font-size: 1.45rem; margin: 4px 0 12px; }
   background: var(--surface); border-top: 1px solid var(--bordure);
 }
 .barre-actions > * { flex: 1; }
-.paires .barre-actions { position: sticky; margin: 16px -16px 0; }
 
 /* Formulaire */
 .formulaire { display: flex; flex-direction: column; gap: 8px; }
@@ -104,19 +103,48 @@ progress { width: 100%; height: 14px; accent-color: var(--accent); }
 .envoi.refusee .envoi-etat { color: var(--alerte); white-space: normal; max-width: 60%; }
 .envoi.reessai .envoi-etat { color: var(--attention); }
 
-/* Vérification de l'ordre */
-.liste-paires { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.paire { background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon); padding: 10px; }
-.paire-titre { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.paire-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Dépôt : une bouteille = ses photos (session 6) */
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 12px 0; border: 1px solid var(--bordure); border-radius: var(--rayon); overflow: hidden; }
+.mode { min-height: 48px; font: inherit; border: none; background: var(--surface); color: var(--texte); cursor: pointer; }
+.mode.actif { background: var(--accent); color: var(--accent-texte); font-weight: 600; }
+.bouteille-en-cours, .carte-galerie, .carte-attente {
+  background: var(--surface); border: 1px solid var(--bordure); border-radius: var(--rayon); padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.bouteille-en-cours { border-color: var(--accent); }
+.en-cours-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.en-cours-tete strong { font-size: 1.15rem; }
+.compteur { color: var(--texte-doux); font-variant-numeric: tabular-nums; }
+.vignettes-depot { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.vignette-depot {
+  width: 64px; height: 64px; border-radius: 8px; border: 2px solid var(--bordure); overflow: hidden;
+  display: flex; align-items: center; justify-content: center; font-size: 0.7rem; text-align: center; background: #eee;
+}
+.vignette-depot img { width: 100%; height: 100%; object-fit: cover; }
+.vignette-depot.ok { border-color: var(--ok); }
+.vignette-depot.actif, .vignette-depot.attente { border-color: var(--accent); border-style: dashed; }
+.vignette-depot.reessai { border-color: var(--attention); }
+.vignette-depot.deja { width: auto; padding: 0 8px; background: none; color: var(--texte-doux); border-style: dotted; }
+.quantite-depot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.quantite-depot input { width: 4em; text-align: center; }
+.precedentes { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.precedente { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--texte-doux); }
+.bouteilles-galerie { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.actions-galerie { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.quantite-galerie input { width: 4em; text-align: center; min-height: 44px; }
+.bouton.inactif { opacity: 0.5; pointer-events: none; }
+
+/* Vérifier les bouteilles en attente */
+.liste-attente { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.attente-titre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.quantite-attente { display: flex; align-items: center; gap: 6px; }
+.quantite-attente input { width: 4em; text-align: center; min-height: 44px; }
+.attente-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.en-attente .barre-actions { position: sticky; margin: 16px -16px 0; }
 .vignette { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .vignette img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; background: #eee; }
 .vignette figcaption { font-size: 0.9rem; color: var(--texte-doux); }
 .vignette-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.vignette.manquante {
-  display: flex; align-items: center; justify-content: center; text-align: center; padding: 12px;
-  border: 2px dashed var(--alerte); color: var(--alerte); border-radius: 8px; min-height: 120px;
-}
 
 /* Suivi */
 .chiffres { list-style: none; padding: 0; display: flex; gap: 18px; flex-wrap: wrap; }

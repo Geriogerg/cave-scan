@@ -17,15 +17,15 @@
   {% endif %}
   {% if b.paire_signalee %}
     <div class="message alerte">
-      Problème de paire signalé : cette bouteille ne peut pas être validée.
+      Problème de photos signalé : cette bouteille ne peut pas être validée.
       <form class="en-ligne" method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/lever-signalement" data-action>
         {% include "_filtre_cache.html" %}
         <button class="lien">Lever le signalement</button>
       </form>
     </div>
   {% elif f.doute_paire %}
-    <p class="message attention">Le modèle doute que les deux photos montrent la même bouteille : comparez-les.
-      Au besoin, « Signaler un problème de paire » (autres actions, en bas).</p>
+    <p class="message attention">Le modèle doute que ces photos montrent toutes la même bouteille : comparez-les.
+      Au besoin, « Signaler un problème de photos » (autres actions, en bas).</p>
   {% endif %}
   {% if f.separee_de %}
     <p class="message info">Née de la séparation de la bouteille n°{{ f.separee_de.position }} ({{ f.separee_de.identifiant }}) : mêmes photos.</p>

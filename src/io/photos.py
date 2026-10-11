@@ -1,27 +1,27 @@
-"""Appariement des photos par ordre de prise de vue (decisions.md 0023).
+"""Les photos d'un dossier, regroupées par bouteille (decisions.md 0166).
 
-En cave, l'expert photographie dans l'ordre — étiquette, contre-étiquette,
-bouteille suivante — puis dépose tout, à plat, dans un dossier. Ce module
-reconstitue les paires, et refuse de deviner (decisions.md 0068) :
+Une bouteille = un groupe de photos, tel que l'expert l'a constitué — l'outil ne
+devine jamais quelle photo va avec quelle autre :
 
-- tri par date de prise de vue (EXIF) si TOUTES les photos en ont une, sinon
-  par nom de fichier (tri naturel : « photo 2 » avant « photo 10 ») ;
-- paires consécutives : 1re photo = étiquette, 2e = contre-étiquette ;
-- nombre impair -> arrêt, avec un message explicite : aucun appariement
-  silencieux, il faudrait deviner quelle photo manque ;
-- photo dans un format que la chaîne ne lit pas (TIFF, RAW...) -> arrêt,
-  jamais ignorée en silence ; le HEIC d'iPhone est lu (decisions.md 0158),
-  mais une photo HEIC illisible arrête aussi ;
-- photo rangée dans un sous-dossier -> arrêt (l'ancienne convention « un
-  sous-dossier par bouteille » est remplacée par 0023).
+- une photo posée à la racine du dossier = une bouteille d'une seule photo ;
+- un sous-dossier = une bouteille, avec toutes les photos qu'il contient
+  (étiquette, contre-étiquette, capsule, bouteille entière…), dans l'ordre
+  naturel de leurs noms (« photo 2 » avant « photo 10 ») ;
+- les bouteilles suivent l'ordre naturel des noms, photos et sous-dossiers
+  mêlés ;
+- photo dans un format que la chaîne ne lit pas (TIFF, RAW…), photo HEIC
+  illisible, photo rangée deux niveaux plus bas -> arrêt, avec un message
+  explicite : jamais ignorée en silence. Le HEIC d'iPhone est lu (0158).
 
-Les fichiers qui ne sont pas des photos (notes, fichiers système) sont ignorés.
+Les fichiers qui ne sont pas des photos (notes, fichiers système) et les
+sous-dossiers sans photo sont ignorés.
 """
 
 from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -36,144 +36,108 @@ EXTENSIONS_NON_LUES = {
     ".dng", ".raw", ".cr2", ".cr3", ".nef", ".arw",
 }
 
-TRI_EXIF = "date de prise de vue (EXIF)"
-TRI_NOM = "nom de fichier"
-
 # Étiquettes EXIF : date de prise de vue, sinon date de l'image.
 _EXIF_IFD, _DATE_ORIGINALE, _DATE = 0x8769, 0x9003, 0x0132
 
 
 class PhotosInvalides(ValueError):
-    """Le dossier de photos ne permet pas un appariement sûr. Le message dit pourquoi."""
+    """Le dossier de photos ne permet pas de former les bouteilles sans deviner.
+    Le message dit pourquoi."""
+
+
+def identifiant_de(photos: Sequence[str | Path]) -> str:
+    """Identifiant stable d'une bouteille : empreinte du CONTENU de ses photos,
+    dans leur ordre (decisions.md 0016, 0065).
+
+    Le même d'un run à l'autre, insensible au renommage des fichiers. Une photo
+    absente du disque (dry-run sur fixtures) contribue par son chemin. Pour une
+    bouteille étiquette + contre-étiquette, c'est l'identifiant d'avant les
+    groupes : les inventaires existants gardent les leurs.
+    """
+    empreinte = hashlib.sha256()
+    for chemin in photos:
+        chemin = Path(chemin)
+        empreinte.update(chemin.read_bytes() if chemin.is_file() else str(chemin).encode())
+        empreinte.update(b"\0")
+    return f"B-{empreinte.hexdigest()[:10].upper()}"
 
 
 @dataclass(frozen=True)
 class PhotosBouteille:
-    """Les vues d'UNE bouteille."""
+    """Les photos d'UNE bouteille, dans l'ordre de l'expert."""
 
-    etiquette: Path
-    contre_etiquette: Path | None = None
-    autres: list[Path] = field(default_factory=list)
-
-    @property
-    def nom(self) -> str:
-        if self.contre_etiquette is None:
-            return self.etiquette.name
-        return f"{self.etiquette.name} + {self.contre_etiquette.name}"
+    photos: tuple[Path, ...]
+    nom: str  # le nom de la photo seule, ou du sous-dossier
 
     @property
     def identifiant(self) -> str:
-        """Identifiant stable de la bouteille : empreinte du CONTENU de ses photos.
-
-        Le même d'un run à l'autre, insensible au renommage des fichiers — c'est
-        ce qui permet de reprendre une campagne ou de retrouver une bouteille
-        (decisions.md 0016, 0065). Une photo absente du disque (dry-run sur
-        fixtures) contribue par son chemin.
-        """
-        empreinte = hashlib.sha256()
-        for chemin in (self.etiquette, self.contre_etiquette, *self.autres):
-            if chemin is None:
-                continue
-            chemin = Path(chemin)
-            empreinte.update(chemin.read_bytes() if chemin.is_file() else str(chemin).encode())
-            empreinte.update(b"\0")
-        return f"B-{empreinte.hexdigest()[:10].upper()}"
+        return identifiant_de(self.photos)
 
 
 @dataclass(frozen=True)
-class Appariement:
-    """Les paires reconstituées, et comment elles l'ont été."""
+class Regroupement:
+    """Les bouteilles d'un dossier, et la date de prise de vue de chaque photo
+    (gardée pour information : elle ne décide plus de rien)."""
 
     bouteilles: list[PhotosBouteille]
-    tri: str  # TRI_EXIF ou TRI_NOM
-    sans_date: list[str] = field(default_factory=list)  # pourquoi on a trié par nom
-    dates: dict[Path, datetime | None] = field(default_factory=dict)  # prise de vue, par photo
+    dates: dict[Path, datetime | None] = field(default_factory=dict)
 
 
-def apparier_photos(racine: str | Path, sans_contre: bool = False) -> Appariement:
-    """Reconstitue les paires étiquette / contre-étiquette d'un dossier à plat.
-
-    `sans_contre` : le dossier ne contient que des étiquettes, une photo par
-    bouteille (decisions.md 0108). C'est l'utilisateur qui le dit — l'outil ne
-    devine jamais si une photo est une étiquette ou une contre-étiquette.
-    """
+def grouper_photos(racine: str | Path) -> Regroupement:
+    """Les bouteilles d'un dossier : une par photo à la racine, une par
+    sous-dossier. Lève `PhotosInvalides` plutôt que de deviner."""
     racine = Path(racine)
     if not racine.is_dir():
         raise NotADirectoryError(f"Dossier de photos introuvable : {racine}")
 
-    _refuser_les_sous_dossiers(racine)
+    entrees = sorted(racine.iterdir(), key=lambda chemin: _cle_naturelle(chemin.name))
+    _refuser_les_formats_non_lus(racine, [c for c in entrees if c.is_file()])
+    bouteilles: list[PhotosBouteille] = []
+    for entree in entrees:
+        if entree.is_file() and entree.suffix.lower() in EXTENSIONS_IMAGE:
+            bouteilles.append(PhotosBouteille(photos=(entree,), nom=entree.name))
+        elif entree.is_dir():
+            photos = _photos_du_sous_dossier(entree)
+            if photos:
+                bouteilles.append(PhotosBouteille(photos=tuple(photos), nom=f"{entree.name}/"))
 
-    fichiers = [chemin for chemin in racine.iterdir() if chemin.is_file()]
-    _refuser_les_formats_non_lus(fichiers)
-
-    images = [chemin for chemin in fichiers if chemin.suffix.lower() in EXTENSIONS_IMAGE]
-    if not images:
+    if not bouteilles:
         raise PhotosInvalides(
-            f"Aucune photo exploitable sous {racine} "
-            f"(extensions reconnues : {', '.join(sorted(EXTENSIONS_IMAGE))})."
+            f"Aucune photo exploitable sous {racine} (extensions reconnues : "
+            f"{', '.join(sorted(EXTENSIONS_IMAGE))}). Une photo à la racine = une bouteille ; "
+            f"un sous-dossier = une bouteille et toutes ses photos."
         )
-    _refuser_les_heic_illisibles(images)
+    toutes = [photo for bouteille in bouteilles for photo in bouteille.photos]
+    _refuser_les_heic_illisibles(toutes)
+    return Regroupement(bouteilles=bouteilles, dates={photo: _date_de_prise_de_vue(photo) for photo in toutes})
 
-    dates = {image: _date_de_prise_de_vue(image) for image in images}
-    images, tri, sans_date = _trier(images, dates)
 
-    if sans_contre:
-        return Appariement(
-            bouteilles=[PhotosBouteille(etiquette=image) for image in images],
-            tri=tri,
-            sans_date=[c.name for c in sans_date],
-            dates=dates,
-        )
-
-    if len(images) % 2:
-        raise PhotosInvalides(
-            f"{len(images)} photos dans {racine} : nombre IMPAIR. Chaque bouteille "
-            f"demande une étiquette ET une contre-étiquette, prises dans l'ordre "
-            f"(decisions.md 0023). Aucun appariement n'est tenté : il faudrait "
-            f"deviner quelle photo manque ou est en trop. Ordre utilisé : {tri}. "
-            f"Vérifier le dossier puis relancer — ou, s'il ne contient que des "
-            f"étiquettes, relancer avec --sans-contre."
-        )
-
-    bouteilles = [
-        PhotosBouteille(etiquette=images[rang], contre_etiquette=images[rang + 1])
-        for rang in range(0, len(images), 2)
-    ]
-    return Appariement(
-        bouteilles=bouteilles, tri=tri, sans_date=[c.name for c in sans_date], dates=dates
+def _photos_du_sous_dossier(dossier: Path) -> list[Path]:
+    """Les photos d'un sous-dossier (= une bouteille), dans l'ordre naturel."""
+    for profond in sorted(c for c in dossier.iterdir() if c.is_dir()):
+        perdues = [c.name for c in profond.rglob("*") if c.suffix.lower() in EXTENSIONS_IMAGE | EXTENSIONS_NON_LUES]
+        if perdues:
+            raise PhotosInvalides(
+                f"Photos rangées trop profond ({dossier.name}/{profond.name}/ : {len(perdues)} photo(s)). "
+                f"Un sous-dossier par bouteille, ses photos directement dedans : sinon elles ne "
+                f"seraient jamais lues."
+            )
+    fichiers = [c for c in dossier.iterdir() if c.is_file()]
+    _refuser_les_formats_non_lus(dossier, fichiers)
+    return sorted(
+        (c for c in fichiers if c.suffix.lower() in EXTENSIONS_IMAGE), key=lambda c: _cle_naturelle(c.name)
     )
 
 
-def grouper_photos(racine: str | Path) -> list[PhotosBouteille]:
-    """Les bouteilles d'un dossier de photos, dans l'ordre de prise de vue."""
-    return apparier_photos(racine).bouteilles
-
-
-def _refuser_les_sous_dossiers(racine: Path) -> None:
-    for sous_dossier in sorted(c for c in racine.iterdir() if c.is_dir()):
-        photos = [
-            c.name for c in sous_dossier.rglob("*")
-            if c.suffix.lower() in EXTENSIONS_IMAGE | EXTENSIONS_NON_LUES
-        ]
-        if photos:
-            raise PhotosInvalides(
-                f"Photos rangées dans un sous-dossier ({sous_dossier.name}/ : "
-                f"{len(photos)} photo(s)). Les photos se déposent À PLAT dans "
-                f"{racine}, dans l'ordre de prise de vue (decisions.md 0023) : "
-                f"elles ne seraient sinon jamais lues."
-            )
-
-
-def _refuser_les_formats_non_lus(fichiers: list[Path]) -> None:
+def _refuser_les_formats_non_lus(dossier: Path, fichiers: list[Path]) -> None:
     non_lues = sorted(c.name for c in fichiers if c.suffix.lower() in EXTENSIONS_NON_LUES)
     if not non_lues:
         return
     apercu = ", ".join(non_lues[:5]) + (f" (+{len(non_lues) - 5})" if len(non_lues) > 5 else "")
     raise PhotosInvalides(
-        f"{len(non_lues)} photo(s) dans un format non lu par la chaîne : {apercu}. "
-        f"Formats lus : {', '.join(sorted(EXTENSIONS_IMAGE))}. Elles ne sont pas "
-        f"ignorées en silence : l'appariement par paires serait décalé. Les convertir "
-        f"en JPEG ou PNG."
+        f"{len(non_lues)} photo(s) dans un format non lu par la chaîne ({dossier.name}) : {apercu}. "
+        f"Formats lus : {', '.join(sorted(EXTENSIONS_IMAGE))}. Elles ne sont pas ignorées en "
+        f"silence : une bouteille perdrait une photo. Les convertir en JPEG ou PNG."
     )
 
 
@@ -198,35 +162,14 @@ def _refuser_les_heic_illisibles(images: list[Path]) -> None:
         )
 
 
-def _trier(
-    images: list[Path], dates: dict[Path, datetime | None]
-) -> tuple[list[Path], str, list[Path]]:
-    """Par date EXIF si TOUTES les photos en ont une ; sinon toutes par nom.
-
-    Un tri mixte (dates pour les unes, noms pour les autres) intercalerait les
-    photos au hasard : c'est tout l'un ou tout l'autre.
-    """
-    sans_date = [image for image, date in dates.items() if date is None]
-    if not sans_date:
-        return (
-            sorted(images, key=lambda image: (dates[image], _cle_naturelle(image.name))),
-            TRI_EXIF,
-            [],
-        )
-    return sorted(images, key=lambda image: _cle_naturelle(image.name)), TRI_NOM, sans_date
-
-
 def _cle_naturelle(nom: str) -> list[object]:
     """« photo 2 » avant « photo 10 » : les nombres se comparent comme des nombres."""
     return [int(morceau) if morceau.isdigit() else morceau.casefold() for morceau in re.split(r"(\d+)", nom)]
 
 
 def _date_de_prise_de_vue(chemin: Path) -> datetime | None:
-    """Date EXIF de prise de vue, ou None si absente ou illisible.
-
-    Une photo sans date n'est pas une erreur : elle fait seulement basculer
-    TOUT le tri sur les noms de fichier, et le run le dit.
-    """
+    """Date EXIF de prise de vue, ou None si absente ou illisible. Information
+    seulement : l'ordre des bouteilles ne dépend plus des dates (0166)."""
     from PIL import Image, UnidentifiedImageError
 
     try:
@@ -243,7 +186,7 @@ def _date_de_prise_de_vue(chemin: Path) -> datetime | None:
         return None
 
 
-# Publics pour le dépôt par l'application web (decisions.md 0128, 0129) : même
-# lecture de date et même ordre naturel que l'appariement d'un dossier.
+# Publics pour le dépôt par l'application web : même lecture de date et même
+# ordre naturel que le regroupement d'un dossier.
 date_de_prise_de_vue = _date_de_prise_de_vue
 cle_naturelle = _cle_naturelle
