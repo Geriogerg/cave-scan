@@ -70,7 +70,7 @@ def test_les_deux_backends_partagent_les_memes_consignes():
     from src.extract import vision_extract
 
     assert vision_extract.SYSTEM_PROMPT is consignes.SYSTEM_PROMPT
-    assert vision_extract.LIBELLE_ETIQUETTE is consignes.LIBELLE_ETIQUETTE
+    assert vision_extract.LIBELLE_PHOTO is consignes.LIBELLE_PHOTO
 
 
 def test_les_deux_backends_construisent_les_memes_libelles(photos):
@@ -78,8 +78,8 @@ def test_les_deux_backends_construisent_les_memes_libelles(photos):
 
     etiquette, contre, capsule = photos
 
-    textes_gemini = [b for b in construire_contenu(etiquette, contre, [capsule]) if isinstance(b, str)]
-    blocs = vision_extract.construire_contenu(etiquette, contre, [capsule])
+    textes_gemini = [b for b in construire_contenu([etiquette, contre, capsule]) if isinstance(b, str)]
+    blocs = vision_extract.construire_contenu([etiquette, contre, capsule])
     textes_anthropic = [b["text"] for b in blocs if b["type"] == "text"]
 
     assert textes_gemini == textes_anthropic
@@ -99,7 +99,7 @@ def test_le_schema_vient_de_schema_py():
 
 def test_toutes_les_vues_dans_le_meme_appel(photos):
     etiquette, contre, capsule = photos
-    contenu = construire_contenu(etiquette, contre, [capsule])
+    contenu = construire_contenu([etiquette, contre, capsule])
     images = [b for b in contenu if not isinstance(b, str)]
     assert len(images) == 3
 

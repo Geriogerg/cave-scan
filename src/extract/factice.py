@@ -16,11 +16,10 @@ import os
 import random
 import threading
 import time
-from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from src.extract.base import CheminPhoto, SortieModele, bouteille_depuis_sortie
+from src.extract.base import PhotosDUneBouteille, SortieModele, bouteille_depuis_sortie, liste_de_photos
 from src.extract.consignes import version_prompt
 from src.extract.schema import Bouteille, schema_extraction
 
@@ -53,13 +52,8 @@ class ExtracteurFactice:
         self.en_cours = 0
         self.max_simultanes = 0  # dans ce processus : pour vérifier le parallélisme
 
-    def extraire_brut(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> SortieModele:
-        nom = Path(etiquette).stem
+    def extraire_brut(self, photos: PhotosDUneBouteille) -> SortieModele:
+        nom = Path(liste_de_photos(photos)[0]).stem
         with self._verrou:
             self.en_cours += 1
             self.max_simultanes = max(self.max_simultanes, self.en_cours)
@@ -80,13 +74,8 @@ class ExtracteurFactice:
             tokens_sortie=200,
         )
 
-    def extract(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> Bouteille:
-        return bouteille_depuis_sortie(self.extraire_brut(etiquette, contre_etiquette, autres), self.config)
+    def extract(self, photos: PhotosDUneBouteille) -> Bouteille:
+        return bouteille_depuis_sortie(self.extraire_brut(photos), self.config)
 
     def _noter(self, evenement: str, nom: str) -> None:
         if self.journal is None:

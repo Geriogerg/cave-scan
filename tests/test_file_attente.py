@@ -167,7 +167,7 @@ def test_deux_reprises_simultanees_ne_reprennent_qu_une_fois(session, inventaire
 
 def test_un_ctrl_c_rend_la_bouteille_a_la_file(session, inventaire_id, stockage):
     class Interrompu(ExtracteurScenario):
-        def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
+        def extraire_brut(self, photos):
             raise KeyboardInterrupt
 
     lancer(session, inventaire_id)

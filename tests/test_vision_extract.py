@@ -63,7 +63,7 @@ def test_prompt_ne_contient_aucun_exemple_resolu():
 
 def test_toutes_les_vues_dans_le_meme_message(photos):
     etiquette, contre, capsule = photos
-    contenu = construire_contenu(etiquette, contre, [capsule])
+    contenu = construire_contenu([etiquette, contre, capsule])
 
     images = [bloc for bloc in contenu if bloc["type"] == "image"]
     assert len(images) == 3
@@ -71,15 +71,17 @@ def test_toutes_les_vues_dans_le_meme_message(photos):
     assert images[1]["source"]["media_type"] == "image/png"
 
 
-def test_chaque_image_est_precedee_de_son_role(photos):
+def test_chaque_image_est_precedee_de_son_numero_sans_role(photos):
+    """decisions.md 0164 : l'expert photographie librement, le modèle n'utilise que
+    ce qu'il voit ; aucun rôle (étiquette, contre-étiquette) n'est imposé."""
     etiquette, contre, _ = photos
-    contenu = construire_contenu(etiquette, contre)
-    roles = [bloc["text"] for bloc in contenu if bloc["type"] == "text"]
-    assert roles[0].startswith("Photo — étiquette")
-    assert roles[1].startswith("Photo — contre-étiquette")
+    contenu = construire_contenu([etiquette, contre])
+    reperes = [bloc["text"] for bloc in contenu if bloc["type"] == "text"]
+    assert reperes[:2] == ["Photo 1 sur 2 :", "Photo 2 sur 2 :"]
+    assert not any("contre-étiquette" in repere for repere in reperes[:2])
 
 
-def test_etiquette_seule_est_acceptee(photos):
+def test_une_photo_seule_est_acceptee(photos):
     etiquette, _, _ = photos
     contenu = construire_contenu(etiquette)
     assert len([b for b in contenu if b["type"] == "image"]) == 1

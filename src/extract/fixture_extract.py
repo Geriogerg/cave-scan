@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from src.extract.base import CheminPhoto, SortieModele, bouteille_depuis_sortie
+from src.extract.base import PhotosDUneBouteille, SortieModele, bouteille_depuis_sortie
 from src.extract.consignes import version_prompt
 from src.extract.schema import Bouteille, schema_extraction
 
@@ -75,12 +75,7 @@ class FixtureExtractor:
     def __len__(self) -> int:
         return len(self._charges)
 
-    def extraire_brut(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> SortieModele:
+    def extraire_brut(self, photos: PhotosDUneBouteille) -> SortieModele:
         """Rend la fixture suivante comme réponse brute. Les photos sont ignorées.
 
         L'ordre d'appel fait foi, comme l'alignement ligne à ligne du reste de
@@ -95,12 +90,5 @@ class FixtureExtractor:
         self._index += 1
         return SortieModele(brut=dict(charge), modele=self.modele, version_prompt=self.version_prompt)
 
-    def extract(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> Bouteille:
-        return bouteille_depuis_sortie(
-            self.extraire_brut(etiquette, contre_etiquette, autres), self.config
-        )
+    def extract(self, photos: PhotosDUneBouteille) -> Bouteille:
+        return bouteille_depuis_sortie(self.extraire_brut(photos), self.config)

@@ -19,21 +19,25 @@ from __future__ import annotations
 
 import os
 import time
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import httpx
 from google import genai
 from google.genai import errors, types
 
-from src.extract.base import CheminPhoto, Limiteur, SortieModele, bouteille_depuis_sortie
+from src.extract.base import (
+    Limiteur,
+    PhotosDUneBouteille,
+    SortieModele,
+    bouteille_depuis_sortie,
+    liste_de_photos,
+)
 from src.extract.consignes import (
     INSTRUCTION_FINALE,
-    LIBELLE_AUTRE,
-    LIBELLE_CONTRE_ETIQUETTE,
-    LIBELLE_ETIQUETTE,
+    LIBELLE_PHOTO,
     SYSTEM_PROMPT,
-    lire_photo,
+    LimitesEnvoi,
+    preparer_photos,
     version_prompt,
 )
 from src.extract.schema import Bouteille, schema_extraction
@@ -65,6 +69,10 @@ CODES_PASSAGERS = {408, 429}
 # réessaie, au lieu de transformer la moitié d'une campagne en abstentions.
 PAUSE_ENTRE_APPELS_S = 4.5
 TENTATIVES_MAX = 4
+
+# Gemini refuse une requête de plus de 20 Mo, images comprises, encodées en
+# base64 (un tiers de plus) : 13 Mo d'images laissent la marge (0165).
+LIMITES_ENVOI = LimitesEnvoi(octets_total=13 * 1024 * 1024)
 
 
 class GeminiExtractor:
@@ -101,19 +109,14 @@ class GeminiExtractor:
         self._dernier_appel = 0.0
         self.version_prompt = version_prompt(schema_extraction(config))
 
-    def extraire_brut(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> SortieModele:
+    def extraire_brut(self, photos: PhotosDUneBouteille) -> SortieModele:
         """Une bouteille, un appel. Même politique d'erreur que le backend payant.
 
         Panne SYSTÉMATIQUE -> remonte et arrête l'inventaire. Panne PASSAGÈRE,
         une fois les nouvelles tentatives épuisées -> rendue comme une donnée
         (decisions.md 0079).
         """
-        contenu = construire_contenu(etiquette, contre_etiquette, autres)
+        contenu = construire_contenu(photos)
         try:
             reponse = self._appeler(contenu)
         except errors.APIError as erreur:
@@ -124,15 +127,8 @@ class GeminiExtractor:
             return self._sortie_en_erreur(erreur)
         return sortie_depuis_reponse(reponse, self.modele, self.version_prompt)
 
-    def extract(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> Bouteille:
-        return bouteille_depuis_sortie(
-            self.extraire_brut(etiquette, contre_etiquette, autres), self.config
-        )
+    def extract(self, photos: PhotosDUneBouteille) -> Bouteille:
+        return bouteille_depuis_sortie(self.extraire_brut(photos), self.config)
 
     def _sortie_en_erreur(self, erreur: Exception) -> SortieModele:
         return SortieModele(
@@ -196,32 +192,18 @@ def _merite_reprise(erreur: Exception) -> bool:
     return _code(erreur) in CODES_PASSAGERS or isinstance(erreur, errors.ServerError)
 
 
-def construire_contenu(
-    etiquette: CheminPhoto,
-    contre_etiquette: CheminPhoto | None = None,
-    autres: Sequence[CheminPhoto] | None = None,
-) -> list[Any]:
-    """Assemble le message : toutes les vues d'UNE bouteille, ensemble.
+def construire_contenu(photos: PhotosDUneBouteille) -> list[Any]:
+    """Assemble le message : toutes les photos d'UNE bouteille, ensemble,
+    numérotées dans l'ordre de l'expert (decisions.md 0164).
 
-    Même ordre et mêmes libellés de rôle que le backend Anthropic — la
-    comparabilité des deux backends en dépend.
+    Mêmes libellés que le backend Anthropic — la comparabilité des deux backends
+    en dépend.
     """
-    octets, type_mime = lire_photo(etiquette)
-    contenu: list[Any] = [
-        LIBELLE_ETIQUETTE,
-        types.Part.from_bytes(data=octets, mime_type=type_mime),
-    ]
-
-    if contre_etiquette is not None:
-        octets, type_mime = lire_photo(contre_etiquette)
-        contenu.append(LIBELLE_CONTRE_ETIQUETTE)
+    photos = liste_de_photos(photos)
+    contenu: list[Any] = []
+    for numero, (octets, type_mime) in enumerate(preparer_photos(photos, LIMITES_ENVOI), start=1):
+        contenu.append(LIBELLE_PHOTO.format(numero=numero, total=len(photos)))
         contenu.append(types.Part.from_bytes(data=octets, mime_type=type_mime))
-
-    for index, autre in enumerate(autres or [], start=1):
-        octets, type_mime = lire_photo(autre)
-        contenu.append(LIBELLE_AUTRE.format(index=index))
-        contenu.append(types.Part.from_bytes(data=octets, mime_type=type_mime))
-
     contenu.append(INSTRUCTION_FINALE)
     return contenu
 

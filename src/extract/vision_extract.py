@@ -12,19 +12,23 @@ from __future__ import annotations
 
 import base64
 import os
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import anthropic
 
-from src.extract.base import CheminPhoto, Limiteur, SortieModele, bouteille_depuis_sortie
+from src.extract.base import (
+    Limiteur,
+    PhotosDUneBouteille,
+    SortieModele,
+    bouteille_depuis_sortie,
+    liste_de_photos,
+)
 from src.extract.consignes import (
     INSTRUCTION_FINALE,
-    LIBELLE_AUTRE,
-    LIBELLE_CONTRE_ETIQUETTE,
-    LIBELLE_ETIQUETTE,
+    LIBELLE_PHOTO,
     SYSTEM_PROMPT,
-    lire_photo,
+    LimitesEnvoi,
+    preparer_photos,
     version_prompt,
 )
 from src.extract.schema import Bouteille, schema_extraction
@@ -33,6 +37,10 @@ if TYPE_CHECKING:
     from src.config.maison import ConfigMaison
 
 MODELE_DEFAUT = "claude-opus-5"
+
+# Anthropic refuse une image de plus de 5 Mo (base64 compris) et une requête de
+# plus de 32 Mo : marges comprises (0165).
+LIMITES_ENVOI = LimitesEnvoi(octets_total=22 * 1024 * 1024, octets_par_photo=3_700_000)
 VARIABLE_MODELE = "CAVE_SCAN_MODEL"
 
 # Nouvelles tentatives du SDK sur panne passagère, à délai croissant.
@@ -65,8 +73,7 @@ le modèle écrit alors ses appels d'outil en texte visible, l'appel ne part
 jamais et l'extraction sort vide sans lever d'erreur."""
 
 
-def _bloc_image(chemin: CheminPhoto) -> dict[str, Any]:
-    octets, type_mime = lire_photo(chemin)
+def _bloc_image(octets: bytes, type_mime: str) -> dict[str, Any]:
     return {
         "type": "image",
         "source": {
@@ -77,30 +84,15 @@ def _bloc_image(chemin: CheminPhoto) -> dict[str, Any]:
     }
 
 
-def construire_contenu(
-    etiquette: CheminPhoto,
-    contre_etiquette: CheminPhoto | None = None,
-    autres: Sequence[CheminPhoto] | None = None,
-) -> list[dict[str, Any]]:
-    """Assemble les blocs du message : toutes les vues d'UNE bouteille, ensemble.
-
-    Chaque image est précédée d'une étiquette de rôle : sans elle, le modèle ne
-    sait pas laquelle est la contre-étiquette (où se lisent importateur et
-    degré). Ce sont des repères de position, pas des exemples de réponse.
-    """
-    contenu: list[dict[str, Any]] = [
-        {"type": "text", "text": LIBELLE_ETIQUETTE},
-        _bloc_image(etiquette),
-    ]
-
-    if contre_etiquette is not None:
-        contenu.append({"type": "text", "text": LIBELLE_CONTRE_ETIQUETTE})
-        contenu.append(_bloc_image(contre_etiquette))
-
-    for index, autre in enumerate(autres or [], start=1):
-        contenu.append({"type": "text", "text": LIBELLE_AUTRE.format(index=index)})
-        contenu.append(_bloc_image(autre))
-
+def construire_contenu(photos: PhotosDUneBouteille) -> list[dict[str, Any]]:
+    """Assemble les blocs du message : toutes les photos d'UNE bouteille,
+    ensemble, chacune précédée de son numéro (decisions.md 0164). Ce sont des
+    repères de position, pas des exemples de réponse."""
+    photos = liste_de_photos(photos)
+    contenu: list[dict[str, Any]] = []
+    for numero, (octets, type_mime) in enumerate(preparer_photos(photos, LIMITES_ENVOI), start=1):
+        contenu.append({"type": "text", "text": LIBELLE_PHOTO.format(numero=numero, total=len(photos))})
+        contenu.append(_bloc_image(octets, type_mime))
     contenu.append({"type": "text", "text": INSTRUCTION_FINALE})
     return contenu
 
@@ -161,13 +153,8 @@ class VisionExtractor:
         self._outil = schema_extraction(config)
         self.version_prompt = version_prompt(self._outil)
 
-    def extraire_brut(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> SortieModele:
-        """Une bouteille, un appel ; toutes ses vues dans le même message.
+    def extraire_brut(self, photos: PhotosDUneBouteille) -> SortieModele:
+        """Une bouteille, un appel ; toutes ses photos dans le même message.
 
         Panne SYSTÉMATIQUE (clé invalide, modèle inconnu, requête mal formée) :
         remonte et arrête l'inventaire — la répéter 200 fois ne ferait que
@@ -175,7 +162,7 @@ class VisionExtractor:
         du SDK épuisées : rendue comme une donnée (decisions.md 0079).
         """
         try:
-            reponse = self._appeler(etiquette, contre_etiquette, autres)
+            reponse = self._appeler(photos)
         except ERREURS_SYSTEMATIQUES:
             raise
         except anthropic.APIError as erreur:
@@ -187,22 +174,10 @@ class VisionExtractor:
             )
         return sortie_depuis_reponse(reponse, self.modele, self.version_prompt)
 
-    def extract(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> Bouteille:
-        return bouteille_depuis_sortie(
-            self.extraire_brut(etiquette, contre_etiquette, autres), self.config
-        )
+    def extract(self, photos: PhotosDUneBouteille) -> Bouteille:
+        return bouteille_depuis_sortie(self.extraire_brut(photos), self.config)
 
-    def _appeler(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None,
-        autres: Sequence[CheminPhoto] | None,
-    ) -> Any:
+    def _appeler(self, photos: PhotosDUneBouteille) -> Any:
         if self.limiteur is not None:
             self.limiteur.attendre_mon_tour()
         try:
@@ -221,9 +196,7 @@ class VisionExtractor:
                 messages=[
                     {
                         "role": "user",
-                        "content": construire_contenu(
-                            etiquette, contre_etiquette, autres
-                        ),
+                        "content": construire_contenu(photos),
                     }
                 ],
             )

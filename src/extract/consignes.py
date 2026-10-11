@@ -11,10 +11,16 @@ format de message.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import logging
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 from src.io.heic import en_jpeg, est_heic
+
+journal = logging.getLogger(__name__)
 
 TYPES_MEDIA = {
     ".jpg": "image/jpeg",
@@ -49,19 +55,19 @@ CHAMPS_A_VERIFIER : liste-y le nom de chaque champ sur lequel un doute subsiste,
 
 INTERDIT : tu ne produis aucune estimation, aucun prix, aucune cote, aucune valeur marchande, sous aucune forme, y compris dans les notes."""
 
-# Repères de position, pas des exemples de réponse : sans eux le modèle ne sait
-# pas laquelle est la contre-étiquette (où se lisent importateur et degré).
-LIBELLE_ETIQUETTE = "Photo — étiquette :"
-LIBELLE_CONTRE_ETIQUETTE = "Photo — contre-étiquette :"
-LIBELLE_AUTRE = "Photo — vue complémentaire {index} :"
+# Un repère de position, SANS rôle imposé : l'expert photographie librement
+# chaque bouteille (étiquette, contre-étiquette s'il y en a une, capsule,
+# bouteille entière…) et le modèle n'utilise que ce qu'il voit (decisions.md
+# 0164). Ce n'est pas un exemple de réponse.
+LIBELLE_PHOTO = "Photo {numero} sur {total} :"
 
-# Ne PRÉSUPPOSE pas que les photos montrent la même bouteille : elles sont
-# appariées par ordre de prise de vue, et une erreur d'appariement doit pouvoir
-# être signalée (guide, étape 4.4). Affirmer l'inverse l'aurait empêchée.
+# Ne PRÉSUPPOSE pas que les photos montrent la même bouteille : l'expert les a
+# regroupées, une erreur de regroupement doit pouvoir être signalée (0069).
 INSTRUCTION_FINALE = (
-    "Ces photos sont censées montrer une seule et même bouteille : vérifie-le "
-    "et dis-le dans photos_meme_bouteille. Relève les champs de catalogage "
-    "lisibles et abstiens-toi sur les autres."
+    "Ces photos, regroupées par l'expert, sont censées montrer une seule et même "
+    "bouteille : vérifie-le et dis-le dans photos_meme_bouteille. Relève les "
+    "champs de catalogage lisibles ou visibles sur l'une ou l'autre des photos, "
+    "et abstiens-toi sur les autres."
 )
 
 
@@ -76,7 +82,7 @@ def version_prompt(schema: dict) -> str:
     contenu = json.dumps(
         {
             "systeme": SYSTEM_PROMPT,
-            "libelles": [LIBELLE_ETIQUETTE, LIBELLE_CONTRE_ETIQUETTE, LIBELLE_AUTRE],
+            "libelles": [LIBELLE_PHOTO],
             "instruction": INSTRUCTION_FINALE,
             "schema": schema,
         },
@@ -110,3 +116,67 @@ def lire_photo(chemin: str | Path) -> tuple[bytes, str]:
     if est_heic(chemin):
         return en_jpeg(chemin), "image/jpeg"
     return chemin.read_bytes(), type_media(chemin)
+
+
+# --- garde-fou de taille (decisions.md 0165) ----------------------------------------------
+#
+# Toutes les photos d'une bouteille partent dans le même appel. Au-delà de la
+# limite du fournisseur, l'appel est refusé (400) — refus classé « panne
+# systématique », qui arrêterait TOUT l'inventaire. Seules les photos les plus
+# lourdes sont alors réduites, pour cet appel seulement : le fichier stocké ne
+# change jamais, et une bouteille sous la limite part telle quelle.
+
+COTES_DE_REDUCTION = (3000, 2500, 2000, 1600, 1200)  # côté long, en pixels
+QUALITE_REDUCTION = 90
+
+
+@dataclass(frozen=True)
+class LimitesEnvoi:
+    """Ce qu'un fournisseur accepte en un appel, en octets d'image (avant
+    l'encodage base64, qui ajoute un tiers)."""
+
+    octets_total: int
+    octets_par_photo: int | None = None
+
+
+def preparer_photos(photos: Sequence[str | Path], limites: LimitesEnvoi) -> list[tuple[bytes, str]]:
+    """Octets et type MIME de chaque photo, dans l'ordre, sous les limites."""
+    contenus = [lire_photo(photo) for photo in photos]
+    etapes = [0] * len(contenus)  # réduction déjà appliquée à chaque photo
+
+    def depasse() -> int | None:
+        """La photo à réduire : trop lourde seule, sinon la plus lourde."""
+        if limites.octets_par_photo is not None:
+            for index, (octets, _type) in enumerate(contenus):
+                if len(octets) > limites.octets_par_photo and etapes[index] < len(COTES_DE_REDUCTION):
+                    return index
+        if sum(len(octets) for octets, _type in contenus) > limites.octets_total:
+            candidates = [i for i in range(len(contenus)) if etapes[i] < len(COTES_DE_REDUCTION)]
+            if candidates:
+                return max(candidates, key=lambda i: len(contenus[i][0]))
+        return None
+
+    while (index := depasse()) is not None:
+        cote = COTES_DE_REDUCTION[etapes[index]]
+        etapes[index] += 1
+        contenus[index] = (_reduire(Path(photos[index]), cote), "image/jpeg")
+    reduites = [Path(photos[i]).name for i, etape in enumerate(etapes) if etape]
+    if reduites:
+        journal.warning(
+            "Photos réduites pour tenir dans un appel (%s octets au plus) : %s",
+            limites.octets_total, ", ".join(reduites),
+        )
+    return contenus
+
+
+def _reduire(chemin: Path, cote: int) -> bytes:
+    """La photo d'ORIGINE réduite (jamais une réduction de réduction), orientée,
+    sans métadonnées."""
+    from PIL import Image, ImageOps
+
+    with Image.open(chemin) as originale:
+        image = ImageOps.exif_transpose(originale).convert("RGB")
+    image.thumbnail((cote, cote))
+    sortie = io.BytesIO()
+    image.save(sortie, "JPEG", quality=QUALITE_REDUCTION)
+    return sortie.getvalue()

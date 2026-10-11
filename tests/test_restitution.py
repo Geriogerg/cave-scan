@@ -79,7 +79,7 @@ def export_comme_en_session_1(dossier, chemin):
     extracteur = FixtureExtractor(charges(), config)
     bouteilles = []
     for vues in apparier_photos(dossier).bouteilles:
-        bouteille = normalize(extracteur.extract(vues.etiquette, vues.contre_etiquette))
+        bouteille = normalize(extracteur.extract([vues.etiquette, vues.contre_etiquette]))
         bouteille.id = vues.identifiant
         bouteilles.append(bouteille)
     return ecrire_excel(bouteilles, config, chemin)
@@ -154,7 +154,7 @@ class ExtracteurComplet:
             else:
                 self.charge[colonne.cle] = "Texte lu"
 
-    def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
+    def extraire_brut(self, photos):
         return SortieModele(brut=dict(self.charge), modele=self.modele, version_prompt=self.version_prompt)
 
     def extract(self, *args, **kwargs):  # pragma: no cover

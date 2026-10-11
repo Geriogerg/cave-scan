@@ -98,7 +98,7 @@ def mesurer(
 
 def _lire(extracteur: Extractor, photo: Path, config: ConfigMaison, resultat: ResultatTaille):
     resultat.octets += photo.stat().st_size
-    sortie = extracteur.extraire_brut(etiquette=photo)
+    sortie = extracteur.extraire_brut([photo])
     resultat.tokens_entree += sortie.tokens_entree or 0
     resultat.tokens_sortie += sortie.tokens_sortie or 0
     if sortie.erreur is not None:

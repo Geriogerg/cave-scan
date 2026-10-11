@@ -351,8 +351,8 @@ def tool_schema() -> dict[str, Any]:
                     "enum": ["oui", "non", NON_DETERMINABLE],
                     "description": (
                         "Les photos fournies montrent-elles bien la MÊME bouteille ? "
-                        "Elles sont appariées par ordre de prise de vue, une erreur "
-                        "d'appariement est possible. « non » si elles semblent "
+                        "Elles ont été regroupées par l'expert, une erreur de "
+                        "regroupement est possible. « non » si elles semblent "
                         "appartenir à deux bouteilles différentes (producteur, "
                         "appellation ou millésime incompatibles, bouteilles "
                         "visiblement distinctes) ; « oui » si rien ne s'y oppose ; "

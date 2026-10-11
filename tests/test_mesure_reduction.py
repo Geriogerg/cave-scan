@@ -37,8 +37,8 @@ def test_reduire_comme_le_navigateur(tmp_path):
 class LitMoinsBienEnPetit(ExtracteurFactice):
     """Simule un millésime qui devient illisible sous 2000 px."""
 
-    def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
-        cote = max(Image.open(etiquette).size)
+    def extraire_brut(self, photos):
+        cote = max(Image.open(photos[0]).size)
         millesime = "2015" if cote >= 2000 else "non_lisible"
         return SortieModele(brut={"domaine": "Domaine X", "millesime": millesime}, modele="m", version_prompt="v",
                             tokens_entree=cote, tokens_sortie=10)

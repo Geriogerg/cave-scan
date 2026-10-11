@@ -52,9 +52,9 @@ class ExtracteurScenario:
         self.appels = 0
         self.photos_recues = []
 
-    def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
+    def extraire_brut(self, photos):
         self.appels += 1
-        self.photos_recues.append((etiquette, contre_etiquette))
+        self.photos_recues.append(tuple(photos))
         cas = self.scenario.get(self.appels)
         if cas == "systematique":
             raise PermissionError("clé API invalide")
@@ -66,8 +66,8 @@ class ExtracteurScenario:
         brut = {"appellation": f"Appellation {self.appels}", "domaine": "Domaine X"}
         return SortieModele(brut=brut, tokens_entree=1000, tokens_sortie=200, **trace)
 
-    def extract(self, etiquette, contre_etiquette=None, autres=None):
-        return bouteille_depuis_sortie(self.extraire_brut(etiquette, contre_etiquette, autres))
+    def extract(self, photos):
+        return bouteille_depuis_sortie(self.extraire_brut(photos))
 
 
 @pytest.fixture
@@ -105,7 +105,7 @@ def test_extract_est_construit_a_partir_d_extraire_brut(fabrique, monkeypatch):
     extracteur = fabrique()
     sortie = SortieModele(brut={"appellation": "Sentinelle"}, modele="m", version_prompt="v")
     monkeypatch.setattr(extracteur, "extraire_brut", lambda *a, **k: sortie)
-    assert extracteur.extract("etiquette.jpg", "contre.jpg").appellation == "Sentinelle"
+    assert extracteur.extract(["etiquette.jpg", "contre.jpg"]).appellation == "Sentinelle"
 
 
 @pytest.mark.parametrize(

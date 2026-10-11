@@ -157,18 +157,17 @@ def traiter_reservee(
     ouverte pendant l'appel au modèle (decisions.md 0113).
     """
     bouteille = charger_bouteille(session, bouteille_id)
-    etiquette = chemin_stocke(stockage, bouteille.photo_etiquette.chemin)
-    contre = (
-        chemin_stocke(stockage, bouteille.photo_contre.chemin)
-        if bouteille.photo_contre is not None
-        else None  # inventaire d'étiquettes seules (0108)
-    )
+    photos = [
+        chemin_stocke(stockage, photo.chemin)
+        for photo in (bouteille.photo_etiquette, bouteille.photo_contre)
+        if photo is not None  # inventaire d'étiquettes seules (0108)
+    ]
     config = config_figee(bouteille.inventaire)
     session.commit()
 
     debut = time.monotonic()
     try:
-        sortie = extracteur.extraire_brut(etiquette=etiquette, contre_etiquette=contre)
+        sortie = extracteur.extraire_brut(photos)
     except Exception as erreur:  # `extraire_brut` ne lève que pour une panne systématique
         motif = f"panne systématique — {type(erreur).__name__} : {erreur}"
         bouteille.extractions.append(

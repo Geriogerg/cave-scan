@@ -1030,6 +1030,31 @@ un renvoi d'une ligne à leur place.
   éditeur JSON brut (illisible pour une maison) ; un éditeur en JavaScript
   (la logique et les garde-fous resteraient côté serveur de toute façon).
 
+- 0164 — [remplace en partie 0049 (libellés de rôle) et 0069 (wording)]
+  Toutes les photos d'UNE bouteille partent dans le MÊME appel, dans l'ordre de
+  l'expert, chacune précédée de « Photo n sur N : », SANS rôle imposé
+  (étiquette, contre-étiquette) : l'expert photographie librement et le modèle
+  n'utilise que ce qu'il voit. La consigne finale dit que les photos ont été
+  regroupées par l'expert et que le modèle doit le vérifier
+  (`photos_meme_bouteille`, 0069). Le Protocol devient
+  `extraire_brut(photos)` / `extract(photos)` : une photo seule ou la liste des
+  photos d'une bouteille (jamais vide). Les libellés restent partagés par les
+  deux backends (testé) ; la version du prompt change avec eux — écarté :
+  garder des rôles (il faudrait les deviner, ou les faire saisir pour chaque
+  photo).
+
+- 0165 — Garde-fou de taille d'un appel : au-delà de la limite du fournisseur
+  (Gemini : 20 Mo par requête ; Anthropic : 5 Mo par image, 32 Mo par requête ;
+  base64 compris), l'appel serait refusé (400), refus classé « panne
+  systématique » qui arrêterait TOUT l'inventaire. Seules les photos les plus
+  lourdes sont alors réduites (côté long 3 000 px, puis 2 500, 2 000…, JPEG
+  qualité 90, sans métadonnées, toujours depuis l'original), pour cet appel
+  seulement ; le fichier stocké ne change jamais, une bouteille sous la limite
+  part telle quelle (0130, réduction à l'envoi désactivée, reste vraie), et
+  la réduction est notée dans le journal du worker — écarté : refuser la
+  bouteille (l'expert ne saurait que faire) ; passer par l'API de fichiers de
+  Gemini (un appel réseau de plus par photo, rien pour Anthropic).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

@@ -28,6 +28,16 @@ if TYPE_CHECKING:
 
 # Une photo est désignée par son chemin sur disque.
 CheminPhoto = str | Path
+# Les photos d'UNE bouteille, dans l'ordre ; une photo seule est acceptée.
+PhotosDUneBouteille = Sequence[CheminPhoto] | CheminPhoto
+
+
+def liste_de_photos(photos: PhotosDUneBouteille) -> list[CheminPhoto]:
+    """Une photo seule, ou les photos d'une bouteille : toujours une liste non vide."""
+    liste = [photos] if isinstance(photos, (str, Path)) else list(photos)
+    if not liste:
+        raise ValueError("Aucune photo pour cette bouteille.")
+    return liste
 
 
 @dataclass(frozen=True)
@@ -75,13 +85,9 @@ class Extractor(Protocol):
     modele: str
     version_prompt: str
 
-    def extraire_brut(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> SortieModele:
-        """Appelle le modèle et rend sa réponse brute.
+    def extraire_brut(self, photos: PhotosDUneBouteille) -> SortieModele:
+        """Appelle le modèle sur TOUTES les photos de la bouteille, dans le même
+        appel, numérotées (decisions.md 0164), et rend sa réponse brute.
 
         Ne lève QUE pour une panne systématique — clé invalide, modèle inconnu,
         requête mal formée —, qu'il serait vain de répéter sur les bouteilles
@@ -91,13 +97,8 @@ class Extractor(Protocol):
         """
         ...
 
-    def extract(
-        self,
-        etiquette: CheminPhoto,
-        contre_etiquette: CheminPhoto | None = None,
-        autres: Sequence[CheminPhoto] | None = None,
-    ) -> Bouteille:
-        """`bouteille_depuis_sortie(self.extraire_brut(...), config)`, rien d'autre.
+    def extract(self, photos: PhotosDUneBouteille) -> Bouteille:
+        """`bouteille_depuis_sortie(self.extraire_brut(photos), config)`, rien d'autre.
 
         Une photo floue, coupée ou vide produit des abstentions
         (`non_lisible` / `non_determinable` / `None`), jamais une valeur devinée

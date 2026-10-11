@@ -130,11 +130,11 @@ class ExtracteurQuiTombe(FixtureExtractor):
         self.panne = panne if panne is not None else KeyboardInterrupt()
         self.appels = 0
 
-    def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
+    def extraire_brut(self, photos):
         self.appels += 1
         if self.appels == self.tombe_a:
             raise self.panne
-        return super().extraire_brut(etiquette, contre_etiquette, autres)
+        return super().extraire_brut(photos)
 
 
 def brancher(monkeypatch, *extracteurs) -> None:
@@ -178,9 +178,9 @@ def test_chaque_extraction_est_en_base_des_son_retour(tmp_path, dossier_photos, 
     deja_en_base = []
 
     class Espion(FixtureExtractor):
-        def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
+        def extraire_brut(self, photos):
             deja_en_base.append(requete(base, "SELECT count(*) FROM extraction")[0][0])
-            return super().extraire_brut(etiquette, contre_etiquette, autres)
+            return super().extraire_brut(photos)
 
     source = fixtures()
     brancher(monkeypatch, Espion(source._charges, source.config))
@@ -356,9 +356,9 @@ def test_la_reprise_ne_relit_jamais_le_dossier_d_origine(tmp_path, dossier_photo
     recues = []
 
     class Espion(FixtureExtractor):
-        def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
-            recues.extend([Path(etiquette), Path(contre_etiquette)])
-            return super().extraire_brut(etiquette, contre_etiquette, autres)
+        def extraire_brut(self, photos):
+            recues.extend(Path(photo) for photo in photos)
+            return super().extraire_brut(photos)
 
     reste = fixtures(depuis=3)
     brancher(monkeypatch, ExtracteurQuiTombe(tombe_a=4), Espion(reste._charges, reste.config))
@@ -498,9 +498,9 @@ def test_sans_contre_une_photo_par_bouteille_de_bout_en_bout(tmp_path, monkeypat
     recues = []
 
     class Espion(FixtureExtractor):
-        def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
-            recues.append(contre_etiquette)
-            return super().extraire_brut(etiquette, contre_etiquette, autres)
+        def extraire_brut(self, photos):
+            recues.append(len(photos))
+            return super().extraire_brut(photos)
 
     source = fixtures()
     brancher(monkeypatch, Espion(source._charges, source.config))
@@ -509,7 +509,7 @@ def test_sans_contre_une_photo_par_bouteille_de_bout_en_bout(tmp_path, monkeypat
 
     assert code == 0
     assert "(sans contre-étiquette)" in capsys.readouterr().out
-    assert recues == [None, None, None]
+    assert recues == [1, 1, 1]  # une photo par bouteille, rien d'autre
     assert requete(base, "SELECT count(*) FROM bouteille WHERE photo_contre_id IS NULL") == [(3,)]
     assert len(colonne_excel(sortie, "id")) == 3
     assert inventaire.main(["fiche", "1", "1", "--base", str(base)]) == 0

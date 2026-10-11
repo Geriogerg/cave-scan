@@ -241,8 +241,8 @@ def test_inventaire_avec_une_bouteille_en_erreur_ne_se_valide_pas(api, dossier_p
     from src.extract.base import SortieModele
 
     class UneEnErreur(FixtureExtractor):
-        def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
-            sortie = super().extraire_brut(etiquette, contre_etiquette, autres)
+        def extraire_brut(self, photos):
+            sortie = super().extraire_brut(photos)
             if self._index == 2:
                 return SortieModele(brut=None, modele="m", version_prompt="v", erreur="ServerError : 503")
             return sortie

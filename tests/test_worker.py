@@ -166,11 +166,11 @@ class ExtracteurAPannes(ExtracteurFactice):
         super().__init__(**options)
         self.pannes = pannes
 
-    def extraire_brut(self, etiquette, contre_etiquette=None, autres=None):
-        panne = self.pannes.get(Path(etiquette).name)
+    def extraire_brut(self, photos):
+        panne = self.pannes.get(Path(photos[0]).name)
         if panne == "systematique":
             raise PermissionError("clé API invalide")
-        sortie = super().extraire_brut(etiquette, contre_etiquette, autres)
+        sortie = super().extraire_brut(photos)
         if panne == "passagere":
             return SortieModele(brut=None, modele=self.modele, version_prompt=self.version_prompt,
                                 erreur="RateLimitError : quota dépassé")
