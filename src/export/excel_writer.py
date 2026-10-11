@@ -17,7 +17,8 @@ Règles d'affichage (CLAUDE.md, decisions.md 0055) :
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -30,6 +31,7 @@ from src.config.maison import (
     COLONNE_A_VERIFIER,
     COLONNE_ID,
     COLONNE_QUANTITE,
+    COLONNE_RELUE,
     Colonne,
     ConfigMaison,
 )
@@ -40,7 +42,23 @@ POLICE = "Arial"
 TAILLE_POLICE = 10
 TITRE_FEUILLE = "Catalogue"
 COULEUR_SURLIGNAGE = "FFF2CC"
+COULEUR_ERREUR = "F4CCCC"  # bouteille dont l'analyse a échoué : à voir au premier coup d'œil
 LARGEUR_MIN, LARGEUR_MAX = 8, 50
+MENTION_ERREUR = "Erreur d'analyse"
+MENTION_SAISIE_MANUELLE = "Saisie manuelle"
+
+
+@dataclass(frozen=True)
+class EtatLigne:
+    """Ce que l'Excel dit d'une bouteille au-delà de ses valeurs (decisions.md 0170)."""
+
+    erreur: bool = False  # l'analyse a échoué, et la bouteille n'a pas été validée en saisie manuelle
+    saisie_manuelle: bool = False  # l'analyse a échoué ; l'expert a saisi ses champs et l'a validée
+    relue: bool = False  # validée par l'expert
+
+
+SANS_ETAT = EtatLigne()
+Etats = Mapping[str, EtatLigne]  # par identifiant de bouteille
 
 
 def valeur_stockee(bouteille: Bouteille, colonne: Colonne) -> Any:
@@ -86,7 +104,7 @@ def valeur_affichee(bouteille: Bouteille, colonne: Colonne) -> Any:
     return valeur
 
 
-def regrouper(bouteilles: Sequence[Bouteille], config: ConfigMaison) -> list[list[Bouteille]]:
+def regrouper(bouteilles: Sequence[Bouteille], config: ConfigMaison, etats: Etats | None = None) -> list[list[Bouteille]]:
     """Fusionne, À L'EXPORT seulement, les bouteilles identiques sur les clés de
     `regroupement_export` (guide, étape 4.3 ; decisions.md 0017, 0066).
 
@@ -101,6 +119,8 @@ def regrouper(bouteilles: Sequence[Bouteille], config: ConfigMaison) -> list[lis
       sur une clé n'est pas une égalité — « illisible » ne veut pas dire
       « identique », on fusionnerait sinon un magnum et une bouteille dont le
       format n'a pas pu être lu.
+    - Une bouteille dont l'analyse a échoué (ou saisie à la main) n'est jamais
+      fusionnée : sa ligne dit ce qui lui est arrivé (decisions.md 0170).
     - Ordre de première apparition conservé.
     """
     if not config.regroupement_export:
@@ -111,7 +131,8 @@ def regrouper(bouteilles: Sequence[Bouteille], config: ConfigMaison) -> list[lis
     lignes: list[list[Bouteille]] = []
     for bouteille in bouteilles:
         cle = tuple(valeur_stockee(bouteille, colonne) for colonne in colonnes)
-        if a_relire(bouteille, config):
+        etat = (etats or {}).get(bouteille.id, SANS_ETAT)
+        if a_relire(bouteille, config) or etat.erreur or etat.saisie_manuelle:
             lignes.append([bouteille])
         elif cle in groupes:
             groupes[cle].append(bouteille)
@@ -121,7 +142,7 @@ def regrouper(bouteilles: Sequence[Bouteille], config: ConfigMaison) -> list[lis
     return lignes
 
 
-def valeur_affichee_ligne(groupe: Sequence[Bouteille], colonne: Colonne) -> Any:
+def valeur_affichee_ligne(groupe: Sequence[Bouteille], colonne: Colonne, etats: Etats | None = None) -> Any:
     """Ce qui s'écrit dans la case d'une ligne d'export, regroupée ou non.
 
     Quantités additionnées, identifiants tous listés, doutes réunis. Pour les
@@ -132,9 +153,16 @@ def valeur_affichee_ligne(groupe: Sequence[Bouteille], colonne: Colonne) -> Any:
         return sum(bouteille.quantite for bouteille in groupe)
     if colonne.cle == COLONNE_ID:
         return ", ".join(bouteille.id for bouteille in groupe if bouteille.id) or None
+    lignes = [(etats or {}).get(bouteille.id, SANS_ETAT) for bouteille in groupe]
     if colonne.cle == COLONNE_A_VERIFIER:
+        if any(etat.erreur for etat in lignes):
+            return MENTION_ERREUR
+        if any(etat.saisie_manuelle for etat in lignes):
+            return MENTION_SAISIE_MANUELLE
         champs = dict.fromkeys(c for bouteille in groupe for c in bouteille.champs_a_verifier)
         return ", ".join(champs) or None
+    if colonne.cle == COLONNE_RELUE:
+        return "oui" if lignes and all(etat.relue for etat in lignes) else None
 
     distinctes = list(
         dict.fromkeys(
@@ -173,8 +201,11 @@ def ecrire_excel(
     bouteilles: Sequence[Bouteille],
     config: ConfigMaison,
     chemin: str | Path,
+    etats: Etats | None = None,
 ) -> Path:
-    """Écrit le listing automatique et renvoie le chemin du fichier produit."""
+    """Écrit le listing automatique et renvoie le chemin du fichier produit.
+    `etats` : ce que l'Excel dit de chaque bouteille au-delà de ses valeurs
+    (erreur d'analyse, saisie manuelle, relue), par identifiant."""
     chemin = Path(chemin)
     chemin.parent.mkdir(parents=True, exist_ok=True)
 
@@ -194,6 +225,7 @@ def ecrire_excel(
     surlignage = PatternFill(
         start_color=COULEUR_SURLIGNAGE, end_color=COULEUR_SURLIGNAGE, fill_type="solid"
     )
+    erreur = PatternFill(start_color=COULEUR_ERREUR, end_color=COULEUR_ERREUR, fill_type="solid")
 
     largeurs = [len(colonne.nom) for colonne in config.colonnes]
     for index, colonne in enumerate(config.colonnes, start=1):
@@ -201,18 +233,21 @@ def ecrire_excel(
         cellule.font = police_entete
         cellule.alignment = Alignment(vertical="center", wrap_text=True)
 
-    for numero_ligne, groupe in enumerate(regrouper(bouteilles, config), start=2):
+    for numero_ligne, groupe in enumerate(regrouper(bouteilles, config, etats), start=2):
         # Une ligne regroupée est à relire dès qu'une de ses bouteilles l'est.
         surligner = any(a_relire(bouteille, config) for bouteille in groupe)
+        en_erreur = any((etats or {}).get(bouteille.id, SANS_ETAT).erreur for bouteille in groupe)
         for index, colonne in enumerate(config.colonnes, start=1):
-            valeur = valeur_affichee_ligne(groupe, colonne)
+            valeur = valeur_affichee_ligne(groupe, colonne, etats)
             cellule = feuille.cell(row=numero_ligne, column=index, value=valeur)
             if isinstance(valeur, str) and valeur.startswith("="):
                 # Un texte lu sur une étiquette ne doit jamais devenir une
                 # formule exécutée à l'ouverture du fichier.
                 cellule.data_type = "s"
             cellule.font = police
-            if surligner:
+            if en_erreur:
+                cellule.fill = erreur
+            elif surligner:
                 cellule.fill = surlignage
             if valeur is not None:
                 largeurs[index - 1] = max(largeurs[index - 1], len(str(valeur)))

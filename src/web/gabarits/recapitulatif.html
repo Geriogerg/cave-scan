@@ -59,7 +59,11 @@
   </dl>
 
   <nav class="actions-recap">
-    <a class="bouton principal" href="/inventaires/{{ i }}/export" download>Télécharger l'Excel</a>
+    {% if r.excel_attend %}
+      <span class="bouton inactif" aria-disabled="true" title="Chaque bouteille doit avoir sa ligne">Excel — il reste {{ r.excel_attend }}</span>
+    {% else %}
+      <a class="bouton principal" href="/inventaires/{{ i }}/export" download>Télécharger l'Excel</a>
+    {% endif %}
     {% if not r.termine %}<a class="bouton" href="/app/inventaires/{{ i }}/relecture">Reprendre la relecture</a>{% endif %}
     <a class="bouton" href="/app/inventaires/{{ i }}/suivi">Suivi de l'analyse</a>
   </nav>

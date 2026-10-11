@@ -37,8 +37,10 @@
       <form method="post" action="/app/inventaires/{{ inventaire.id }}/reprendre-analyse"><button class="bouton principal">Reprendre l'analyse</button></form>
     {% endif %}
     {% endif %}
-    {% if etat.terminee %}
+    {% if etat.excel_disponible %}
       <a class="bouton" href="/inventaires/{{ inventaire.id }}/export" download>Télécharger l'Excel</a>
+    {% elif etat.terminee %}
+      <span class="bouton inactif" aria-disabled="true">Excel — après l'analyse des bouteilles ajoutées</span>
     {% endif %}
   </div>
 </section>

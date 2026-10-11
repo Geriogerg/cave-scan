@@ -20,18 +20,44 @@ from src.compare.compare_listings import (
     relever_signaux,
 )
 from src.donnees.modeles import STATUTS_BOUTEILLE, Correction, EvenementBouteille, Extraction, FicheBouteille
-from src.export.excel_writer import ecrire_excel
+from src.export.excel_writer import EtatLigne, ecrire_excel
 from src.io.manual_listing import colonnes_toujours_vides, load_manual
+from src.services.cycle_de_vie import bilan
 from src.services.inventaires import charger_inventaire, config_figee
-from src.services.relecture import CHAMP_STATUT, valeurs_courantes, valeurs_modele
+from src.services.relecture import CHAMP_STATUT, extraction_qui_fait_foi, valeurs_courantes, valeurs_modele
+
+
+class ExportRefuse(ValueError):
+    """Une bouteille n'aurait pas sa ligne dans l'Excel : le message dit laquelle."""
 
 
 def exporter(session: Session, inventaire_id: int, chemin: str | Path) -> Path:
     """L'Excel de l'inventaire : valeurs courantes (modèle + corrections), config
-    figée, regroupement et surlignage exactement comme en session 1."""
+    figée, regroupement et surlignage comme en session 1.
+
+    Une ligne par bouteille, toujours (decisions.md 0170) : refusé tant qu'une
+    bouteille n'est pas encore analysée ou qu'une bouteille ajoutée n'est pas
+    lancée ; une bouteille en erreur a sa ligne, signalée « Erreur d'analyse »
+    (ou « Saisie manuelle » une fois validée à la main). Les bouteilles retirées
+    n'en font plus partie. Valider bouteille par bouteille reste facultatif.
+    """
     inventaire = charger_inventaire(session, inventaire_id)
+    etat = bilan(session, inventaire_id)
+    if not etat.chaque_bouteille_a_sa_ligne:
+        raise ExportRefuse(
+            f"L'Excel n'est pas encore disponible : chaque bouteille doit y avoir sa ligne. Il reste "
+            f"{etat.ce_qui_manque()}."
+        )
     bouteilles = [valeurs_courantes(session, bouteille.id) for bouteille in inventaire.bouteilles]
-    return ecrire_excel(bouteilles, config_figee(inventaire), chemin)
+    etats = {}
+    for fiche in inventaire.bouteilles:
+        sans_lecture = extraction_qui_fait_foi(fiche) is None
+        etats[fiche.identifiant] = EtatLigne(
+            erreur=fiche.statut == "erreur",
+            saisie_manuelle=fiche.statut == "validee" and sans_lecture,
+            relue=fiche.statut == "validee",
+        )
+    return ecrire_excel(bouteilles, config_figee(inventaire), chemin, etats)
 
 
 @dataclass(frozen=True)
@@ -48,7 +74,7 @@ def comparer_au_listing(
     0081). Les corrections, elles, se mesurent dans `stats_inventaire`."""
     inventaire = charger_inventaire(session, inventaire_id)
     config = config_figee(inventaire)
-    auto = [valeurs_modele(session, bouteille.id) for bouteille in inventaire.bouteilles]
+    auto = [valeurs_modele(session, bouteille.id) for bouteille in _photographiees(inventaire)]
     manuel = load_manual(chemin_manuel, config)
     systematiques = [colonne.cle for colonne in config.colonnes_best_effort]
     return ResultatComparaison(
@@ -62,8 +88,16 @@ def signaux_du_modele(session: Session, inventaire_id: int) -> SignauxModele:
     lisible avant que son listing existe."""
     inventaire = charger_inventaire(session, inventaire_id)
     config = config_figee(inventaire)
-    auto = [valeurs_modele(session, bouteille.id) for bouteille in inventaire.bouteilles]
+    auto = [valeurs_modele(session, bouteille.id) for bouteille in _photographiees(inventaire)]
     return relever_signaux(auto, [colonne.cle for colonne in config.colonnes_best_effort])
+
+
+def _photographiees(inventaire) -> list[FicheBouteille]:
+    """Les bouteilles telles que le modèle les a lues : une par groupe de photos.
+    Une bouteille née d'une séparation reprend la lecture de sa source ; la
+    compter décalerait l'alignement ligne à ligne avec le listing de l'expert
+    (decisions.md 0010, 0170). Les retirées n'en font déjà plus partie."""
+    return [bouteille for bouteille in inventaire.bouteilles if bouteille.separee_de_id is None]
 
 
 @dataclass(frozen=True)

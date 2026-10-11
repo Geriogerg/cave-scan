@@ -40,6 +40,7 @@ from src.services.relecture import (
     CorrectionRefusee,
     ModificationConcurrente,
     SaisiesRefusees,
+    ajouter_temps_de_relecture,
     corriger_en_relecture,
     revenir_a_la_valeur_du_modele,
     valider_en_relecture,
@@ -256,6 +257,14 @@ def demander_reanalyse(request: Request, inventaire_id: int, bouteille_id: int,
                        base: SessionBase, auteur: AuteurEcran, saisies: Formulaire):
     return _action(request, base, inventaire_id, bouteille_id, saisies,
                    lambda: reanalyser(base, bouteille_id, auteur) and None, "reanalyse")
+
+
+@routeur.post("/app/inventaires/{inventaire_id}/relecture/{bouteille_id}/temps")
+def temps_sans_validation(inventaire_id: int, bouteille_id: int, base: SessionBase, saisies: Formulaire):
+    """Le temps passé sur la bouteille, envoyé par l'écran en la quittant (0169)."""
+    bouteille_de(base, inventaire_id, bouteille_id)
+    ajouter_temps_de_relecture(base, bouteille_id, _entier(saisies.get("temps_ms")))
+    return Response(status_code=204)
 
 
 @routeur.post("/app/inventaires/{inventaire_id}/relecture/{bouteille_id}/retirer")

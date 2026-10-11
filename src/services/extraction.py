@@ -227,7 +227,7 @@ def conclure(
 
     _fin_de_reservation(bouteille, "erreur" if extraction.erreur else "extraite")
     if etait_validee:
-        # Relance forcée d'une bouteille validée : elle est à relire (0083).
+        # Relance forcée d'une bouteille validée : elle est à relire (0169).
         bouteille.corrections.append(
             Correction(
                 champ="statut",

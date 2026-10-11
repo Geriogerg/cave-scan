@@ -130,3 +130,17 @@ Décisions remplacées ou devenues sans objet, retirées de `decisions.md`
 - 0129 — [remplacée par 0166] Date de prise de vue : lue par le navigateur dans l'EXIF de l'ORIGINAL,
   avant toute réduction, et envoyée à côté du fichier ; à défaut, le serveur la
   lit dans le fichier reçu.
+
+- 0083 — [remplacée par 0169] Statut d'inventaire : `ouvert` | `valide` ; il passe à `valide` quand
+  toutes ses bouteilles le sont. Seule une bouteille extraite peut être
+  validée : une bouteille en erreur ne le peut pas, donc un inventaire qui en
+  contient une ne peut pas passer à `valide`. Une correction (ou une relance
+  forcée) sur une bouteille validée la remet à relire (statut `extraite`) et
+  l'inventaire repasse à `ouvert`. La validation et la remise à relire sont
+  tracées dans l'historique des corrections (champ « statut », auteur, date),
+  sans colonne supplémentaire au schéma validé.
+
+- 0146 — [remplacée par 0169] Temps de relecture : mesuré par l'écran (temps actif, onglet visible,
+  pause au-delà de 60 s sans clavier ni souris), envoyé avec la validation,
+  CUMULÉ par bouteille (une bouteille rouverte s'ajoute), borné à 1 h par envoi ;
+  une validation refusée n'enregistre rien, le temps reste compté dans la page.

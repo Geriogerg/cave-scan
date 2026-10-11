@@ -466,14 +466,7 @@ un renvoi d'une ligne à leur place.
   peut toujours rien écrire dans une colonne expert (CLAUDE.md). La quantité
   courante est portée par la bouteille, son historique par les corrections.
 
-- 0083 — Statut d'inventaire : `ouvert` | `valide` ; il passe à `valide` quand
-  toutes ses bouteilles le sont. Seule une bouteille extraite peut être
-  validée : une bouteille en erreur ne le peut pas, donc un inventaire qui en
-  contient une ne peut pas passer à `valide`. Une correction (ou une relance
-  forcée) sur une bouteille validée la remet à relire (statut `extraite`) et
-  l'inventaire repasse à `ouvert`. La validation et la remise à relire sont
-  tracées dans l'historique des corrections (champ « statut », auteur, date),
-  sans colonne supplémentaire au schéma validé.
+- 0083 — archivée (remplacée par 0169) → docs/decisions-archive.md
 
 - 0084 — Ligne de commande : `--journal`, `--reprendre` et `--auto` sont
   remplacés par `--inventaire ID` (reprendre, réexporter, rescorer depuis la
@@ -841,10 +834,7 @@ un renvoi d'une ligne à leur place.
   (erreur de l'expert), tracé. Elle n'est pas proposée par « suivante à
   relire » : elle attend au récapitulatif.
 
-- 0146 — Temps de relecture : mesuré par l'écran (temps actif, onglet visible,
-  pause au-delà de 60 s sans clavier ni souris), envoyé avec la validation,
-  CUMULÉ par bouteille (une bouteille rouverte s'ajoute), borné à 1 h par envoi ;
-  une validation refusée n'enregistre rien, le temps reste compté dans la page.
+- 0146 — archivée (remplacée par 0169) → docs/decisions-archive.md
 
 - 0147 — Réanalyser remet UNE bouteille « à extraire » : le worker l'extrait
   (aucun appel au modèle depuis l'écran). Seulement si l'analyse de
@@ -1108,6 +1098,46 @@ un renvoi d'une ligne à leur place.
   (extractions immuables, 0072) ; clore seulement quand tout est validé
   (valider reste facultatif, choix du 2026-10-11).
 
+- 0169 — Statut d'inventaire : `ouvert` | `valide` ; il passe à `valide` quand
+  toutes ses bouteilles le sont (valider reste facultatif, 0168). Une bouteille
+  EXTRAITE se valide ; une bouteille dont l'analyse a ÉCHOUÉ aussi, en « saisie
+  manuelle », une fois ses champs obligatoires saisis — les colonnes du noyau
+  canonique (domaine, appellation, millésime, format) présentes dans la config
+  de la maison (choix 2 du 2026-10-10) ; sinon le refus dit ce qui manque. Une
+  correction (ou une relance forcée) sur une bouteille validée la remet à
+  relire : `extraite`, ou `erreur` si aucune analyse n'a réussi ; l'inventaire
+  repasse à `ouvert`. Validation et remise à relire sont tracées dans
+  l'historique des corrections (champ « statut », auteur, date ; « erreur » ->
+  « validée » = saisie manuelle), sans colonne supplémentaire. Temps de
+  relecture : mesuré par l'écran (temps actif, onglet visible, pause au-delà de
+  60 s sans clavier ni souris), CUMULÉ par bouteille, borné à 1 h par envoi ;
+  envoyé avec la validation, et SANS validation en quittant la bouteille (et
+  chaque minute, par `sendBeacon` vers `.../temps`) : une bouteille ouverte et
+  non validée compte aussi ; une validation refusée garde son temps pour
+  l'envoi suivant. Une mesure, pas une modification : comptée même sur un
+  inventaire clos — remplace 0083 et 0146 — écarté : une bouteille en erreur
+  jamais validable (un modèle qui échoue toujours sur une photo bloquait
+  l'inventaire) ; ne compter que le temps des bouteilles validées.
+
+- 0170 — Excel : une ligne par bouteille, toujours (choix du 2026-10-11).
+  `exporter` est REFUSÉ (`ExportRefuse`, 409 `export_refuse` ; bouton
+  remplacé par ce qui manque dans le suivi et le récapitulatif) tant qu'une
+  bouteille n'est pas encore analysée ou qu'une bouteille ajoutée n'est pas
+  lancée — la règle de la clôture (0168). Valider n'est pas requis. Une
+  bouteille en erreur a sa ligne : fond rouge pâle (`F4CCCC`, distinct du jaune
+  « à relire »), « Erreur d'analyse » dans « À vérifier » ; validée en saisie
+  manuelle, « Saisie manuelle » (fond normal). Ces lignes ne sont JAMAIS
+  fusionnées par le regroupement (leurs valeurs vides ou saisies se
+  ressembleraient). Colonne système facultative `relue` : « oui » si l'expert
+  a validé la bouteille. Une config sans colonne `a_verifier` reste valide,
+  avec un avertissement (une erreur ne s'y verrait qu'à la couleur). Les
+  bouteilles retirées n'ont pas de ligne. La comparaison au listing et les
+  signaux du modèle ne comptent pas les bouteilles nées d'une séparation : une
+  bouteille = un groupe de photos lu une fois ; insérée après sa source, elle
+  décalait l'alignement ligne à ligne (0010) — écarté : exporter en laissant
+  tomber les bouteilles pas encore analysées (perte silencieuse) ; exporter
+  sans les erreurs.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
@@ -1119,7 +1149,5 @@ un renvoi d'une ligne à leur place.
 - La maison accepte-t-elle que les photos de ses lots transitent par un palier
   gratuit dont le fournisseur peut exploiter les données (0050) ? Si non :
   backend payant, ou modèle local.
-- Bouteille en erreur d'analyse saisie entièrement à la main par l'expert : elle
-  reste non validable (0083, test existant), si bien qu'un modèle qui échoue
-  toujours sur une photo empêche l'inventaire d'être validé. Faut-il permettre
-  de la valider une fois saisie (avec une trace « saisie manuelle ») ?
+- (Tranchée le 2026-10-11 : une bouteille en erreur saisie à la main se valide
+  en « saisie manuelle », 0169.)

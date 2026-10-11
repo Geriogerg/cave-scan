@@ -23,6 +23,7 @@ from src.donnees.modeles import Correction, EvenementBouteille, FicheBouteille, 
 from src.export.excel_writer import a_relire, regrouper
 from src.extract.schema import DOUTE_PAIRE_PHOTOS, NON_DETERMINABLE, Bouteille, est_abstention
 from src.services.cas_particuliers import bouteilles_liees, evenements_de
+from src.services.cycle_de_vie import bilan
 from src.services.extraction import BouteilleIntrouvable, extractions_de
 from src.services.inventaires import charger_inventaire, config_figee
 from src.services.pilotage import Avancement, avancement
@@ -30,6 +31,7 @@ from src.services.relecture import (
     CHAMP_STATUT,
     LIBELLES_EVENEMENT,
     champs_corrigeables,
+    champs_obligatoires,
     corrections_de,
     valeur_courante,
     valeur_pour_formulaire,
@@ -368,6 +370,7 @@ class FicheRelecture:
     doute_paire: bool  # le modèle doute lui-même que les photos montrent la même bouteille
     notes_modele: str
     erreur: str | None  # bouteille en erreur : la raison, en clair
+    obligatoires: list[str]  # en erreur : ce qu'il faut saisir pour la valider à la main (0169)
     en_attente: bool  # réanalyse demandée, pas encore faite
     historique: list[LigneHistorique]
     compteurs: Compteurs
@@ -411,6 +414,7 @@ def fiche_de_relecture(
         doute_paire=DOUTE_PAIRE_PHOTOS in modele.champs_a_verifier,
         notes_modele=modele.notes if bouteille.statut != "erreur" else "",
         erreur=raison_de_l_erreur(bouteille) if bouteille.statut == "erreur" else None,
+        obligatoires=[config.colonne(cle).nom for cle in champs_obligatoires(config)],
         en_attente=bouteille.statut in ("a_extraire", "en_cours"),
         historique=_historique(session, bouteille, config),
         compteurs=compter(etats),
@@ -545,6 +549,7 @@ class Recapitulatif:
     signalees: list[EtatRelecture]
     pas_encore_extraites: list[EtatRelecture]
     champs_corriges: list[tuple[str, int]]  # (nom de la colonne, nombre), les plus corrigés d'abord
+    excel_attend: str  # vide si chaque bouteille a sa ligne ; sinon, ce qui manque (0170)
 
     @property
     def termine(self) -> bool:
@@ -552,6 +557,7 @@ class Recapitulatif:
 
 
 def recapitulatif(session: Session, inventaire_id: int) -> Recapitulatif:
+    etat = bilan(session, inventaire_id)
     inventaire = charger_inventaire(session, inventaire_id)
     config = config_figee(inventaire)
     etats = etats_de_relecture(session, inventaire_id)
@@ -568,4 +574,5 @@ def recapitulatif(session: Session, inventaire_id: int) -> Recapitulatif:
             (config.colonne(champ).nom if config.colonne(champ) else champ, nombre)
             for champ, nombre in stats.champs_les_plus_corriges
         ],
+        excel_attend="" if etat.chaque_bouteille_a_sa_ligne else etat.ce_qui_manque(),
     )

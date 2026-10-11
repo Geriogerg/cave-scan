@@ -189,7 +189,7 @@ def separer(session: Session, bouteille_id: int, quantite: Any, auteur: str) -> 
     pour_la_nouvelle.append(Correction(champ=COLONNE_QUANTITE, ancienne_valeur=None, nouvelle_valeur=nombre, auteur=auteur))
     nouvelle.corrections.extend(pour_la_nouvelle)
 
-    # La source garde le reste ; validée, elle redevient à relire (0083).
+    # La source garde le reste ; validée, elle redevient à relire (0169).
     pour_la_source = Correction(
         champ=COLONNE_QUANTITE, ancienne_valeur=source.quantite, nouvelle_valeur=source.quantite - nombre, auteur=auteur
     )

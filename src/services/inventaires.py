@@ -191,7 +191,7 @@ def verifier_modifiable(inventaire: Inventaire) -> None:
 
 
 def actualiser_statut(inventaire: Inventaire) -> None:
-    """`valide` quand TOUTES les bouteilles le sont, `ouvert` sinon (decisions.md 0083).
+    """`valide` quand TOUTES les bouteilles le sont, `ouvert` sinon (decisions.md 0169).
 
     Une bouteille en erreur ne pouvant pas être validée, un inventaire qui en
     contient une ne passe jamais à `valide`.

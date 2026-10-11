@@ -38,7 +38,8 @@ NOYAU_CANONIQUE = ("domaine", "appellation", "millesime", "format")
 # colonne système inconnue serait une colonne vide sans explication.
 COLONNE_ID = "id"
 COLONNE_A_VERIFIER = "a_verifier"
-COLONNES_SYSTEME = (COLONNE_ID, COLONNE_A_VERIFIER)
+COLONNE_RELUE = "relue"  # « oui » si l'expert a validé la bouteille (option, decisions.md 0170)
+COLONNES_SYSTEME = (COLONNE_ID, COLONNE_A_VERIFIER, COLONNE_RELUE)
 
 # Seule colonne expert que le pipeline connaît : elle porte une valeur par
 # défaut (1) et s'additionne au regroupement (decisions.md 0017).
@@ -316,7 +317,7 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
         langue=langue,
         colonnes=tuple(colonnes),
         regroupement_export=regroupement,
-        avertissements=tuple(_reperer_exemples(colonnes)),
+        avertissements=(*_reperer_exemples(colonnes), *_reperer_manques(colonnes)),
         photos_max_par_bouteille=photos_max,
     )
 
@@ -539,6 +540,16 @@ def _valider_regroupement(
             )
         vus.add(cle)
     return tuple(brut)
+
+
+def _reperer_manques(colonnes: list[Colonne]) -> list[str]:
+    """Une config valide, mais à qui il manque de quoi dire une erreur dans l'Excel."""
+    if any(colonne.cle == COLONNE_A_VERIFIER for colonne in colonnes):
+        return []
+    return [
+        f"Pas de colonne système « {COLONNE_A_VERIFIER} » : dans l'Excel, une bouteille dont "
+        f"l'analyse a échoué ne se reconnaîtra qu'à la couleur de sa ligne (decisions.md 0170)."
+    ]
 
 
 def _reperer_exemples(colonnes: list[Colonne]) -> list[str]:

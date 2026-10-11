@@ -7,8 +7,8 @@
   {% elif b.statut == "erreur" %}
     <div class="message alerte" role="alert">
       <p><strong>Analyse en échec.</strong> {{ f.erreur }}</p>
-      <p>Réanalysez la bouteille, ou saisissez ses champs à la main : ils sont gardés, mais elle ne
-         pourra être validée qu'après une analyse réussie.</p>
+      <p>Réanalysez la bouteille, ou saisissez ses champs à la main : avec au moins
+         {{ f.obligatoires | join(", ") }}, elle pourra être validée en saisie manuelle.</p>
       <form method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/reanalyser" data-action>
         {% include "_filtre_cache.html" %}
         <button class="bouton petit">Réanalyser cette bouteille</button>

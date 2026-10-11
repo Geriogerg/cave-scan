@@ -47,6 +47,7 @@ from src.services.inventaires import (
     creer_inventaire,
 )
 from src.services.restitution import (
+    ExportRefuse,
     comparer_au_listing,
     exporter,
     lister_bouteilles,
@@ -272,6 +273,8 @@ def _extraire(session: Session, inventaire_id: int, extracteur: Extractor, stock
 def _restituer(session: Session, inventaire_id: int, chemin_manuel: Path | None, sortie: Path) -> None:
     try:
         chemin_excel = exporter(session, inventaire_id, sortie)
+    except ExportRefuse as refus:  # bouteilles ajoutées depuis l'écran, pas encore lancées
+        raise Arret(str(refus)) from None
     except PermissionError as erreur:  # Windows : le fichier est ouvert dans Excel
         raise Arret(
             f"Impossible d'écrire {erreur.filename} : le fichier est-il ouvert dans Excel ? "

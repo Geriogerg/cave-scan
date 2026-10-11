@@ -26,6 +26,7 @@ from src.services.envoi import EnvoiRefuse, PhotoIntrouvable
 from src.services.extraction import BouteilleIntrouvable, BouteilleOccupee
 from src.services.inventaires import InventaireClos, InventaireIntrouvable
 from src.services.pilotage import LancementRefuse
+from src.services.restitution import ExportRefuse
 from src.services.relecture import (
     CorrectionRefusee,
     ModificationConcurrente,
@@ -47,6 +48,7 @@ TRADUCTIONS: list[tuple[type[Exception], int, str]] = [
     (ActionRefusee, 409, "action_refusee"),
     (CycleRefuse, 409, "action_refusee"),
     (InventaireClos, 409, "inventaire_clos"),
+    (ExportRefuse, 409, "export_refuse"),
     (LancementRefuse, 409, "lancement_refuse"),
     (DepotFerme, 409, "depot_ferme"),
     (ModificationRefusee, 422, "modification_refusee"),

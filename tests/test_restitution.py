@@ -23,6 +23,7 @@ from src.extract.base import SortieModele
 from src.extract.fixture_extract import FixtureExtractor
 from src.io.photos import grouper_photos
 from src.normalize.normalize import normalize
+from src.services.cas_particuliers import separer
 from src.services.extraction import extraire_bouteille, extraire_inventaire
 from src.services.inventaires import charger_inventaire, creer_inventaire
 from src.services.relecture import corriger, valeurs_courantes, valider
@@ -30,6 +31,7 @@ from src.services.restitution import (
     bouteille_par_reference,
     comparer_au_listing,
     exporter,
+    signaux_du_modele,
     stats_inventaire,
 )
 from tests.conftest import CONFIG_TEST, FIXTURES
@@ -194,6 +196,24 @@ def test_le_score_du_modele_ignore_les_corrections(session, nom_maison, dossier_
     resultat = comparer_au_listing(session, inventaire_id, FIXTURES / "manuel.json")
     assert (3, "millesime") in {(d.ligne, d.champ) for d in resultat.rapport.desaccords}
     assert valeurs_courantes(session, quatrieme.id).millesime == "2001"
+
+
+def test_une_separation_ne_decale_pas_la_comparaison_avec_le_listing(session, nom_maison, dossier_photos, stockage):
+    """La bouteille née d'une séparation s'insère juste après sa source : comptée,
+    elle décalerait toutes les suivantes face au listing de l'expert (0170)."""
+    inventaire_id = inventaire_sur_fixtures(session, nom_maison, dossier_photos, stockage)
+    avant = comparer_au_listing(session, inventaire_id, FIXTURES / "manuel.json")
+    signaux_avant = signaux_du_modele(session, inventaire_id)
+
+    deuxieme = charger_inventaire(session, inventaire_id).bouteilles[1]
+    corriger(session, deuxieme.id, "quantite", 3, "expert")
+    separer(session, deuxieme.id, 1, "expert")
+    assert len(charger_inventaire(session, inventaire_id).bouteilles) == 7
+
+    apres = comparer_au_listing(session, inventaire_id, FIXTURES / "manuel.json")
+    assert {(d.ligne, d.champ) for d in apres.rapport.desaccords} == {(d.ligne, d.champ) for d in avant.rapport.desaccords}
+    assert formater_rapport(apres.rapport) == formater_rapport(avant.rapport)
+    assert signaux_du_modele(session, inventaire_id) == signaux_avant
 
 
 def test_le_rapport_dit_que_c_est_le_score_du_modele(session, nom_maison, dossier_photos, stockage):

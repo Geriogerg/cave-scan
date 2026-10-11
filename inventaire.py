@@ -42,6 +42,7 @@ from src.services.relecture import (
     valider,
 )
 from src.services.restitution import (
+    ExportRefuse,
     bouteille_par_reference,
     exporter,
     lister_bouteilles,
@@ -61,8 +62,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         with session_de_base(arguments.base) as session:
             arguments.commande(session, arguments)
-    except (LookupError, CorrectionRefusee, ValidationRefusee) as erreur:
-        # Inventaire ou bouteille introuvable, saisie refusée : rien n'a été écrit.
+    except (LookupError, CorrectionRefusee, ValidationRefusee, ExportRefuse) as erreur:
+        # Inventaire ou bouteille introuvable, saisie ou export refusé : rien n'a été écrit.
         print(erreur, file=sys.stderr)
         return 2
     except PermissionError as erreur:

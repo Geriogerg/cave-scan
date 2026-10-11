@@ -298,7 +298,7 @@ class Correction(Base):
     """Une action de l'expert sur une bouteille — jamais modifiée ni supprimée.
 
     Une correction de valeur, ou un changement de statut (validation, remise à
-    relire) sous le champ « statut » (decisions.md 0083).
+    relire) sous le champ « statut » (decisions.md 0169).
     """
 
     __tablename__ = "correction"

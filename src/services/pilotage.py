@@ -12,10 +12,10 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import exists, func, select, update
 from sqlalchemy.orm import Session
 
-from src.donnees.modeles import STATUTS_BOUTEILLE, Extraction, FicheBouteille, maintenant
+from src.donnees.modeles import STATUTS_BOUTEILLE, Extraction, FicheBouteille, GroupePhotos, maintenant
 from src.services.inventaires import charger_inventaire, verifier_modifiable
 
 
@@ -85,10 +85,16 @@ class Avancement:
     lancee_le: datetime | None
     ecoule_s: float | None
     restant_estime_s: float | None  # au rythme observé depuis le lancement
+    en_attente: int = 0  # bouteilles ajoutées (groupes de photos) pas encore lancées
 
     @property
     def terminee(self) -> bool:
         return self.restantes == 0
+
+    @property
+    def excel_disponible(self) -> bool:
+        """Chaque bouteille a sa ligne : la même règle que l'export (decisions.md 0170)."""
+        return self.terminee and not self.en_attente
 
 
 def avancement(session: Session, inventaire_id: int) -> Avancement:
@@ -126,6 +132,12 @@ def avancement(session: Session, inventaire_id: int) -> Avancement:
         lancee_le=inventaire.extraction_lancee_le,
         ecoule_s=ecoule,
         restant_estime_s=estime,
+        en_attente=session.scalar(
+            select(func.count(GroupePhotos.id)).where(
+                GroupePhotos.inventaire_id == inventaire_id,
+                ~exists().where(FicheBouteille.groupe_id == GroupePhotos.id),
+            )
+        ),
     )
 
 

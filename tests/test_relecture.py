@@ -260,8 +260,12 @@ def test_une_correction_sur_une_bouteille_validee_la_remet_a_relire(session, inv
     assert statuts == [("extraite", "validee", "expert"), ("validee", "extraite", "expert B")]
 
 
-def test_un_inventaire_avec_une_bouteille_en_erreur_ne_peut_pas_passer_a_valide(session, nom_maison, dossier_photos, stockage):
-    """Point 7, règle 2."""
+def test_une_bouteille_en_erreur_se_valide_en_saisie_manuelle_une_fois_ses_champs_obligatoires_saisis(
+    session, nom_maison, dossier_photos, stockage
+):
+    """Point 7, règle 2, revu en session 6 (decisions.md 0169) : une bouteille
+    dont l'analyse a échoué ne bloque plus l'inventaire, mais elle ne se valide
+    qu'avec ses champs obligatoires saisis à la main — et c'est tracé."""
     cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Cave", stockage)
     extraire_inventaire(session, cree.inventaire_id, ExtracteurScenario({4: "passagere"}), stockage)
     inventaire = charger_inventaire(session, cree.inventaire_id)
@@ -269,15 +273,26 @@ def test_un_inventaire_avec_une_bouteille_en_erreur_ne_peut_pas_passer_a_valide(
     assert en_erreur.statut == "erreur"
 
     valider_tout(session, cree.inventaire_id, sauf={4})
-    with pytest.raises(ValidationRefusee, match="en erreur : relancer son extraction"):
+    with pytest.raises(ValidationRefusee, match="Domaine / Château, Appellation, Millésime, Format"):
         valider(session, en_erreur.id, "expert")
+    assert inventaire.statut == "ouvert"
 
-    assert inventaire.statut == "ouvert"
-    # Même corrigée de partout, une bouteille en erreur reste non validable.
+    # Une partie seulement : toujours refusée, avec ce qui manque encore.
     corriger(session, en_erreur.id, "millesime", "2001", "expert")
-    with pytest.raises(ValidationRefusee):
+    with pytest.raises(ValidationRefusee, match="remplissez d'abord : Domaine / Château, Appellation, Format"):
         valider(session, en_erreur.id, "expert")
     assert inventaire.statut == "ouvert"
+
+    for champ, valeur in (("domaine", "Domaine X"), ("appellation", "Pommard"), ("format", "bouteille")):
+        corriger(session, en_erreur.id, champ, valeur, "expert")
+    valider(session, en_erreur.id, "expert")
+    assert en_erreur.statut == "validee" and inventaire.statut == "valide"
+    trace = [c for c in en_erreur.corrections if c.champ == "statut"][-1]
+    assert (trace.ancienne_valeur, trace.nouvelle_valeur) == ("erreur", "validee")  # « saisie manuelle »
+
+    # Modifiée ensuite, elle redevient « en erreur » (aucune analyse réussie), pas « extraite ».
+    corriger(session, en_erreur.id, "millesime", "2002", "expert")
+    assert en_erreur.statut == "erreur" and inventaire.statut == "ouvert"
 
 
 def test_on_ne_valide_pas_une_bouteille_pas_encore_extraite(session, nom_maison, dossier_photos, stockage):

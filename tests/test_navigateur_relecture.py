@@ -206,6 +206,26 @@ def test_relire_dix_bouteilles_uniquement_au_clavier(application, ordinateur, tm
     assert stats["bouteilles_chronometrees"] == 10 and stats["temps_relecture_total_ms"] > 0
 
 
+def test_le_temps_passe_sur_une_bouteille_compte_meme_sans_la_valider(application, ordinateur, tmp_path):
+    """Ouverte, regardée, quittée sans validation : son temps est envoyé en la
+    quittant (decisions.md 0169)."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 2)
+    b = ids(application, inventaire_id)
+    page = ordinateur.new_page()
+    page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{b[0]}")
+    sur_la_bouteille(page, b[0])
+    page.wait_for_function("Number(document.getElementById('temps').value) >= 1500", timeout=10_000)
+    page.keyboard.press("k")  # la suivante, sans valider
+    sur_la_bouteille(page, b[1])
+
+    def statistiques():
+        return httpx.get(f"{application}/inventaires/{inventaire_id}").json()["statistiques"]
+
+    attendre(lambda: statistiques()["temps_relecture_total_ms"] >= 1500, message="temps envoyé en quittant la bouteille")
+    assert statistiques()["bouteilles_chronometrees"] == 1
+    assert httpx.get(f"{application}/inventaires/{inventaire_id}/bouteilles/{b[0]}").json()["statut"] == "extraite"
+
+
 def test_deux_onglets_sur_la_meme_bouteille(application, ordinateur, tmp_path):
     inventaire_id = inventaire_extrait(application, tmp_path, 2)
     premiere = ids(application, inventaire_id)[0]

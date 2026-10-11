@@ -7,7 +7,7 @@ La sortie du modèle n'est JAMAIS modifiée (decisions.md 0072) :
   dernière correction ; RECALCULÉE à chaque lecture, jamais stockée ;
 - `corriger` : ajoute un enregistrement à l'historique, valide la saisie selon
   le type de la colonne (0082) ;
-- `valider` : la bouteille est relue et approuvée (0083).
+- `valider` : la bouteille est relue et approuvée (0169).
 
 L'écran de relecture (session 5) passe par les mêmes fonctions, avec en plus :
 - une VERSION de la bouteille telle qu'affichée : enregistrer par-dessus une
@@ -27,7 +27,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, object_session
 
-from src.config.maison import COLONNE_QUANTITE, CLES_RESERVEES_AU_PIPELINE, ConfigMaison
+from src.config.maison import COLONNE_QUANTITE, CLES_RESERVEES_AU_PIPELINE, NOYAU_CANONIQUE, ConfigMaison
 from src.donnees.modeles import Correction, EvenementBouteille, Extraction, FicheBouteille
 from src.extract.base import interpreter
 from src.extract.schema import (
@@ -47,7 +47,7 @@ from src.services.extraction import (
 from src.services.inventaires import actualiser_statut, charger_inventaire, config_figee, verifier_modifiable
 
 # Le changement de statut d'une bouteille (validation, remise à relire) est
-# tracé dans l'historique sous ce nom (decisions.md 0083).
+# tracé dans l'historique sous ce nom (decisions.md 0169).
 CHAMP_STATUT = "statut"
 
 # Vocabulaire v0 des champs de liste qu'une config ne redéfinit pas.
@@ -378,7 +378,7 @@ def corriger(
     invalide pour le type de la colonne : quantité = entier ≥ 1, liste = code
     connu (un libellé est ramené à son code), nombre = nombre, texte = libre
     (decisions.md 0082). Sur une bouteille validée, la remet à relire et
-    rouvre l'inventaire (0083).
+    rouvre l'inventaire (0169).
     """
     auteur = auteur_valide(auteur)
     bouteille = charger_bouteille(session, bouteille_id)
@@ -390,7 +390,7 @@ def enregistrer_correction(
     session: Session, bouteille: FicheBouteille, champ: str, valeur: Any, auteur: str
 ) -> Correction:
     """Ajoute à l'historique une valeur DÉJÀ validée, puis applique la règle de
-    statut : une bouteille validée qu'on modifie est à relire (decisions.md 0083).
+    statut : une bouteille validée qu'on modifie est à relire (decisions.md 0169).
     Jamais sur un inventaire clos (lecture seule, 0168)."""
     verifier_modifiable(bouteille.inventaire)
     ancienne = valeur_courante(valeurs_courantes(session, bouteille.id), champ)
@@ -411,13 +411,35 @@ def enregistrer_correction(
 
 def remettre_a_relire(bouteille: FicheBouteille, auteur: str, statut: str = "extraite") -> None:
     """Une bouteille validée dont quelque chose change n'est plus validée : son
-    statut passe à `statut`, et c'est tracé dans l'historique (decisions.md 0083)."""
+    statut passe à `statut`, et c'est tracé dans l'historique (decisions.md 0169).
+    Une bouteille validée en saisie manuelle (aucune analyse réussie) redevient
+    « en erreur », pas « extraite » (0169)."""
     if bouteille.statut != "validee":
         return
+    if statut == "extraite" and extraction_qui_fait_foi(bouteille) is None:
+        statut = "erreur"
     bouteille.statut = statut
     bouteille.corrections.append(
         Correction(champ=CHAMP_STATUT, ancienne_valeur="validee", nouvelle_valeur=statut, auteur=auteur)
     )
+
+
+def champs_obligatoires(config: ConfigMaison) -> list[str]:
+    """Ce qu'une bouteille dont l'analyse a échoué doit avoir, saisi à la main,
+    pour être validée : les colonnes du noyau canonique PRÉSENTES dans la config
+    de la maison — toujours saisissables à l'écran (choix du 2026-10-11, 0169)."""
+    return [cle for cle in NOYAU_CANONIQUE if config.colonne(cle) is not None]
+
+
+def champs_obligatoires_manquants(session: Session, bouteille: FicheBouteille) -> list[str]:
+    """Les champs obligatoires encore vides (ou en abstention), par leur nom à l'écran."""
+    config = config_figee(bouteille.inventaire)
+    courantes = valeurs_courantes(session, bouteille.id)
+    return [
+        config.colonne(cle).nom
+        for cle in champs_obligatoires(config)
+        if est_abstention(valeur_courante(courantes, cle)) or valeur_courante(courantes, cle) in (None, "")
+    ]
 
 
 def champs_corrigeables(config: ConfigMaison) -> list[str]:
@@ -594,14 +616,15 @@ def _saisies_a_enregistrer(
 
 
 def valider(session: Session, bouteille_id: int, auteur: str, temps_ms: int | None = None) -> None:
-    """La bouteille est relue et approuvée. Seule une bouteille extraite peut
-    l'être : une bouteille en erreur ne le peut pas, si bien qu'un inventaire qui
-    en contient une ne passe jamais à `valide` (decisions.md 0083). Une bouteille
-    dont la paire de photos est signalée non plus, tant que le signalement n'est
-    pas levé (0145).
+    """La bouteille est relue et approuvée — facultatif (0168). Une bouteille
+    extraite peut l'être ; une bouteille dont l'analyse a ÉCHOUÉ aussi, une fois
+    ses champs obligatoires saisis à la main (« saisie manuelle », tracée par le
+    passage « erreur » -> « validée » dans l'historique, 0169) : elle ne bloque
+    plus l'inventaire. Une bouteille dont les photos sont signalées, non, tant
+    que le signalement n'est pas levé (0145).
 
     `temps_ms` : temps passé sur la bouteille à l'écran, absences longues
-    exclues ; il s'ajoute au temps de relecture de la bouteille (0146).
+    exclues ; il s'ajoute au temps de relecture de la bouteille (0169).
     """
     auteur = auteur_valide(auteur)
     bouteille = charger_bouteille(session, bouteille_id)
@@ -611,11 +634,13 @@ def valider(session: Session, bouteille_id: int, auteur: str, temps_ms: int | No
         session.commit()
         return  # déjà validée : rien d'autre à faire, rien à tracer
     if bouteille.statut == "erreur":
-        raise ValidationRefusee(
-            f"Bouteille n°{bouteille.position} ({bouteille.identifiant}) en erreur : "
-            f"relancer son extraction avant de la valider."
-        )
-    if bouteille.statut != "extraite":
+        manquants = champs_obligatoires_manquants(session, bouteille)
+        if manquants:
+            raise ValidationRefusee(
+                f"Bouteille n°{bouteille.position} ({bouteille.identifiant}) : l'analyse a échoué. Pour la "
+                f"valider en saisie manuelle, remplissez d'abord : {', '.join(manquants)} — ou réanalysez-la."
+            )
+    elif bouteille.statut != "extraite":
         raise ValidationRefusee(
             f"Bouteille n°{bouteille.position} ({bouteille.identifiant}) pas encore "
             f"extraite (statut « {bouteille.statut} »)."
@@ -626,17 +651,27 @@ def valider(session: Session, bouteille_id: int, auteur: str, temps_ms: int | No
             f"signalé. Elle ne peut pas être validée tant que le signalement n'est pas levé."
         )
 
+    ancien = bouteille.statut  # « erreur » : validée en saisie manuelle
     bouteille.statut = "validee"
     bouteille.corrections.append(
         Correction(
             champ=CHAMP_STATUT,
-            ancienne_valeur="extraite",
+            ancienne_valeur=ancien,
             nouvelle_valeur="validee",
             auteur=auteur,
         )
     )
     _ajouter_temps(bouteille, temps_ms)
     actualiser_statut(bouteille.inventaire)
+    session.commit()
+
+
+def ajouter_temps_de_relecture(session: Session, bouteille_id: int, temps_ms: int | None) -> None:
+    """Le temps passé sur une bouteille ouverte, SANS la valider : envoyé par
+    l'écran en la quittant, et chaque minute (decisions.md 0169). Cumulé avec
+    celui des validations, borné à 1 h par envoi. Une mesure, pas une
+    modification : comptée même sur un inventaire clos."""
+    _ajouter_temps(charger_bouteille(session, bouteille_id), temps_ms)
     session.commit()
 
 
@@ -698,8 +733,8 @@ def valider_inventaire(session: Session, inventaire_id: int, auteur: str) -> int
     raisons = []
     if en_erreur:
         raisons.append(
-            f"{len(en_erreur)} bouteille(s) en erreur ({_positions(en_erreur)}) : relancer "
-            f"leur extraction (Réanalyser) avant de les valider"
+            f"{len(en_erreur)} bouteille(s) en erreur ({_positions(en_erreur)}) : les réanalyser, ou "
+            f"saisir leurs champs obligatoires à la main pour les valider"
         )
     if pas_extraites:
         raisons.append(f"{len(pas_extraites)} bouteille(s) pas encore extraite(s) ({_positions(pas_extraites)})")

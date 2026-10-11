@@ -450,14 +450,38 @@
   });
 
   // Appelé chaque seconde, et juste avant une validation : une bouteille validée
-  // en moins d'une seconde a aussi son temps.
+  // en moins d'une seconde a aussi son temps. La validation emporte le temps
+  // pas encore envoyé ; le reste part en quittant la bouteille, et chaque minute
+  // (decisions.md 0169) : une bouteille ouverte sans être validée compte aussi.
+  var tempsEnvoye = 0;  // déjà enregistré par le serveur (ou en route vers lui)
+  var tempsDeLaValidation = 0;  // emporté par la validation en cours
+
   function compterLeTemps() {
     var maintenant = performance.now();
     var ecart = maintenant - dernierTic;
     dernierTic = maintenant;
     if (!document.hidden && Date.now() - derniereActivite < PAUSE_MS) tempsActif += ecart;
-    champTemps.value = String(Math.round(tempsActif));
+    tempsDeLaValidation = Math.round(tempsActif - tempsEnvoye);
+    champTemps.value = String(tempsDeLaValidation);
+  }
+
+  // Validation enregistrée : son temps l'est aussi. Refusée : il reste à envoyer.
+  fiche.addEventListener("htmx:afterRequest", function (evenement) {
+    if (evenement.detail.elt === fiche && evenement.detail.successful) tempsEnvoye += tempsDeLaValidation;
+  });
+
+  function envoyerLeTemps() {
+    compterLeTemps();
+    var reste = Math.round(tempsActif - tempsEnvoye);
+    if (reste < 1000 || !navigator.sendBeacon) return;  // moins d'une seconde : rien à dire
+    var donnees = new URLSearchParams({ temps_ms: String(reste) });
+    if (navigator.sendBeacon(location.pathname.replace(/\/?$/, "") + "/temps", donnees)) tempsEnvoye += reste;
   }
 
   setInterval(compterLeTemps, 1000);
+  setInterval(envoyerLeTemps, 60000);
+  window.addEventListener("pagehide", envoyerLeTemps);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") envoyerLeTemps();
+  });
 })();
