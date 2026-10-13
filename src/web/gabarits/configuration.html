@@ -2,11 +2,10 @@
 {% block titre %}Configuration{% endblock %}
 {% block fil %}<span class="fil">Configuration</span>{% endblock %}
 {% block contenu %}
-<h1>Configuration des maisons</h1>
+<h1>Configuration</h1>
 <p class="aide">
-  Les colonnes de l'Excel de chaque maison, et ce que le modèle doit lire. Chaque
-  enregistrement crée une nouvelle version ; un inventaire garde toujours la version
-  avec laquelle il a été créé.
+  Les colonnes de votre Excel, et ce que le modèle doit lire. Chaque enregistrement crée une
+  nouvelle version ; un inventaire garde toujours la version avec laquelle il a été créé.
 </p>
 
 {% if info %}<p class="message info" role="status">{{ info }}</p>{% endif %}
@@ -17,32 +16,12 @@
   </div>
 {% endif %}
 
-<ul class="cartes">
-{% for m in maisons %}
-  <li>
-    {% if m.erreur %}
-      <div class="carte">
-        <span class="carte-titre">{{ m.fichier }}</span>
-        <span class="carte-ligne"><span class="etiquette alerte">Fichier invalide</span></span>
-        <span class="carte-ligne">Importez un fichier corrigé pour cette maison.</span>
-        <details><summary>Voir les erreurs</summary><pre class="code">{{ m.erreur }}</pre></details>
-      </div>
-    {% else %}
-      <a class="carte" href="/app/configuration/{{ m.fichier[:-5] }}">
-        <span class="carte-titre">{{ m.maison }}</span>
-        <span class="carte-ligne">Version {{ m.version_declaree }} · {{ m.fichier }}</span>
-      </a>
-    {% endif %}
-  </li>
-{% else %}
-  <li class="vide">Aucune configuration pour l'instant : importez le fichier JSON d'une maison.</li>
-{% endfor %}
-</ul>
+{% if not erreurs and not info %}<p class="vide">Aucune configuration pour l'instant : importez votre fichier de configuration (JSON).</p>{% endif %}
 
 <h2>Importer un fichier</h2>
 <p class="aide">
-  Le fichier JSON d'une maison. Si la maison existe déjà, il devient sa nouvelle version ;
-  sinon, une nouvelle maison est ajoutée. Il est vérifié avant d'être pris en compte.
+  Un fichier de configuration (JSON), par exemple exporté depuis cette page. Il est vérifié, puis
+  devient la nouvelle version de la configuration.
 </p>
 <form method="post" action="/app/configuration/importer" enctype="multipart/form-data" class="formulaire">
   <input type="file" name="fichier" accept=".json,application/json" required>
@@ -52,5 +31,6 @@
 {% block actions %}
 <nav class="barre-actions">
   <a class="bouton" href="/app">Inventaires</a>
+  <a class="bouton" href="/app/configuration">Configuration</a>
 </nav>
 {% endblock %}

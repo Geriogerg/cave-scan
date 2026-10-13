@@ -148,7 +148,7 @@ def refuser_les_groupes_trop_grands(bouteilles: list[PhotosBouteille], maximum: 
         detail = " ; ".join(f"{vues.nom} : {len(vues.photos)} photos" for vues in trop[:5])
         raise PhotosInvalides(
             f"{len(trop)} bouteille(s) dépassent le plafond de {maximum} photos par bouteille fixé par la "
-            f"maison ({detail}). Retirer les photos en trop, ou relever le plafond dans la configuration."
+            f"configuration ({detail}). Retirer les photos en trop, ou relever le plafond dans la configuration."
         )
 
 

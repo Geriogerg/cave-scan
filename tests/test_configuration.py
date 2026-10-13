@@ -104,7 +104,7 @@ def test_rien_de_change_rien_d_enregistre(session, dossier, maison):
 def test_la_page_ne_renomme_pas_la_maison(session, dossier, maison):
     brut = config_active(dossier, maison).brut
     brut["maison"] = "Une autre maison"
-    with pytest.raises(ConfigInvalide, match="importez son fichier"):
+    with pytest.raises(ConfigInvalide, match="ne modifie que la configuration de l.application"):
         enregistrer_version(session, dossier, maison, brut)
 
 

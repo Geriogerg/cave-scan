@@ -11,7 +11,7 @@
     <li>
       <a class="carte" href="/app/inventaires/{{ inventaire.id }}">
         <span class="carte-titre">{{ inventaire.nom }}</span>
-        <span class="carte-ligne">{{ inventaire.maison.nom }} · {{ inventaire.cree_le | date }}</span>
+        <span class="carte-ligne">Créé le {{ inventaire.cree_le | date }}</span>
         <span class="carte-ligne">
           {% if inventaire.clos_le %}
             <span class="etiquette ok">Clos</span>
@@ -47,7 +47,7 @@
   {% for inventaire, etat in archives %}
     <li><a class="carte" href="/app/inventaires/{{ inventaire.id }}">
       <span class="carte-titre">{{ inventaire.nom }}</span>
-      <span class="carte-ligne">{{ inventaire.maison.nom }} · {{ inventaire.cree_le | date }}</span>
+      <span class="carte-ligne">Créé le {{ inventaire.cree_le | date }}</span>
       <span class="carte-ligne">
         {% if inventaire.clos_le %}<span class="etiquette ok">Clos</span>{% endif %}
         {% if etat %}{{ etat.total - etat.restantes }} / {{ etat.total }} analysée(s){% if etat.terminee and etat.total %} · {{ etat.par_statut.validee }} validée(s){% endif %}{% endif %}
@@ -66,7 +66,7 @@
   {% for inventaire in corbeille %}
     <li class="carte">
       <span class="carte-titre">{{ inventaire.nom }}</span>
-      <span class="carte-ligne">{{ inventaire.maison.nom }} · mis à la corbeille le {{ inventaire.supprime_le | horodatage }}</span>
+      <span class="carte-ligne">Mis à la corbeille le {{ inventaire.supprime_le | horodatage }}</span>
       <form method="post" action="/app/inventaires/{{ inventaire.id }}/restaurer"><button class="bouton petit">Restaurer</button></form>
     </li>
   {% endfor %}

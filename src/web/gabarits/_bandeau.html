@@ -33,12 +33,12 @@
     <p class="message info">Séparée : {% for autre in f.liees %}n°{{ autre.position }} ({{ autre.identifiant }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>
   {% endif %}
   {% if f.fusionnee_avec %}
-    <p class="message attention">Identique à {{ f.fusionnee_avec | join(", ") }} sur les colonnes de regroupement de la
-      maison ({{ f.regroupement | join(", ") }}) : l'export les fusionnera en une seule ligne. Modifiez l'une de ces
+    <p class="message attention">Identique à {{ f.fusionnee_avec | join(", ") }} sur les colonnes de regroupement
+      ({{ f.regroupement | join(", ") }}) : l'export les fusionnera en une seule ligne. Modifiez l'une de ces
       colonnes pour garder deux lignes.</p>
   {% endif %}
   {% if f.notes_modele %}<p class="message info">Note du modèle : {{ f.notes_modele }}</p>{% endif %}
   {% if f.doutes_ailleurs %}
-    <p class="message info">Le modèle doute aussi de : {{ f.doutes_ailleurs | join(", ") }} (non repris dans les colonnes de la maison).</p>
+    <p class="message info">Le modèle doute aussi de : {{ f.doutes_ailleurs | join(", ") }} (non repris dans vos colonnes).</p>
   {% endif %}
 </div>

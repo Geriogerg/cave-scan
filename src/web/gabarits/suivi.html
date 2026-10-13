@@ -3,7 +3,7 @@
 {% block fil %}<span class="fil">{{ inventaire.nom }}</span>{% endblock %}
 {% block contenu %}
 <h1>Analyse des photos</h1>
-<p class="aide">{{ inventaire.maison.nom }} · {{ inventaire.bouteilles | length }} bouteille(s).{% if etat.extraction == "lancee" and not etat.terminee %} Cette page se met à jour toute seule.{% endif %}</p>
+<p class="aide">{{ inventaire.bouteilles | length }} bouteille(s).{% if etat.extraction == "lancee" and not etat.terminee %} Cette page se met à jour toute seule.{% endif %}</p>
 {% if inventaire.archive_le %}
   <div class="message info">Inventaire archivé : il est rangé dans « Archives », sur l'accueil.
     <form method="post" action="/app/inventaires/{{ inventaire.id }}/desarchiver" class="en-ligne"><button class="lien">Sortir des archives</button></form></div>

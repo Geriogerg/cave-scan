@@ -170,7 +170,7 @@ def ajouter_photo(
     if len(groupe.photos) >= plafond:
         session.rollback()
         raise EnvoiRefuse(
-            f"Bouteille n°{groupe.numero} : {plafond} photos au plus (plafond de la maison). "
+            f"Bouteille n°{groupe.numero} : {plafond} photos au plus (plafond de la configuration). "
             f"Commencez une nouvelle bouteille, ou retirez une photo."
         )
     if quantite is not None:
@@ -273,7 +273,7 @@ def rattacher(session: Session, inventaire_id: int, groupe_id: int) -> None:
         session.rollback()
         raise ModificationRefusee(
             f"Ensemble, ces deux bouteilles auraient {len(precedent.photos) + len(groupe.photos)} photos : "
-            f"{plafond} au plus (plafond de la maison). Retirez d'abord des photos."
+            f"{plafond} au plus (plafond de la configuration). Retirez d'abord des photos."
         )
     _deplacer(session, list(groupe.photos), precedent, a_la_suite=True)
     session.delete(groupe)

@@ -9,6 +9,7 @@ rien n'est écrit avant « Enregistrer », et rien qui ne soit valide.
 
 from __future__ import annotations
 
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, File, Query, Request, UploadFile
@@ -19,6 +20,7 @@ from src.config.maison import NOYAU_CANONIQUE, ConfigInvalide
 from src.extract.consignes import SYSTEM_PROMPT
 from src.extract.schema import CHAMPS_MODELE
 from src.services.configuration import (
+    config_de_l_instance,
     SOURCES_EDITABLES,
     TYPES_EDITABLES,
     ConfigInchangee,
@@ -33,7 +35,6 @@ from src.services.configuration import (
     importer,
     versions_de,
 )
-from src.services.envoi import configs_disponibles
 from src.web.pages import page
 
 routeur = APIRouter(include_in_schema=False)
@@ -73,7 +74,11 @@ def _afficher(request: Request, base, nom: str, vue, statut: int = 200, **messag
 
 @routeur.get("/app/configuration")
 def liste(request: Request, base: SessionBase):
-    return page(request, "configuration.html", maisons=configs_disponibles(base, request.app.state.configs))
+    """LA configuration de l'instance (decisions.md 0171) ; à défaut, l'import."""
+    active = config_de_l_instance(request.app.state.configs)
+    if active is not None:
+        return RedirectResponse(f"/app/configuration/{active.fichier.stem}", status_code=303)
+    return page(request, "configuration.html")
 
 
 @routeur.post("/app/configuration/importer")
@@ -83,23 +88,28 @@ async def importer_un_fichier(
     contenu = await fichier.read()
     try:
         texte = contenu.decode("utf-8-sig")
+        # Le fichier importé devient la nouvelle version de LA configuration de
+        # l'application, quel que soit le nom de maison qu'il porte (0171).
+        active = config_de_l_instance(request.app.state.configs)
+        if active is not None:
+            try:
+                brut = json.loads(texte)
+            except ValueError:
+                brut = None  # illisible : la validation dira où
+            if isinstance(brut, dict):
+                brut["maison"] = active.config.maison
+                texte = json.dumps(brut, ensure_ascii=False, indent=2)
         enregistree = importer(base, request.app.state.configs, texte, fichier.filename or "")
     except UnicodeDecodeError:
         erreurs = [f"« {fichier.filename} » n'est pas un fichier texte JSON (UTF-8 attendu)."]
     except ConfigInvalide as refus:
         erreurs = refus.erreurs
     except ConfigInchangee as refus:  # le fichier qu'on vient d'exporter : rien à faire
-        return page(
-            request, "configuration.html",
-            maisons=configs_disponibles(base, request.app.state.configs), info=f"« {fichier.filename} » : {refus}",
-        )
+        return page(request, "configuration.html", info=f"« {fichier.filename} » : {refus}")
     else:
         cible = f"/app/configuration/{enregistree.fichier.stem}?enregistree={enregistree.version}"
         return RedirectResponse(cible, status_code=303)
-    return page(
-        request, "configuration.html", 422,
-        maisons=configs_disponibles(base, request.app.state.configs), erreurs=erreurs, importe=fichier.filename,
-    )
+    return page(request, "configuration.html", 422, erreurs=erreurs, importe=fichier.filename)
 
 
 # --- une maison ---------------------------------------------------------------------------------

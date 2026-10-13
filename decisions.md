@@ -1138,6 +1138,19 @@ un renvoi d'une ligne à leur place.
   tomber les bouteilles pas encore analysées (perte silencieuse) ; exporter
   sans les erreurs.
 
+- 0171 — Une instance de l'application = une maison (demande de l'utilisateur,
+  2026-10-13) : chaque maison a sa propre installation, avec SA configuration,
+  qu'elle modifie à sa guise. Aucune page ne nomme ni ne fait choisir la
+  maison : « Nouvel inventaire » demande seulement le nom de la vente ;
+  « Configuration » ouvre directement la configuration ; un fichier importé
+  devient sa nouvelle version, quel que soit le nom de maison qu'il porte. La
+  configuration de l'instance est le fichier de `config/maisons/` (s'il y en a
+  plusieurs : `CAVE_SCAN_MAISON`, à défaut le premier par nom). Les données
+  (table des maisons, versions figées par inventaire), l'API et la ligne de
+  commande (`--maison`) gardent la notion de maison : le format reste piloté
+  par sa config JSON (contrainte 6) — écarté : supprimer la notion de maison des
+  données (migration sans bénéfice, et les inventaires passés y sont liés).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

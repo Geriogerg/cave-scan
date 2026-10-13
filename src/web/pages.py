@@ -35,7 +35,8 @@ from src.services.depot import (
 )
 from src.config.maison import QUANTITE_MAX
 from src.services.depot import ModificationRefusee
-from src.services.envoi import TAILLE_MAX_OCTETS, config_de_la_maison, configs_disponibles
+from src.services.configuration import maison_de_l_instance
+from src.services.envoi import TAILLE_MAX_OCTETS, EnvoiRefuse, config_de_la_maison
 from src.services.inventaires import charger_inventaire, lister_inventaires
 from src.services.pilotage import avancement, reprendre
 
@@ -113,27 +114,20 @@ def accueil(request: Request, base: SessionBase, fait: str | None = None):
 
 @routeur.get("/app/nouveau")
 def nouveau(request: Request, base: SessionBase):
-    return page(request, "nouveau.html", maisons=_maisons(request, base))
+    return page(request, "nouveau.html", configuree=maison_de_l_instance(request.app.state.configs) is not None)
 
 
 @routeur.post("/app/nouveau")
-def creer(
-    request: Request,
-    base: SessionBase,
-    nom: Annotated[str, Form()] = "",
-    maison: Annotated[str, Form()] = "",
-):
+def creer(request: Request, base: SessionBase, nom: Annotated[str, Form()] = ""):
+    # Une instance = une maison (decisions.md 0171) : sa configuration, sans choix.
+    maison = maison_de_l_instance(request.app.state.configs)
     try:
+        if maison is None:
+            raise EnvoiRefuse("Aucune configuration : importez-la d'abord (page « Configuration »).")
         cree = creer_brouillon(base, maison, config_de_la_maison(request.app.state.configs, maison), nom)
     except ERREURS_DE_SERVICE as erreur:
-        return page(
-            request, "nouveau.html", 422, maisons=_maisons(request, base), erreur=str(erreur), nom=nom, maison=maison,
-        )
+        return page(request, "nouveau.html", 422, configuree=maison is not None, erreur=str(erreur), nom=nom)
     return RedirectResponse(f"/app/inventaires/{cree.inventaire_id}/depot", status_code=303)
-
-
-def _maisons(request: Request, base) -> list:
-    return [m for m in configs_disponibles(base, request.app.state.configs) if m.erreur is None]
 
 
 @routeur.get("/app/inventaires/{inventaire_id}")

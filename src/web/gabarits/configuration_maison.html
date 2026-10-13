@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% set config = vue.active.config %}
-{% block titre %}Configuration — {{ config.maison }}{% endblock %}
+{% block titre %}Configuration{% endblock %}
 {% block classe %}page-configuration{% endblock %}
-{% block fil %}<a class="fil" href="/app/configuration">Configuration</a>{% endblock %}
+{% block fil %}<span class="fil">Configuration</span>{% endblock %}
 {% block contenu %}
-<h1>{{ config.maison }}</h1>
+<h1>Configuration</h1>
 <p class="aide">
   Version active : {{ config.version }}. Les colonnes marquées « noyau » (domaine, appellation, millésime,
   format) sont toujours lues par le modèle, même retirées de l'Excel. Modifiez les colonnes
@@ -15,7 +15,7 @@
 {% include "_config_editeur.html" %}
 
 <details class="bloc-repli">
-  <summary>Consignes générales envoyées au modèle, pour toutes les maisons</summary>
+  <summary>Consignes générales envoyées au modèle</summary>
   <p class="aide">
     En plus des colonnes ci-dessus lues par le modèle, il reçoit toujours ces consignes et lit
     toujours ces champs, quelle que soit la configuration : {{ champs_toujours_lus | join(", ") }}.
@@ -26,6 +26,11 @@
 
 <h2>Versions enregistrées</h2>
 <p class="aide"><a href="/app/configuration/{{ nom }}/export">Télécharger la version active (JSON)</a></p>
+<form method="post" action="/app/configuration/importer" enctype="multipart/form-data" class="formulaire-en-ligne">
+  <label for="fichier-import">Importer un fichier (JSON) : il devient la nouvelle version</label>
+  <input id="fichier-import" type="file" name="fichier" accept=".json,application/json" required>
+  <button class="bouton petit" type="submit">Importer</button>
+</form>
 {% if versions %}
 <ul class="liste-versions">
   {% for v in versions %}

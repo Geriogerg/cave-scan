@@ -78,10 +78,16 @@ def agir(client, champs: dict[str, str], action: str, hx: bool = True):
     )
 
 
-def test_la_liste_montre_chaque_maison_et_l_import(client):
-    page = client.get("/app/configuration").text
-    assert "Maison Test" in page and f'href="/app/configuration/{NOM}"' in page
+def test_la_configuration_est_celle_de_l_application_sans_nom_de_maison(client):
+    """Une instance = une maison (decisions.md 0171) : « Configuration » ouvre
+    directement LA configuration, et aucune page ne dit « maison »."""
+    redirection = client.get("/app/configuration", follow_redirects=False)
+    assert redirection.status_code == 303 and redirection.headers["location"] == f"/app/configuration/{NOM}"
+    page = client.get(redirection.headers["location"]).text
     assert 'action="/app/configuration/importer"' in page
+    visible = re.sub(r'<input type="hidden"[^>]*>', "", page)  # les données du formulaire ne s'affichent pas
+    for mention in ("Maison Test", "de la maison", "des maisons", "chaque maison", "pour toutes les maisons"):
+        assert mention not in visible, mention
     assert 'href="/app/configuration"' in client.get("/app").text  # accessible depuis l'accueil
 
 
@@ -188,13 +194,17 @@ def test_sans_javascript_les_actions_affichent_la_page_entiere(client):
 def test_importer_un_fichier(client, configs):
     brut = json.loads(CONFIG_TEST.read_text(encoding="utf-8"))
     brut["maison"] = "Cave Dupont"
+    brut["colonnes"][1]["description"] = "Description venue du fichier importé."
     reponse = client.post(
         "/app/configuration/importer",
         files={"fichier": ("dupont.json", json.dumps(brut, ensure_ascii=False).encode("utf-8"), "application/json")},
         follow_redirects=False,
     )
-    assert reponse.status_code == 303 and reponse.headers["location"].startswith("/app/configuration/cave_dupont?")
-    assert charger_config(configs / "cave_dupont.json").maison == "Cave Dupont"
+    # Le fichier importé devient la nouvelle version de LA configuration, quel
+    # que soit le nom de maison qu'il porte (0171).
+    assert reponse.status_code == 303 and reponse.headers["location"].startswith(f"/app/configuration/{NOM}?")
+    assert not (configs / "cave_dupont.json").exists()
+    assert charger_config(configs / CONFIG_TEST.name).maison == "Maison Test"
 
     brut["colonnes"][0]["type"] = "date"
     refus = client.post(

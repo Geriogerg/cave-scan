@@ -101,6 +101,30 @@ def config_active(dossier_configs: Path, maison: str) -> ConfigActive:
     raise ConfigIntrouvable(f"Aucune config pour la maison « {maison} » dans {Path(dossier_configs).name}/.")
 
 
+def maison_de_l_instance(dossier_configs: Path) -> str | None:
+    """Une instance de l'application = une maison (decisions.md 0171) : sa
+    configuration est la seule de `config/maisons/`. Si le dossier en contient
+    plusieurs, la variable `CAVE_SCAN_MAISON` désigne celle de l'instance ; à
+    défaut, la première par nom de fichier. None : aucune configuration valide."""
+    valides = []
+    for fichier in sorted(Path(dossier_configs).glob("*.json")):
+        try:
+            valides.append(lire_config(fichier)[0].maison)
+        except ConfigInvalide:
+            continue
+    choisie = os.environ.get("CAVE_SCAN_MAISON", "").strip()
+    if choisie:
+        for maison in valides:
+            if plier(maison) == plier(choisie):
+                return maison
+    return valides[0] if valides else None
+
+
+def config_de_l_instance(dossier_configs: Path) -> ConfigActive | None:
+    maison = maison_de_l_instance(dossier_configs)
+    return config_active(dossier_configs, maison) if maison else None
+
+
 def versions_de(session: Session, maison: str) -> list[ConfigVersion]:
     """Les versions enregistrées en base, la plus récente d'abord."""
     return list(
@@ -141,15 +165,14 @@ def enregistrer_version(
         active = config_active(dossier_configs, maison)
         if version_vue is not None and version_vue != active.config.version:
             raise ConfigModifieeAilleurs(
-                f"La configuration de « {active.config.maison} » a été modifiée ailleurs depuis "
+                f"La configuration a été modifiée ailleurs depuis "
                 f"que vous l'avez ouverte (version {active.config.version}, vous éditiez la version "
                 f"{version_vue}). Rechargez la page pour repartir de la version actuelle."
             )
         brut = dict(brut)
         if plier(str(brut.get("maison", ""))) != plier(active.config.maison):
             raise ConfigInvalide(
-                f"« maison » : cette page modifie la configuration de « {active.config.maison} » ; "
-                f"pour une autre maison, importez son fichier."
+                "Cette page ne modifie que la configuration de l'application : rechargez-la."
             )
         brut["maison"] = active.config.maison
         return _ecrire(session, active.fichier, brut, active, nouvelle_maison=False)
@@ -197,7 +220,7 @@ def exporter_version(
         return active.fichier.name, active.texte
     version = next((v for v in versions_de(session, active.config.maison) if v.numero == numero), None)
     if version is None:
-        raise ConfigIntrouvable(f"Aucune version n°{numero} de la configuration de « {active.config.maison} ».")
+        raise ConfigIntrouvable(f"Aucune version n°{numero} de la configuration.")
     return f"{active.fichier.stem}_version_{numero}.json", version.contenu
 
 

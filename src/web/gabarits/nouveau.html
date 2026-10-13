@@ -8,12 +8,8 @@
   <input id="nom" name="nom" type="text" required maxlength="200" value="{{ nom or '' }}"
          placeholder="Vente de printemps — cave Dupont" autocomplete="off">
 
-  <label for="maison">Maison</label>
-  <select id="maison" name="maison" required>
-    {% for m in maisons %}
-      <option value="{{ m.maison }}" {% if m.maison == maison %}selected{% endif %}>{{ m.maison }}</option>
-    {% endfor %}
-  </select>
+  {% if not configuree %}<p class="message attention">Aucune configuration pour l'instant :
+    <a href="/app/configuration">importez-la</a> avant de créer un inventaire.</p>{% endif %}
 
   <p class="aide">Ensuite, chaque bouteille avec ses photos : l'étiquette, la contre-étiquette s'il y en a une,
     la capsule, la bouteille entière…</p>

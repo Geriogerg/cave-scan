@@ -48,7 +48,8 @@ def test_chaque_page_s_affiche(api):
     accueil = api.get("/app")
     assert accueil.status_code == 200 and "Nouvel inventaire" in accueil.text and "Aucun inventaire" in accueil.text
     nouveau = api.get("/app/nouveau")
-    assert nouveau.status_code == 200 and "Maison Test" in nouveau.text
+    # Une instance = une maison (decisions.md 0171) : aucun choix, aucune mention.
+    assert nouveau.status_code == 200 and "Nom de la vente" in nouveau.text and "Maison" not in nouveau.text
     assert "sans_contre" not in nouveau.text  # l'option « étiquettes seules » a disparu (0166)
 
     inventaire_id = creer(api)

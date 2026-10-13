@@ -180,10 +180,10 @@ d'autoriser Python dans le pare-feu (« Réseaux privés »).
 
 Le parcours de l'expert :
 
-1. **Nouvel inventaire** : le nom de la vente et la maison.
+1. **Nouvel inventaire** : le nom de la vente.
 2. **Photographier les bouteilles**, une à une, chacune avec toutes ses photos
    (étiquette, contre-étiquette, capsule, bouteille entière… 4 au plus par
-   défaut, réglable par maison).
+   défaut, réglable dans la configuration).
    - **Appareil photo** : prenez les photos de la bouteille à la suite (le
      compteur les affiche), indiquez la quantité s'il y a plusieurs bouteilles
      identiques, puis « Bouteille suivante ».
@@ -303,9 +303,14 @@ Les corrections faites à l'écran sont signées « Expert », ou du nom indiqu�
   pour les inventaires suivants : pensez à incrémenter son champ `version` (la
   page « Configuration » le fait pour vous).
 
-## Configuration d'une maison
+## Configuration
 
-Depuis l'accueil, **Configuration** : les colonnes de l'Excel de chaque maison.
+Chaque maison de vente a sa propre installation de l'application, avec sa
+configuration : les pages ne parlent jamais de « maison ». La configuration est
+le fichier de `config/maisons/` (s'il y en a plusieurs, `CAVE_SCAN_MAISON` dans
+`.env` désigne le bon).
+
+Depuis l'accueil, **Configuration** : les colonnes de votre Excel.
 On ajoute, modifie, réordonne ou retire une colonne (nom, type, source, valeurs
 et leur description, règle), on voit pour chacune ce qui est envoyé au modèle,
 on importe ou exporte le JSON. Chaque enregistrement est vérifié comme un
