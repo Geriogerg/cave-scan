@@ -3,9 +3,9 @@
 {% block fil %}<span class="fil">{{ inventaire.nom }}</span>{% endblock %}
 {% block contenu %}
 <h1>Analyse des photos</h1>
-<p class="aide">{{ inventaire.bouteilles | length }} bouteille(s).{% if etat.extraction == "lancee" and not etat.terminee %} Cette page se met à jour toute seule.{% endif %}</p>
+<p class="aide">{{ inventaire.bouteilles | length }} bouteille(s)</p>
 {% if inventaire.archive_le %}
-  <div class="message info">Inventaire archivé : il est rangé dans « Archives », sur l'accueil.
+  <div class="message info">Inventaire archivé.
     <form method="post" action="/app/inventaires/{{ inventaire.id }}/desarchiver" class="en-ligne"><button class="lien">Sortir des archives</button></form></div>
 {% endif %}
 {% if fait %}<p class="message ok" role="status">{{ fait }}</p>{% endif %}
@@ -44,8 +44,6 @@
       {% endif %}
       <a class="bouton petit danger" href="/app/inventaires/{{ inventaire.id }}/supprimer">Mettre à la corbeille</a>
     </div>
-    <p class="aide">Archiver range l'inventaire hors de la liste, sans le fermer. Clore le met en lecture seule
-      quand vous êtes sûr de lui ; valider chaque bouteille reste facultatif. Rien n'est jamais effacé.</p>
   </div>
 </details>
 {% endblock %}

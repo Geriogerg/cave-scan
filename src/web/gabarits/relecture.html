@@ -56,8 +56,8 @@
         </button>
       {% endfor %}
       <p class="aide-photo">
-        Molette, double-clic ou <kbd>Z</kbd> : zoom · glisser : déplacer{% if photos | length > 1 %} · <kbd>E</kbd> / <kbd>Maj+E</kbd> : photo suivante / précédente{% endif %}<br>
-        <a id="lien-original" href="/inventaires/{{ i }}/photos/{{ premiere.id }}?taille=originale" target="_blank" rel="noopener">Ouvrir l'original en pleine résolution</a>
+        <kbd>Z</kbd> zoom{% if photos | length > 1 %} · <kbd>E</kbd> photo suivante{% endif %} ·
+        <a id="lien-original" href="/inventaires/{{ i }}/photos/{{ premiere.id }}?taille=originale" target="_blank" rel="noopener">Original</a>
       </p>
     </div>
   </section>

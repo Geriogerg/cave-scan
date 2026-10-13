@@ -96,7 +96,7 @@ def test_la_page_d_une_bouteille(api, inventaire, base):
     assert "1</strong> / 6" in texte  # position
     assert "0</strong> validée(s) sur 6" in texte
     for attendu in ("Domaine / Château", "Millésime", "Estimation (€)", "Qté", "Valider et passer à la suivante",
-                    "Ctrl+Entrée", "Raccourcis clavier", "/static/relecture.js", "Ouvrir l'original en pleine résolution"):
+                    "Ctrl+Entrée", "Raccourcis clavier", "/static/relecture.js", ">Original</a>"):
         assert attendu in texte, attendu
     assert 'value="Domaine Rossignol-Trapet"' in texte
     # Photos : par la route qui vérifie l'inventaire, jamais un dossier statique.
@@ -152,7 +152,7 @@ def test_modifier_une_bouteille_validee_le_signale(api, inventaire, base):
     premiere = ids(base, inventaire)[0]
     api.post(f"/app/inventaires/{inventaire}/relecture/{premiere}/valider", data=formulaire(ouvrir(api, inventaire, premiere)))
     texte = ouvrir(api, inventaire, premiere)
-    assert "Bouteille validée. Modifier un champ la remettra à relire." in texte
+    assert "Bouteille validée." in texte
     reponse = enregistrer(api, inventaire, premiere, "cuvee", "Autre", texte)
     assert "Cette bouteille était validée : cette modification la remet à relire." in reponse.text
     assert base.get(FicheBouteille, premiere).statut == "extraite"

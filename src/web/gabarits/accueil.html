@@ -4,7 +4,7 @@
 <h1>Inventaires</h1>
 {% if fait %}<p class="message ok" role="status">{{ fait }}</p>{% endif %}
 {% if not inventaires %}
-  <p class="vide">Aucun inventaire pour l'instant. Commencez avec le bouton « Nouvel inventaire », en bas de l'écran.</p>
+  <p class="vide">Aucun inventaire pour l'instant.</p>
 {% else %}
   <ul class="cartes">
   {% for inventaire, etat in inventaires %}
@@ -61,7 +61,7 @@
 {% if corbeille %}
 <details class="bloc-repli">
   <summary>Corbeille ({{ corbeille | length }})</summary>
-  <p class="aide">Rien n'y est effacé : photos, lectures du modèle et corrections sont conservées.</p>
+  <p class="aide">Rien n'y est effacé.</p>
   <ul class="cartes">
   {% for inventaire in corbeille %}
     <li class="carte">

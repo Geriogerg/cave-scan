@@ -6,7 +6,6 @@
   <p class="aide">
     {{ vue.bouteilles | length }} bouteille(s) en attente · {{ vue.nb_photos }} photo(s)
     {% if vue.deja_formees %} · {{ vue.deja_formees }} déjà dans l'inventaire{% endif %}
-    · {{ vue.photos_max }} photos au plus par bouteille
   </p>
   <ol class="liste-attente">
   {% for b in vue.bouteilles %}{% set g = b.groupe %}

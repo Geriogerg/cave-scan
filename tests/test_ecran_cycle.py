@@ -48,7 +48,7 @@ def test_renommer_et_archiver_depuis_le_suivi(api, extrait):
 
 def test_la_corbeille_demande_confirmation_et_se_restaure(api, extrait):
     confirmation = api.get(f"/app/inventaires/{extrait}/supprimer").text
-    assert "Rien n&#39;est effacé" in confirmation and "Mettre à la corbeille" in confirmation
+    assert "rien n&#39;est effacé" in confirmation and "Mettre à la corbeille" in confirmation
     supprime = api.post(f"/app/inventaires/{extrait}/supprimer", follow_redirects=False)
     assert supprime.headers["location"] == "/app?fait=corbeille"
     accueil = api.get("/app").text

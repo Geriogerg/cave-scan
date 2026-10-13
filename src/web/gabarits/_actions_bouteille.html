@@ -6,7 +6,7 @@
     <form method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/reanalyser" data-action>
       {% include "_filtre_cache.html" %}
       <button class="bouton petit">Réanalyser cette bouteille</button>
-      <span class="aide">Nouvelle lecture par le modèle ; l'ancienne est gardée, vos corrections restent prioritaires.</span>
+      <span class="aide">Vos corrections restent prioritaires.</span>
     </form>
     {% endif %}
     {% if not b.paire_signalee %}
@@ -14,7 +14,7 @@
       {% include "_filtre_cache.html" %}
       <button class="bouton petit danger">Signaler un problème de photos</button>
       <input type="text" name="motif" placeholder="Motif (facultatif)" aria-label="Motif du signalement" autocomplete="off">
-      <span class="aide">Une photo ne montre pas cette bouteille : elle ne pourra pas être validée.</span>
+      <span class="aide">Une photo ne montre pas cette bouteille.</span>
     </form>
     {% endif %}
     {% if b.statut != "en_cours" %}
@@ -23,7 +23,7 @@
       {% include "_filtre_cache.html" %}
       <button class="bouton petit danger">Retirer cette bouteille</button>
       <input type="text" name="motif" placeholder="Motif (facultatif)" aria-label="Motif du retrait" autocomplete="off">
-      <span class="aide">Photographiée par erreur, pas dans la vente… Elle sort de la relecture et de l'Excel.</span>
+      <span class="aide">Hors de l'Excel ; rien n'est effacé.</span>
     </form>
     {% endif %}
     {% if b.statut in ("extraite", "validee") %}
@@ -31,7 +31,7 @@
       {% include "_filtre_cache.html" %}
       <label class="separer">Séparer <input type="number" name="quantite" min="1" value="1" class="petit-nombre"> exemplaire(s)</label>
       <button class="bouton petit">Séparer</button>
-      <span class="aide large">D'état différent (5 bonnes, 1 abîmée…) : une seconde bouteille, mêmes photos. Quantité actuelle : {{ b.quantite }}.</span>
+      <span class="aide large">D'état différent (5 bonnes, 1 abîmée…). Quantité : {{ b.quantite }}.</span>
     </form>
     {% endif %}
   </div>

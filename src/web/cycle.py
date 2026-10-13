@@ -34,12 +34,12 @@ routeur = APIRouter(include_in_schema=False)
 # Après un geste, un message court (jamais un texte arbitraire dans l'adresse).
 MESSAGES = {
     "renomme": "Inventaire renommé.",
-    "archive": "Inventaire archivé : il est rangé dans « Archives », sur l'accueil.",
+    "archive": "Inventaire archivé.",
     "desarchive": "Inventaire sorti des archives.",
     "rouvert": "Inventaire rouvert : il est de nouveau modifiable.",
     "reprise": "Analyse reprise.",
     "restaure": "Inventaire restauré.",
-    "corbeille": "Inventaire mis à la corbeille. Il se restaure depuis la corbeille, en bas de cette page.",
+    "corbeille": "Inventaire mis à la corbeille.",
 }
 
 
@@ -95,10 +95,8 @@ def confirmer_la_suppression(request: Request, inventaire_id: int, base: Session
         request, "confirmation.html", inventaire=inventaire, action="supprimer",
         titre=f"Mettre « {inventaire.nom} » à la corbeille ?",
         explications=[
-            "Il disparaît de la liste des inventaires et son analyse s'arrête.",
-            f"Rien n'est effacé : ses {etat.total} bouteille(s), leurs photos, les lectures du modèle et "
-            f"vos corrections restent conservées.",
-            "Il se restaure à tout moment depuis la corbeille, en bas de l'accueil.",
+            "Son analyse s'arrête ; rien n'est effacé.",
+            "Il se restaure depuis la corbeille, en bas de l'accueil.",
         ],
         bouton="Mettre à la corbeille", danger=True,
     )
@@ -123,14 +121,11 @@ def confirmer_la_cloture(request: Request, inventaire_id: int, base: SessionBase
         return page(request, "erreur.html", 409,
                     message=f"L'inventaire ne peut pas encore être clos : {etat.ce_qui_manque()}.")
     explications = [
-        f"{etat.total} bouteille(s), dont {etat.validees} validée(s) une par une.",
-        "Ensuite, l'inventaire est en lecture seule : plus de correction, d'ajout ni de retrait de bouteille. "
-        "L'Excel reste téléchargeable, et l'inventaire peut être rouvert.",
+        f"{etat.total} bouteille(s), dont {etat.validees} validée(s).",
+        "Ensuite : lecture seule. L'Excel reste téléchargeable ; l'inventaire peut être rouvert.",
     ]
     if etat.ce_qui_n_est_pas_valide():
-        explications.insert(1, f"Attention : {etat.ce_qui_n_est_pas_valide()}. Valider reste facultatif ; "
-                               f"ce qui ne l'est pas sera noté dans la trace de la clôture. Le récapitulatif "
-                               f"les liste, avec un lien vers chacune.")
+        explications.insert(1, f"Attention : {etat.ce_qui_n_est_pas_valide()} (facultatif).")
     return page(
         request, "confirmation.html", inventaire=inventaire, action="clore",
         titre=f"Clore « {inventaire.nom} » ?", explications=explications,
@@ -150,8 +145,7 @@ def confirmer_la_reouverture(request: Request, inventaire_id: int, base: Session
         request, "confirmation.html", inventaire=inventaire, action="rouvrir",
         titre=f"Rouvrir « {inventaire.nom} » ?",
         explications=[
-            "Il redevient modifiable : corrections, ajout et retrait de bouteilles.",
-            "La réouverture est notée dans l'historique de l'inventaire, avec votre nom.",
+            "Il redevient modifiable. La réouverture est notée dans l'historique.",
         ],
         bouton="Rouvrir l'inventaire", danger=False,
     )

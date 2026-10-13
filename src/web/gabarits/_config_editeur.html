@@ -28,7 +28,7 @@
       <label for="photos_max">Photos au plus par bouteille</label>
       <input id="photos_max" name="photos_max_par_bouteille" type="text" inputmode="numeric" size="3"
              value="{{ vue.brut.photos_max_par_bouteille if vue.brut.photos_max_par_bouteille is defined else 4 }}">
-      <span class="aide">De 1 à 10. Chaque photo envoyée au modèle se paie.</span>
+      <span class="aide">1 à 10</span>
     </div>
 
     <ol class="colonnes-config">
@@ -124,7 +124,7 @@
           {% endfor %}
           </tbody>
         </table>
-        <p class="aide">« Non déterminable » est ajoutée d'office à chaque liste.
+        <p class="aide">+ « Non déterminable », d'office.
           <button class="lien" type="submit" name="action" value="ajouter_valeur-{{ i }}">Ajouter une valeur</button></p>
         {% else %}
         <input type="hidden" name="c{{ i }}_nb_valeurs" value="0">
@@ -137,7 +137,7 @@
           {% elif c.apercu %}
             <pre class="code">{{ c.apercu }}</pre>
           {% else %}
-            <p class="aide">Aperçu disponible quand la colonne est complète (nom, clé, type, valeurs).</p>
+            <p class="aide">Aperçu dès que la colonne est complète.</p>
           {% endif %}
         </details>
         </details>

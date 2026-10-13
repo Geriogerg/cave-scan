@@ -12,11 +12,7 @@
          data-attente="{{ attente }}"
          data-taille="{{ taille_reduction }}">
   <h1>{% if brouillon %}Photographier les bouteilles{% else %}Ajouter des bouteilles{% endif %}</h1>
-  <p class="aide">
-    Chaque bouteille avec ses photos : l'étiquette, la contre-étiquette s'il y en a une, la capsule,
-    la bouteille entière… ({{ vue.photos_max }} au plus). Vous pouvez vous arrêter et reprendre plus tard.
-    {% if not brouillon %}Les nouvelles bouteilles s'ajoutent à la fin de l'inventaire.{% endif %}
-  </p>
+  <p class="aide">{{ vue.photos_max }} photos au plus par bouteille{% if not brouillon %} · ajoutées à la fin de l'inventaire{% endif %}.</p>
 
   <div class="modes" role="tablist" aria-label="Façon de prendre les photos">
     <button type="button" class="mode actif" role="tab" aria-selected="true" data-mode="appareil">Appareil photo</button>

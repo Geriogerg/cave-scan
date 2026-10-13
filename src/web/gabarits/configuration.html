@@ -3,10 +3,7 @@
 {% block fil %}<span class="fil">Configuration</span>{% endblock %}
 {% block contenu %}
 <h1>Configuration</h1>
-<p class="aide">
-  Les colonnes de votre Excel, et ce que le modèle doit lire. Chaque enregistrement crée une
-  nouvelle version ; un inventaire garde toujours la version avec laquelle il a été créé.
-</p>
+<p class="aide">Les colonnes de votre Excel, et ce que le modèle doit lire.</p>
 
 {% if info %}<p class="message info" role="status">{{ info }}</p>{% endif %}
 {% if erreurs %}
@@ -19,19 +16,12 @@
 {% if not erreurs and not info %}
 <p class="vide">Aucune configuration pour l'instant.</p>
 <h2>Créer la configuration</h2>
-<p class="aide">
-  Sans fichier : l'application part des colonnes de base (N°, quantité, domaine, appellation, millésime,
-  format, à vérifier). Vous ajoutez ensuite vos colonnes une à une : nom, description pour le modèle,
-  valeurs possibles d'une liste…
-</p>
+<p class="aide">À partir des colonnes de base ; vous ajoutez ensuite les vôtres.</p>
 <form method="post" action="/app/configuration/creer"><button class="bouton principal" type="submit">Créer la configuration</button></form>
 {% endif %}
 
 <h2>Ou importer un fichier</h2>
-<p class="aide">
-  Un fichier de configuration (JSON), par exemple exporté depuis cette page. Il est vérifié, puis
-  devient la nouvelle version de la configuration.
-</p>
+<p class="aide">Un fichier JSON, vérifié avant d'être pris en compte.</p>
 <form method="post" action="/app/configuration/importer" enctype="multipart/form-data" class="formulaire">
   <input type="file" name="fichier" accept=".json,application/json" required>
   <button class="bouton" type="submit">Importer</button>

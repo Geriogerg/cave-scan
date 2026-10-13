@@ -24,14 +24,13 @@
           {% for e in r.signalees %}<a href="/app/inventaires/{{ i }}/relecture/{{ e.id }}">n°{{ e.position }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</li>
       {% endif %}
       {% if r.pas_encore_extraites %}
-        <li><strong>{{ r.pas_encore_extraites | length }}</strong> pas encore analysée(s) — elles apparaîtront dans la relecture dès qu'elles le seront.</li>
+        <li><strong>{{ r.pas_encore_extraites | length }}</strong> pas encore analysée(s)</li>
       {% endif %}
     </ul>
   {% endif %}
 
   {% if retirees %}
   <h2>Bouteilles retirées</h2>
-  <p class="aide">Hors de la relecture et de l'Excel ; rien n'est effacé.</p>
   <ul class="restes">
     {% for b in retirees %}
     <li>n°{{ b.position }} ({{ b.identifiant }})

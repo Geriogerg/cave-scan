@@ -32,6 +32,8 @@ a { color: var(--accent); }  /* une seule couleur de lien, partout (T1-m14) */
 .contenu { max-width: 860px; margin: 0 auto; padding: 16px 16px calc(var(--barre) + 24px); }
 h1 { font-size: 1.45rem; margin: 4px 0 12px; }
 .aide { color: var(--texte-doux); margin: 4px 0 14px; }
+ul.aide.puces { padding-left: 20px; }
+ul.aide.puces li { margin: 2px 0; }
 .vide { color: var(--texte-doux); padding: 24px 0; }
 
 /* Boutons : au moins 44 px de haut, texte explicite, jamais une icône seule. */
