@@ -112,3 +112,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 4 | T4-B4 | majeur | 404 affiché « Tout est enregistré » | Corrigé : « n'est plus disponible : rechargez la page », champ refusé, validation dite non faite | lot 16 |
 | 4 | T4-B5 | majeur | Coupure réseau muette sur Vérifier et la configuration | Corrigé : « Connexion interrompue : l'action n'a pas été faite » | lot 16 |
 | 4 | T4-B7 | mineur | Double appui : deux inventaires, faux « Action impossible » | Corrigé : un formulaire classique ne part qu'une fois ; test navigateur | lot 16 |
+| 4 | T4-D5 | mineur | Vérifier : refus de quantité loin du champ | Corrigé : sous le champ, dans la carte ; test | lot 17 |
+| 4 | T4-D10 | mineur | Vérifier : ✕ décalé | Corrigé : ✕ dans le coin de la photo, « ✂ Couper » aligné dessous | lot 17 |
+| 4 | T4-B16 | mineur | Dernière photo retirée : bouteille supprimée sans prévenir | Corrigé : la confirmation le dit | lot 17 |
+| 4 | T4-D14 (partie) | mineur | Vérifier vide dit trois fois la même chose ; dépôt vide « 0 photo(s) » ; « photo(s) » | Corrigé : un seul message ; « Aucune photo reçue pour l'instant » ; accord singulier / pluriel | lot 17 |
+| 4 | T4-D8 | mineur | Galerie : ordre des photos faux | Corrigé : photos déjà reçues d'abord | lot 17 |
+| 4 | T4-D9 / T4-B15 | mineur | Dépôt : gestes sans retour | Corrigé : pas de « Retirer » sur l'unique carte vide ; quantité 0 / abc refusée sous le champ ; photo choisie deux fois : « déjà dans la bouteille N » | lot 17 |

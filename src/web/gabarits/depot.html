@@ -62,7 +62,7 @@
   </p>
 
   <div id="resume" class="resume" aria-live="polite">
-    <span id="resume-texte">{{ vue.nb_photos }} photo(s) reçue(s) dans {{ vue.bouteilles | length }} bouteille(s) en attente.</span>
+    <span id="resume-texte">{% if vue.nb_photos %}{{ vue.nb_photos }} photo(s) reçue(s) dans {{ vue.bouteilles | length }} bouteille(s) en attente.{% else %}Aucune photo reçue pour l'instant.{% endif %}</span>
     <progress id="barre" max="1" value="0" hidden></progress>
   </div>
 

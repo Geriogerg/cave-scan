@@ -293,7 +293,7 @@
       titre.textContent = "Bouteille " + rang(bouteille);
       var nombre = document.createElement("span");
       nombre.className = "compteur";
-      nombre.textContent = nombrePhotos(bouteille) + " / " + maximum + " photo(s)";
+      nombre.textContent = nombrePhotos(bouteille) + " / " + maximum + " photo" + (nombrePhotos(bouteille) > 1 ? "s" : "");
       tete.appendChild(titre);
       tete.appendChild(nombre);
       carte.appendChild(tete);
@@ -335,7 +335,8 @@
       quantite.appendChild(champ);
       actions.appendChild(quantite);
 
-      if (!nombrePhotos(bouteille)) {
+      // La seule carte vide : la retirer ne changerait rien à l'écran (T4-D9).
+      if (!nombrePhotos(bouteille) && etat.galerie.length > 1) {
         var retirer = document.createElement("button");
         retirer.type = "button";
         retirer.className = "lien";
@@ -371,6 +372,21 @@
       });
       conteneur.insertAdjacentElement("afterend", refus);
     }
+    // Les photos déjà reçues avant cette page d'abord : c'est l'ordre du serveur (T4-D8).
+    var anciennesAvant = bouteille.recues - file.filter(function (envoi) {
+      return envoi.bouteille.cle === bouteille.cle && envoi.etat === "ok";
+    }).length;
+    (bouteille.miniatures || []).slice(0, Math.max(anciennesAvant, 0)).forEach(function (id) {
+      var recue = document.createElement("li");
+      recue.className = "vignette-depot ok";
+      recue.title = "Photo déjà reçue";
+      var image = document.createElement("img");
+      image.src = api("/photos/" + id + "?taille=miniature");
+      image.alt = "Photo déjà reçue";
+      image.loading = "lazy";
+      recue.appendChild(image);
+      conteneur.appendChild(recue);
+    });
     file.forEach(function (envoi) {
       if (envoi.bouteille.cle !== bouteille.cle || envoi.etat === "refusee") return;
       var element = document.createElement("li");
@@ -386,21 +402,8 @@
       }
       conteneur.appendChild(element);
     });
-    var anciennes = bouteille.recues - file.filter(function (envoi) {
-      return envoi.bouteille.cle === bouteille.cle && (envoi.etat === "ok");
-    }).length;
+    var anciennes = anciennesAvant;
     var miniatures = (bouteille.miniatures || []).slice(0, Math.max(anciennes, 0));
-    miniatures.forEach(function (id) {
-      var recue = document.createElement("li");
-      recue.className = "vignette-depot ok";
-      recue.title = "Photo déjà reçue";
-      var image = document.createElement("img");
-      image.src = api("/photos/" + id + "?taille=miniature");
-      image.alt = "Photo déjà reçue";
-      image.loading = "lazy";
-      recue.appendChild(image);
-      conteneur.appendChild(recue);
-    });
     if (anciennes > miniatures.length) {
       var note = document.createElement("li");
       note.className = "vignette-depot deja";
@@ -446,8 +449,12 @@
       if (champ) champ.value = bouteille.quantite;
       return;
     }
+    if (!(valeur >= 1)) {  // 0, « abc », -3 : refusés comme sur « Vérifier » (T4-B15)
+      signalerQuantite(champ, "Indiquez un nombre de bouteilles (1 ou plus).");
+      if (champ) champ.value = bouteille.quantite;
+      return;
+    }
     signalerQuantite(champ, "");
-    if (!(valeur >= 1)) valeur = 1;
     bouteille.quantite = valeur;
     bouteille.quantiteAEnvoyer = true;
     sauver();
@@ -493,7 +500,11 @@
 
   function ajouter(bouteille, fichier, depuisLaPage) {
     var signature = fichier.name + "|" + fichier.size + "|" + fichier.lastModified;
-    if (file.some(function (envoi) { return envoi.signature === signature; })) return;
+    var deja = file.filter(function (envoi) { return envoi.signature === signature && envoi.etat !== "refusee"; })[0];
+    if (deja) {  // choisie une seconde fois : on le dit (T4-B15)
+      afficherResume("« " + (fichier.name || "photo") + " » est déjà dans la bouteille " + rang(deja.bouteille) + ".");
+      return;
+    }
     var envoi = {
       bouteille: bouteille, fichier: fichier, nom: fichier.name || "photo.jpg", signature: signature,
       etat: "attente", message: "En attente", essais: 0, idb: null,

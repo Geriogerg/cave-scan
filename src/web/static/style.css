@@ -172,6 +172,9 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
   body:has(.liste-attente) .barre-actions { padding-left: max(16px, calc((100% - 1240px) / 2 + 16px)); padding-right: max(16px, calc((100% - 1240px) / 2 + 16px)); }
 }
 .vignette-actions .bouton.icone { min-width: 44px; padding: 6px 10px; }
+/* « ✕ » dans le coin de la photo : les « ✂ Couper » restent alignés (T4-D10). */
+.attente-photos .vignette { position: relative; }
+.attente-photos .retirer-photo { position: absolute; top: 4px; right: 4px; min-height: 44px; background: rgba(255, 255, 255, 0.92); }
 .attente-titre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .quantite-attente { display: flex; align-items: center; gap: 6px; }
 .quantite-attente input { width: 4em; text-align: center; min-height: 44px; }

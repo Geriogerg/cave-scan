@@ -203,3 +203,14 @@ def test_mise_en_page_telephone(api, adresse):
     texte = api.get(adresse).text
     assert 'name="viewport" content="width=device-width, initial-scale=1"' in texte
     assert 'class="barre-actions"' in texte  # actions principales en bas de l'écran
+
+
+def test_un_refus_de_quantite_s_affiche_dans_sa_carte(api):
+    """T4-D5 : sur « Vérifier », le refus est sous le champ de la bouteille concernée."""
+    inventaire_id = creer(api)
+    deposer(api, inventaire_id, bouteilles=2, photos=1)
+    seconde = attente(api, inventaire_id)[1]["groupe_id"]
+    refus = api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{seconde}", data={"quantite": "0"}, headers=HX).text
+    carte = refus.split(f'id="groupe-{seconde}"')[1]
+    assert 'id="refus-quantite"' in carte and "quantité invalide" in carte
+    assert 'class="message alerte"' not in refus.split('<ol class="liste-attente">')[0]

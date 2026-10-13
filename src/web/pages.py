@@ -177,15 +177,17 @@ def verifier(request: Request, inventaire_id: int, base: SessionBase):
     return page(request, "verifier.html", vue=apercu(base, inventaire_id))
 
 
-def _en_attente(request: Request, base, inventaire_id: int, action) -> HTMLResponse:
+def _en_attente(request: Request, base, inventaire_id: int, action, groupe_id: int | None = None) -> HTMLResponse:
     """Applique une correction aux bouteilles en attente puis les réaffiche ; un
-    refus s'affiche au-dessus, avec sa raison."""
+    refus s'affiche avec sa raison — dans la carte de sa bouteille quand il la
+    concerne (`groupe_id`), sinon au-dessus (T4-D5)."""
     erreur = None
     try:
         action()
     except ERREURS_DE_SERVICE as refus:
         erreur = str(refus)
-    return page(request, "_en_attente.html", vue=apercu(base, inventaire_id), erreur=erreur)
+    return page(request, "_en_attente.html", vue=apercu(base, inventaire_id), erreur=erreur,
+                groupe_en_erreur=groupe_id if erreur else None)
 
 
 @routeur.post("/app/inventaires/{inventaire_id}/verifier/retirer-photo/{photo_id}")
@@ -232,7 +234,7 @@ def quantite(request: Request, inventaire_id: int, groupe_id: int, base: Session
             )
         quantite_du_groupe(base, inventaire_id, groupe_id, int(quantite))
 
-    return _en_attente(request, base, inventaire_id, changer)
+    return _en_attente(request, base, inventaire_id, changer, groupe_id)
 
 
 @routeur.post("/app/inventaires/{inventaire_id}/lancer")

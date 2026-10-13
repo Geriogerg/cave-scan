@@ -1,12 +1,12 @@
 {% set id = vue.inventaire.id %}
 {% set cible = 'hx-target="#en-attente" hx-swap="outerHTML"' %}
 <section id="en-attente" class="en-attente" data-peut-lancer="{{ 'oui' if vue.peut_lancer else 'non' }}">
-  {% if erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
+  {% if erreur and not groupe_en_erreur %}<p class="message alerte" role="alert">{{ erreur }}</p>{% endif %}
   {% for anomalie in vue.anomalies %}<p class="message attention">{{ anomalie }}</p>{% endfor %}
-  <p class="aide">
+  {% if vue.bouteilles %}<p class="aide">
     {{ vue.bouteilles | length }} bouteille(s) en attente · {{ vue.nb_photos }} photo(s)
     {% if vue.deja_formees %} · {{ vue.deja_formees }} déjà dans l'inventaire{% endif %}
-  </p>
+  </p>{% endif %}
   <ol class="liste-attente">
   {% for b in vue.bouteilles %}{% set g = b.groupe %}
     <li class="carte-attente" id="groupe-{{ g.id }}">
@@ -18,6 +18,7 @@
           <input type="hidden" name="groupe" value="{{ g.id }}">
           <label>Quantité <input type="text" inputmode="numeric" name="quantite" value="{{ g.quantite }}" size="3"
                           aria-label="Quantité de la bouteille {{ b.numero }}"></label>
+          {% if groupe_en_erreur == g.id %}<span class="alerte-texte" role="alert" id="refus-quantite">{{ erreur }}</span>{% endif %}
         </form>
       </div>
       <div class="attente-photos">
@@ -31,8 +32,10 @@
                     title="Nouvelle bouteille à partir d'ici : cette photo et les suivantes forment une autre bouteille"
                     aria-label="Nouvelle bouteille à partir d'ici">✂ Couper</button>
             {% endif %}
-            <button class="bouton petit danger icone" hx-post="/app/inventaires/{{ id }}/verifier/retirer-photo/{{ p.id }}" {{ cible | safe }}
-                    hx-confirm="Retirer cette photo ?" title="Retirer cette photo" aria-label="Retirer cette photo">✕</button>
+            {#- T4-B16 : la dernière photo emporte la bouteille — la confirmation le dit. #}
+            <button class="bouton petit danger icone retirer-photo" hx-post="/app/inventaires/{{ id }}/verifier/retirer-photo/{{ p.id }}" {{ cible | safe }}
+                    hx-confirm="{{ 'Retirer la dernière photo supprime la bouteille ' ~ b.numero ~ '. Continuer ?' if b.photos | length == 1 else 'Retirer cette photo ?' }}"
+                    title="Retirer cette photo" aria-label="Retirer cette photo">✕</button>
           </div>
         </figure>
         {% endfor %}
@@ -45,8 +48,6 @@
                 hx-confirm="Supprimer la bouteille {{ b.numero }} et {{ 'sa photo' if b.photos | length == 1 else 'ses ' ~ (b.photos | length) ~ ' photos' }} ?">Supprimer la bouteille</button>
       </div>
     </li>
-  {% else %}
-    <li class="vide">Aucune bouteille en attente.</li>
   {% endfor %}
   </ol>
   <nav class="barre-actions">
