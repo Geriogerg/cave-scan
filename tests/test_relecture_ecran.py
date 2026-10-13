@@ -231,7 +231,7 @@ def test_l_avertissement_de_modification_concurrente_se_declenche(session, inven
     with pytest.raises(ModificationConcurrente) as alerte:
         corriger_en_relecture(session, cible.id, "millesime", "1990", "Onglet A", vue_par_a)
     assert "modifiée ailleurs" in str(alerte.value)
-    assert any("millesime" in changement and "2001" in changement and "Onglet B" in changement
+    assert any("Millésime" in changement and "2001" in changement and "Onglet B" in changement
                for changement in alerte.value.changements)
     assert valeurs_courantes(session, cible.id).millesime == "2001"  # rien écrit
 

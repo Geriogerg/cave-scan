@@ -24,12 +24,13 @@
           {% elif etat.terminee %}
             <span class="etiquette ok">Analyse terminée</span>
           {% elif etat.extraction == "annulee" %}
-            <span class="etiquette neutre">Analyse annulée</span>
+            <span class="etiquette neutre">Analyse en pause</span>
           {% else %}
             <span class="etiquette encours">Analyse en cours</span>
           {% endif %}
           {% if inventaire.statut != "brouillon" %}
-            {{ etat.total - etat.restantes }} / {{ etat.total }} bouteille(s)
+            {{ etat.total - etat.restantes }} / {{ etat.total }} analysée(s)
+            {% if etat.terminee and etat.total %} · {{ etat.par_statut.validee }} validée(s){% endif %}
             {% if etat.par_statut.erreur %} · {{ etat.par_statut.erreur }} en erreur{% endif %}
           {% endif %}
         </span>

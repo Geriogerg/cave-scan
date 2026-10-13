@@ -325,6 +325,7 @@ ORIGINES = {
     "corrigee": "corrigée par l'expert",
     "saisie": "saisie par l'expert",
     "defaut": "par défaut",
+    "depot": "saisie au dépôt",
     "vide": "à saisir",
     "a_remplir": "à remplir",
 }
@@ -433,8 +434,13 @@ def _champ(colonne: Colonne, courantes: Bouteille, modele: Bouteille, corrige: b
     valeur = valeur_courante(courantes, colonne.cle)
     expert = colonne.source == "expert"
     lue = None if expert else valeur_courante(modele, colonne.cle)
-    if expert:
-        origine = "saisie" if corrige else ("defaut" if colonne.cle == COLONNE_QUANTITE else "vide")
+    # Revenue à la lecture du modèle (« Revenir à la valeur du modèle ») : le
+    # champ redit d'où vient sa valeur, pas « corrigée » (rapport du testeur, T1-m6).
+    corrige = corrige and (expert or valeur != lue)
+    if expert and not corrige and colonne.cle == COLONNE_QUANTITE:
+        origine = "depot" if valeur not in (None, 1) else "defaut"
+    elif expert:
+        origine = "saisie" if corrige else "vide"
     elif corrige:
         origine = "saisie" if est_abstention(lue) else "corrigee"
     elif est_abstention(valeur):
@@ -574,5 +580,7 @@ def recapitulatif(session: Session, inventaire_id: int) -> Recapitulatif:
             (config.colonne(champ).nom if config.colonne(champ) else champ, nombre)
             for champ, nombre in stats.champs_les_plus_corriges
         ],
-        excel_attend="" if etat.chaque_bouteille_a_sa_ligne else etat.ce_qui_manque(),
+        excel_attend=(
+            "aucune bouteille" if not etat.total else "" if etat.chaque_bouteille_a_sa_ligne else etat.ce_qui_manque()
+        ),
     )

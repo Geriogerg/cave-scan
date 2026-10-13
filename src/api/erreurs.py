@@ -78,7 +78,10 @@ def installer(app: FastAPI, page_erreur: PageErreur | None = None) -> None:
     page HTML lisible plutôt qu'en JSON."""
 
     def repondre(request: Request, statut: int, code: str, message: str, detail: object = None) -> Response:
-        if page_erreur is not None and request.url.path.startswith("/app"):
+        # Les écrans (/app) et toute adresse inconnue ouverte par un navigateur : une
+        # page lisible, jamais du JSON brut (T1-m12). L'API garde son format JSON.
+        navigateur = "text/html" in request.headers.get("accept", "") and statut == 404
+        if page_erreur is not None and (request.url.path.startswith("/app") or navigateur):
             return page_erreur(request, statut, message)
         return erreur(statut, code, message, detail)
 
@@ -99,6 +102,9 @@ def installer(app: FastAPI, page_erreur: PageErreur | None = None) -> None:
             for e in exception.errors()
         ]
         noms = ", ".join(c["champ"] for c in champs if c["champ"]) or "la requête"
+        if request.url.path.startswith("/app") and any(e["loc"][:1] == ("path",) for e in exception.errors()):
+            # /app/inventaires/abc/suivi : une adresse mal formée, pas une saisie (T1-m12).
+            return repondre(request, 404, "introuvable", "Cette adresse n'existe pas.")
         return repondre(request, 422, "requete_invalide", f"Saisie incomplète ou invalide : {noms}.", champs)
 
     @app.exception_handler(HTTPException)

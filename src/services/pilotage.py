@@ -94,7 +94,7 @@ class Avancement:
     @property
     def excel_disponible(self) -> bool:
         """Chaque bouteille a sa ligne : la même règle que l'export (decisions.md 0170)."""
-        return self.terminee and not self.en_attente
+        return self.total > 0 and self.terminee and not self.en_attente
 
 
 def avancement(session: Session, inventaire_id: int) -> Avancement:

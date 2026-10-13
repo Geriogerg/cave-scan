@@ -129,7 +129,8 @@ def confirmer_la_cloture(request: Request, inventaire_id: int, base: SessionBase
     ]
     if etat.ce_qui_n_est_pas_valide():
         explications.insert(1, f"Attention : {etat.ce_qui_n_est_pas_valide()}. Valider reste facultatif ; "
-                               f"ce qui ne l'est pas sera noté dans la trace de la clôture.")
+                               f"ce qui ne l'est pas sera noté dans la trace de la clôture. Le récapitulatif "
+                               f"les liste, avec un lien vers chacune.")
     return page(
         request, "confirmation.html", inventaire=inventaire, action="clore",
         titre=f"Clore « {inventaire.nom} » ?", explications=explications,

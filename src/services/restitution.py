@@ -43,6 +43,8 @@ def exporter(session: Session, inventaire_id: int, chemin: str | Path) -> Path:
     """
     inventaire = charger_inventaire(session, inventaire_id)
     etat = bilan(session, inventaire_id)
+    if not etat.total:  # rapport du testeur, T1-S9
+        raise ExportRefuse("L'inventaire n'a encore aucune bouteille : il n'y a rien à mettre dans l'Excel.")
     if not etat.chaque_bouteille_a_sa_ligne:
         raise ExportRefuse(
             f"L'Excel n'est pas encore disponible : chaque bouteille doit y avoir sa ligne. Il reste "

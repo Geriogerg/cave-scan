@@ -306,6 +306,12 @@ def verifier_version(session: Session, bouteille_id: int, version_vue: str | Non
         raise ModificationConcurrente(_changements_depuis(session, bouteille_id, version_vue))
 
 
+def _nom_de_colonne(config: ConfigMaison, champ: str) -> str:
+    """« Millésime », pas « millesime » (rapport du testeur, T1-m12)."""
+    colonne = config.colonne(champ)
+    return colonne.nom if colonne is not None else champ
+
+
 def _changements_depuis(session: Session, bouteille_id: int, version_vue: str) -> list[str]:
     """Ce qui a été enregistré depuis la version affichée, en clair."""
     try:
@@ -313,6 +319,7 @@ def _changements_depuis(session: Session, bouteille_id: int, version_vue: str) -
     except ValueError:
         return []
     changements = []
+    config = config_figee(charger_bouteille(session, bouteille_id).inventaire)
     for correction in session.scalars(
         select(Correction)
         .where(Correction.bouteille_id == bouteille_id, Correction.id > correction_vue)
@@ -324,7 +331,7 @@ def _changements_depuis(session: Session, bouteille_id: int, version_vue: str) -
             changements.append(f"bouteille {action} ({quand})")
         else:
             changements.append(
-                f"« {correction.champ} » : {_lisible(correction.ancienne_valeur)} → "
+                f"« {_nom_de_colonne(config, correction.champ)} » : {_lisible(correction.ancienne_valeur)} → "
                 f"{_lisible(correction.nouvelle_valeur)} ({quand})"
             )
     nouvelles = session.scalar(

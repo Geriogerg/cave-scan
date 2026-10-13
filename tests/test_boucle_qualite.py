@@ -54,3 +54,13 @@ def test_remettre_une_bouteille_le_dit(api, dossier_photos):
     api.post(f"/app/inventaires/{inventaire_id}/relecture/{premiere}/retirer", headers=AUTEUR)
     page = api.post(f"/app/inventaires/{inventaire_id}/bouteilles/{premiere}/remettre", headers=AUTEUR).text
     assert "Bouteille remise dans l&#39;inventaire" in page
+
+
+def test_une_adresse_mal_formee_ou_inconnue_donne_une_page_en_francais(api):
+    """T1-m12 : ni « inventaire_id », ni JSON brut dans le navigateur."""
+    mal_formee = api.get("/app/inventaires/abc/suivi")
+    assert mal_formee.status_code == 404 and "Cette adresse n&#39;existe pas" in mal_formee.text
+    assert "inventaire_id" not in mal_formee.text
+    inconnue = api.get("/nimportequoi", headers={"Accept": "text/html"})
+    assert inconnue.status_code == 404 and inconnue.text.lstrip().startswith("<!doctype html>")
+    assert api.get("/nimportequoi").json()["code"] == "introuvable"  # l'API garde son JSON
