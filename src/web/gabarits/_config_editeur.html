@@ -150,7 +150,7 @@
     {#- Consignes générales : modifiables, avec deux confirmations (decisions.md 0173) :
         une pour déverrouiller (navigateur), une case à cocher pour enregistrer
         (vérifiée par le serveur). #}
-    <details class="bloc-repli consignes" {% if not consignes_d_origine %}open{% endif %}>
+    <details class="bloc-repli consignes" {% if not consignes_d_origine or erreur_consignes %}open{% endif %}>
       <summary>Consignes générales envoyées au modèle{% if not consignes_d_origine %} (modifiées){% endif %}</summary>
       <details class="regles-fixes">
         <summary>Règles toujours envoyées, non modifiables (ne jamais deviner, millésime, format, aucun prix)</summary>
@@ -161,10 +161,11 @@
 {{ regles_fixes[1] }}</pre>
       </details>
       <textarea name="consignes" id="consignes" rows="10">{{ consignes }}</textarea>
+      {% if erreur_consignes %}<p class="message alerte" role="alert" id="refus-consignes">{{ erreur_consignes }}</p>{% endif %}
       <p class="consignes-actions">
         <button class="bouton petit" type="button" id="deverrouiller-consignes"
                 data-question="Modifier les consignes envoyées au modèle ? Elles changent la lecture de toutes les prochaines bouteilles.">Modifier les consignes</button>
-        <label class="case" id="confirmer-consignes">
+        <label class="case{% if erreur_consignes %} a-cocher{% endif %}" id="confirmer-consignes">
           <input type="checkbox" name="confirmer_consignes" value="1"> Je confirme modifier les consignes
         </label>
       </p>

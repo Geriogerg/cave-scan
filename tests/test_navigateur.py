@@ -267,3 +267,16 @@ def test_reprendre_une_bouteille_depuis_un_autre_appareil_garde_sa_quantite(appl
         assert [(len(x["photos"]), x["quantite"]) for x in vue["bouteilles"]] == [(2, 6)]
     finally:
         ordinateur.close()
+
+
+def test_consignes_case_de_confirmation_cachee_jusqu_au_deverrouillage(application, telephone):
+    """T3-D6 : la case « Je confirme… » n'apparaît qu'après le « êtes-vous sûr ? »."""
+    page = telephone.new_page()
+    page.goto(f"{application}/app/configuration/maison_test")
+    page.locator("details.consignes > summary").click()
+    assert page.locator("#confirmer-consignes").is_hidden()
+    assert page.eval_on_selector("#consignes", "e => e.readOnly")
+    page.once("dialog", lambda dialogue: dialogue.accept())
+    page.click("#deverrouiller-consignes")
+    assert page.locator("#confirmer-consignes").is_visible()
+    assert not page.eval_on_selector("#consignes", "e => e.readOnly")

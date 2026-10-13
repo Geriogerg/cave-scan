@@ -351,8 +351,8 @@ def _reperer_exemple_consignes(consignes: Any) -> list[str]:
         trouve = next((m for m in motif.finditer(consignes) if m.group(0) not in CONSIGNES_MODIFIABLES), None)
         if trouve:
             return [
-                f"Consignes générales : contiennent ce qui ressemble à un exemple de réponse "
-                f"({trouve.group(0)}). C'est du few-shot (CLAUDE.md : on mesure le zero-shot)."
+                f"Consignes générales : contiennent un exemple de réponse ({trouve.group(0)}) : le "
+                f"modèle risque de le recopier (few-shot). Retirez-le si ce n'est pas voulu."
             ]
     return []
 
@@ -600,10 +600,9 @@ def _reperer_exemples(colonnes: list[Colonne]) -> list[str]:
                 trouve = motif.search(texte)
                 if trouve:
                     avertissements.append(
-                        f"colonne « {colonne.cle} », {ou} : contient ce qui ressemble "
-                        f"à un exemple de réponse ({trouve.group(0)}). C'est du "
-                        f"few-shot (CLAUDE.md : on mesure le zero-shot) — à retirer "
-                        f"de la config si ce n'est pas voulu."
+                        f"Colonne « {colonne.nom} », {ou} : contient un exemple "
+                        f"de réponse ({trouve.group(0)}) : le modèle risque de le recopier "
+                        f"(few-shot). Retirez-le si ce n'est pas voulu."
                     )
                     break
     return avertissements

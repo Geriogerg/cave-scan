@@ -98,11 +98,11 @@ async def importer_un_fichier(
     request: Request, base: SessionBase, fichier: Annotated[UploadFile, File()]
 ):
     contenu = await fichier.read()
+    # Le fichier importé devient la nouvelle version de LA configuration de
+    # l'application, quel que soit le nom de maison qu'il porte (0171).
+    active = config_de_l_instance(request.app.state.configs)
     try:
         texte = contenu.decode("utf-8-sig")
-        # Le fichier importé devient la nouvelle version de LA configuration de
-        # l'application, quel que soit le nom de maison qu'il porte (0171).
-        active = config_de_l_instance(request.app.state.configs)
         if active is not None:
             try:
                 brut = json.loads(texte)
@@ -117,10 +117,17 @@ async def importer_un_fichier(
     except ConfigInvalide as refus:
         erreurs = refus.erreurs
     except ConfigInchangee as refus:  # le fichier qu'on vient d'exporter : rien à faire
+        if active is not None:
+            return _afficher(request, base, active.fichier.stem, edition(active), info=f"« {fichier.filename} » : {refus}")
         return page(request, "configuration.html", info=f"« {fichier.filename} » : {refus}")
     else:
         cible = f"/app/configuration/{enregistree.fichier.stem}?enregistree={enregistree.version}"
         return RedirectResponse(cible, status_code=303)
+    if active is not None:  # on reste sur l'éditeur, le refus en haut (T3-D9)
+        return _afficher(
+            request, base, active.fichier.stem, edition(active), 422,
+            erreur=f"« {fichier.filename} » n'a pas été importé : " + " ; ".join(erreurs),
+        )
     return page(request, "configuration.html", 422, erreurs=erreurs, importe=fichier.filename)
 
 
@@ -162,8 +169,8 @@ def agir(request: Request, nom: str, base: SessionBase, champs: Formulaire):
     if consignes_modifiees(active, brut) and champs.get("confirmer_consignes") != "1":
         return _afficher(
             request, base, nom, edition(active, brut), 422,
-            erreur="Les consignes envoyées au modèle ont changé : cochez « Je confirme modifier les consignes » "
-                   "pour enregistrer.",
+            erreur_consignes="Rien n'a été enregistré : cochez « Je confirme modifier les consignes » pour "
+                             "enregistrer des consignes modifiées.",
         )
     version_vue = champs.get("version_vue", "")
     try:

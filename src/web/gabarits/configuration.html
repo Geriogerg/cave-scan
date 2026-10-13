@@ -15,21 +15,19 @@
 
 {% if not erreurs and not info %}
 <p class="vide">Aucune configuration pour l'instant.</p>
-<h2>Créer la configuration</h2>
 <p class="aide">À partir des colonnes de base ; vous ajoutez ensuite les vôtres.</p>
 <form method="post" action="/app/configuration/creer"><button class="bouton principal" type="submit">Créer la configuration</button></form>
 {% endif %}
 
 <h2>Ou importer un fichier</h2>
 <p class="aide">Un fichier JSON, vérifié avant d'être pris en compte.</p>
-<form method="post" action="/app/configuration/importer" enctype="multipart/form-data" class="formulaire">
+<form method="post" action="/app/configuration/importer" enctype="multipart/form-data" class="formulaire-en-ligne">
   <input type="file" name="fichier" accept=".json,application/json" required>
-  <button class="bouton" type="submit">Importer</button>
+  <button class="bouton petit" type="submit">Importer</button>
 </form>
 {% endblock %}
 {% block actions %}
 <nav class="barre-actions">
   <a class="bouton" href="/app">Inventaires</a>
-  <a class="bouton" href="/app/configuration">Configuration</a>
 </nav>
 {% endblock %}

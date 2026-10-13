@@ -123,7 +123,7 @@ def creer(request: Request, base: SessionBase, nom: Annotated[str, Form()] = "")
     maison = maison_de_l_instance(request.app.state.configs)
     try:
         if maison is None:
-            raise EnvoiRefuse("Aucune configuration : importez-la d'abord (page « Configuration »).")
+            raise EnvoiRefuse("Aucune configuration : créez-la d'abord (page « Configuration »).")
         cree = creer_brouillon(base, maison, config_de_la_maison(request.app.state.configs, maison), nom)
     except ERREURS_DE_SERVICE as erreur:
         return page(request, "nouveau.html", 422, configuree=maison is not None, erreur=str(erreur), nom=nom)

@@ -15,6 +15,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }  /* même sur un élément en flex (T3-D6) */
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -361,6 +362,7 @@ textarea {
 .consignes textarea { font: 0.85rem/1.45 ui-monospace, Consolas, monospace; }
 .consignes textarea[readonly] { background: #f4f4f1; color: var(--texte-doux); }
 .consignes-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.case.a-cocher { outline: 2px solid var(--alerte); outline-offset: 4px; border-radius: 6px; }
 .liste-versions { padding-left: 20px; }
 .editeur-config .barre-actions { position: sticky; margin: 16px -16px 0; }
 .barre-config[data-sans-modification] { display: none; }

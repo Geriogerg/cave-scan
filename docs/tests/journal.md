@@ -74,3 +74,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 3 | T3-D8 | mineur | Quantité démesurée au dépôt : photo refusée | Corrigé : contrôlée à la saisie (message sous le champ) ; la photo n'est plus refusée pour la quantité ; champ de 6 chiffres | lot 10 |
 | 3 | T3-D16 | mineur | Refus de photo : nom coupé | Corrigé : nom entier. Le doublon carte / liste reste : la liste du bas est le seul endroit visible pour une bouteille sans carte à l'écran | lot 10 |
 | 3 | T3-D19 | mineur | Ordre des bouteilles instable | Corrigé : toujours par numéro | lot 10 |
+| 3 | T3-D2 | majeur | Alerte few-shot en jargon, clé de colonne | Corrigé : « contient un exemple de réponse : le modèle risque de le recopier », colonne par son nom (la fausse alerte : lot 9) | lot 11 |
+| 3 | T3-D6 | mineur | Case « Je confirme » toujours visible | Corrigé : `[hidden]` l'emporte partout ; test navigateur | lot 11 |
+| 3 | T3-D7 | mineur | Refus des consignes loin de la case | Corrigé : message à côté de la case, case encadrée, mise en vue | lot 11 |
+| 3 | T3-D9 | mineur | Erreur d'import : on quitte l'éditeur | Corrigé : on reste sur la configuration, le refus en haut | lot 11 |
+| 3 | T3-D10 | mineur | Sans configuration : « importez-la » | Corrigé : bouton « Créer la configuration », création d'inventaire désactivée ; page vide sans titre redondant ni bouton qui ramène sur place | lot 11 |
+| 3 | T3-D11 | mineur | Pas de retour aux inventaires depuis la configuration | Corrigé : « Inventaires › Configuration » dans l'en-tête (la barre du bas reste un choix à trancher, n°5) | lot 11 |

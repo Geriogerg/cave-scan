@@ -8,14 +8,14 @@
   <input id="nom" name="nom" type="text" required maxlength="200" value="{{ nom or '' }}"
          placeholder="Vente de printemps — cave Dupont" autocomplete="off">
 
-  {% if not configuree %}<p class="message attention">Aucune configuration pour l'instant :
-    <a href="/app/configuration">importez-la</a> avant de créer un inventaire.</p>{% endif %}
+  {% if not configuree %}<p class="message attention">Aucune configuration pour l'instant.
+    <a class="bouton petit" href="/app/configuration">Créer la configuration</a></p>{% endif %}
 
 </form>
 {% endblock %}
 {% block actions %}
 <nav class="barre-actions">
   <a class="bouton" href="/app">Annuler</a>
-  <button class="bouton principal" type="submit" form="formulaire-nouveau">Créer et ajouter les photos</button>
+  <button class="bouton principal" type="submit" form="formulaire-nouveau" {% if not configuree %}disabled{% endif %}>Créer et ajouter les photos</button>
 </nav>
 {% endblock %}

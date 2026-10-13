@@ -308,7 +308,8 @@ def test_un_libelle_se_decode_en_code_casse_et_accents_compris(tmp_path, brut):
 def test_un_exemple_dans_une_description_est_signale(tmp_path, brut):
     colonne(brut, "cuvee")["description"] = "Nom de la cuvée, par exemple « Les Clos »."
     config = charger_config(ecrire(tmp_path, brut))
-    assert any("« cuvee »" in a and "few-shot" in a for a in config.avertissements)
+    nom = config.colonne("cuvee").nom  # la colonne par son nom, jamais par sa clé (T3-D2)
+    assert any(f"« {nom} »" in a and "few-shot" in a and "« cuvee »" not in a for a in config.avertissements)
 
 
 def test_un_exemple_dans_une_colonne_expert_n_est_pas_signale(tmp_path, brut):

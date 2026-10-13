@@ -211,7 +211,7 @@ def test_importer_un_fichier(client, configs):
         "/app/configuration/importer",
         files={"fichier": ("abime.json", json.dumps(brut).encode("utf-8"), "application/json")},
     )
-    assert refus.status_code == 422 and "« abime.json » n'a pas été importé" in refus.text
+    assert refus.status_code == 422 and "abime.json" in refus.text and "pas été importé" in refus.text
     assert "type &#39;date&#39; inconnu" in refus.text
 
 
@@ -265,7 +265,9 @@ def test_creer_la_configuration_a_la_main_sans_json(tmp_path):
     with TestClient(creer_app(tmp_path / "base.db", stockage=tmp_path / "stockage", configs=vide)) as client:
         page = client.get("/app/configuration").text
         assert "Créer la configuration" in page and "Aucune configuration" in page
-        assert "Choisir" not in client.get("/app/nouveau").text and "importez-la" in client.get("/app/nouveau").text
+        nouveau = client.get("/app/nouveau").text
+        assert 'href="/app/configuration">Créer la configuration' in nouveau  # T3-D10 : on la crée, depuis là
+        assert 'form="formulaire-nouveau" disabled' in nouveau
 
         creee = client.post("/app/configuration/creer", follow_redirects=False)
         assert creee.status_code == 303 and "creee=1" in creee.headers["location"]
@@ -330,3 +332,20 @@ def test_les_consignes_generales_se_modifient_avec_confirmation(client, configs)
     champs = formulaire(ouvrir(client))
     agir(client, dict(champs, consignes=CONSIGNES_MODIFIABLES, confirmer_consignes="1"), "enregistrer")
     assert charger_config(configs / CONFIG_TEST.name).consignes is None
+
+
+def test_une_erreur_d_import_reste_sur_l_editeur(client):
+    """T3-D9 : un fichier refusé laisse sur la configuration, le refus en haut."""
+    refus = client.post("/app/configuration/importer",
+                        files={"fichier": ("abime.json", b'{"maison": ', "application/json")})
+    assert refus.status_code == 422 and "abime.json" in refus.text and "n&#39;a pas été importé" in refus.text
+    assert 'id="editeur"' in refus.text  # l'éditeur, pas la page « Aucune configuration »
+
+
+def test_le_refus_des_consignes_s_affiche_a_cote_de_la_case(client):
+    """T3-D7 : sans la case cochée, le refus est près de la case, la case encadrée."""
+    from src.extract.consignes import CONSIGNES_MODIFIABLES
+
+    champs = formulaire(ouvrir(client))
+    refus = agir(client, dict(champs, consignes=CONSIGNES_MODIFIABLES + "\nAjout."), "enregistrer")
+    assert refus.status_code == 422 and 'id="refus-consignes"' in refus.text and "a-cocher" in refus.text

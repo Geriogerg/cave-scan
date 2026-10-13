@@ -57,7 +57,7 @@
       var d = k === null ? null : document.querySelector("#colonne-" + k + " details.colonne-detail");
       if (d) d.open = true;
     });
-    var message = document.querySelector("#editeur > .message");
+    var message = document.getElementById("refus-consignes") || document.querySelector("#editeur > .message");
     var cible = active === null ? null : document.getElementById("colonne-" + active);
     if (message) message.scrollIntoView({ block: "start", behavior: "smooth" });
     else if (cible) cible.scrollIntoView({ block: "nearest" });
@@ -88,7 +88,12 @@
   function verrouillerLesConsignes() {
     var zone = document.getElementById("consignes");
     if (!zone) return;
+    // Un refus des consignes : elles restent déverrouillées, la case visible (T3-D7).
+    if (document.getElementById("refus-consignes")) consignesDeverrouillees = true;
     if (consignesDeverrouillees) {
+      zone.readOnly = false;
+      var caseConfirmer = document.getElementById("confirmer-consignes");
+      if (caseConfirmer) caseConfirmer.hidden = false;
       var bouton = document.getElementById("deverrouiller-consignes");
       if (bouton) bouton.hidden = true;
       return;
