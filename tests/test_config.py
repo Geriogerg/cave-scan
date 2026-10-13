@@ -21,7 +21,7 @@ from src.config.maison import (
 from src.extract.schema import NON_DETERMINABLE
 from tests.conftest import RACINE
 
-CONFIG_TEST = RACINE / "config" / "maisons" / "maison_test.json"
+CONFIG_TEST = RACINE / "tests" / "fixtures" / "maison_test.json"
 
 
 @pytest.fixture

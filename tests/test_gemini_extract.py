@@ -265,7 +265,7 @@ def test_colonnes_expert_et_systeme_jamais_envoyees(photos):
     from src.config.maison import charger_config
     from tests.conftest import RACINE
 
-    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    config = charger_config(RACINE / "tests" / "fixtures" / "maison_test.json")
     extracteur = _extracteur(_reponse({"appellation": "Pommard"}), config=config)
     extracteur.extract(photos[0])
 
@@ -283,7 +283,7 @@ def test_les_deux_backends_envoient_le_meme_schema_pour_une_maison():
     from src.extract.vision_extract import VisionExtractor
     from tests.conftest import RACINE
 
-    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    config = charger_config(RACINE / "tests" / "fixtures" / "maison_test.json")
     anthropic_ = VisionExtractor(client=object(), config=config)._outil["input_schema"]
     gemini = _extracteur(config=config)._config.response_json_schema
     assert anthropic_ == gemini

@@ -125,7 +125,7 @@ def ecrire_xlsx(tmp_path, entetes, lignes, nom="listing.xlsx"):
     return chemin
 
 
-CONFIG_TEST = FIXTURES.parent.parent / "config" / "maisons" / "maison_test.json"
+CONFIG_TEST = FIXTURES / "maison_test.json"
 
 
 def test_lecture_d_un_xlsx(tmp_path):

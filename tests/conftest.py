@@ -21,7 +21,7 @@ if str(RACINE) not in sys.path:
     sys.path.insert(0, str(RACINE))
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
-CONFIG_TEST = RACINE / "config" / "maisons" / "maison_test.json"
+CONFIG_TEST = RACINE / "tests" / "fixtures" / "maison_test.json"
 
 
 @pytest.fixture

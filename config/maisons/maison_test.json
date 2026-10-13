@@ -9,7 +9,7 @@
     "photos_max_par_bouteille": "Nombre de photos au plus par bouteille (1 à 10, 4 par défaut). Chaque photo envoyée au modèle se paie."
   },
   "maison": "Maison Test",
-  "version": 2,
+  "version": 3,
   "langue": "fr",
   "photos_max_par_bouteille": 4,
   "regroupement_export": [
@@ -18,8 +18,8 @@
     "cuvee",
     "millesime",
     "format",
-    "etat_etiquette",
     "niveau",
+    "etat_etiquette",
     "etat_capsule",
     "caisse",
     "numero_lot"
@@ -44,16 +44,16 @@
       "nom": "Domaine / Château",
       "type": "texte",
       "source": "modele",
-      "canonique": true,
-      "description": "Producteur tel qu'écrit sur l'étiquette (Domaine, Château, Maison...)."
+      "description": "Producteur tel qu'écrit sur l'étiquette (Domaine, Château, Maison...).",
+      "canonique": true
     },
     {
       "cle": "appellation",
       "nom": "Appellation",
       "type": "texte",
       "source": "modele",
-      "canonique": true,
-      "description": "Appellation d'origine, avec la mention Grand Cru / 1er Cru si présente."
+      "description": "Appellation d'origine, avec la mention Grand Cru / 1er Cru /village si présente.",
+      "canonique": true
     },
     {
       "cle": "cuvee",
@@ -67,8 +67,8 @@
       "nom": "Millésime",
       "type": "texte",
       "source": "modele",
-      "canonique": true,
-      "description": "Année sur 4 chiffres, ou NM si non millésimé. Uniquement si lue sur l'étiquette ou la contre-étiquette, jamais déduite."
+      "description": "Année sur 4 chiffres, ou NM si non millésimé. Uniquement si lue sur l'étiquette ou la contre-étiquette, jamais déduite.",
+      "canonique": true
     },
     {
       "cle": "couleur",
@@ -113,6 +113,7 @@
       "nom": "Format",
       "type": "liste",
       "source": "modele_best_effort",
+      "regle": "Seulement si la contenance est imprimée ou si la photo montre clairement la bouteille entière. Sinon non déterminable.",
       "canonique": true,
       "valeurs": [
         {
@@ -150,8 +151,7 @@
           "libelle": "Autre",
           "description": "Tout autre format."
         }
-      ],
-      "regle": "Seulement si la contenance est imprimée ou si la photo montre clairement la bouteille entière. Sinon non déterminable."
+      ]
     },
     {
       "cle": "niveau",

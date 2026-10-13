@@ -17,7 +17,7 @@ from src.export.excel_writer import ecrire_excel, regrouper
 from src.extract.schema import NATURE_DES_CHAMPS, NON_DETERMINABLE, Bouteille
 from tests.conftest import RACINE
 
-CONFIG_TEST = RACINE / "config" / "maisons" / "maison_test.json"
+CONFIG_TEST = RACINE / "tests" / "fixtures" / "maison_test.json"
 
 
 @pytest.fixture

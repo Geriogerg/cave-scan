@@ -254,7 +254,7 @@ def test_colonnes_expert_et_systeme_jamais_envoyees(photos):
     from src.config.maison import charger_config
     from tests.conftest import RACINE
 
-    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    config = charger_config(RACINE / "tests" / "fixtures" / "maison_test.json")
     client = ClientQuiCapture()
     VisionExtractor(client=client, config=config).extract(photos[0])
 
@@ -273,7 +273,7 @@ def test_la_reponse_est_lue_avec_la_config(photos):
     from src.config.maison import charger_config
     from tests.conftest import RACINE
 
-    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    config = charger_config(RACINE / "tests" / "fixtures" / "maison_test.json")
     bouteille = VisionExtractor(client=ClientQuiCapture(), config=config).extract(photos[0])
     for colonne in config.colonnes_best_effort:
         assert colonne.cle in bouteille.champs_a_verifier

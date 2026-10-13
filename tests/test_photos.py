@@ -182,7 +182,7 @@ def test_une_paire_incoherente_surligne_la_ligne():
     from src.config.maison import charger_config
     from tests.conftest import RACINE
 
-    config = charger_config(RACINE / "config" / "maisons" / "maison_test.json")
+    config = charger_config(RACINE / "tests" / "fixtures" / "maison_test.json")
     charge = {PHOTOS_MEME_BOUTEILLE: "non"}
     for colonne in config.colonnes_modele:
         if colonne.type == "liste":

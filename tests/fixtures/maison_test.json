@@ -1,0 +1,317 @@
+{
+  "_fictif": "Config de TEST inventée, à remplacer par la nomenclature réelle de la maison pilote.",
+  "_format": {
+    "version": "Entier, incrémenté à chaque modification du fichier. Copié dans chaque export.",
+    "regroupement_export": "Liste de 'cle' de colonnes lues par le modèle ou saisies par l'expert. Les bouteilles identiques sur toutes ces clés sont fusionnées en une ligne, quantités additionnées.",
+    "valeurs": "Chaque valeur a un 'code' stable (stocké, comparé, jamais modifié) et un 'libelle' affiché à l'export (modifiable librement). La description guide le modèle.",
+    "regle": "Texte optionnel, consigne supplémentaire injectée dans le schéma envoyé au modèle pour cette colonne.",
+    "source": "modele = lu sur la photo ; modele_best_effort = proposé par le modèle et toujours à vérifier ; expert = saisi par l'expert, jamais envoyé au modèle ; systeme = calculé par l'outil, jamais envoyé au modèle.",
+    "photos_max_par_bouteille": "Nombre de photos au plus par bouteille (1 à 10, 4 par défaut). Chaque photo envoyée au modèle se paie."
+  },
+  "maison": "Maison Test",
+  "version": 2,
+  "langue": "fr",
+  "photos_max_par_bouteille": 4,
+  "regroupement_export": [
+    "domaine",
+    "appellation",
+    "cuvee",
+    "millesime",
+    "format",
+    "etat_etiquette",
+    "niveau",
+    "etat_capsule",
+    "caisse",
+    "numero_lot"
+  ],
+  "colonnes": [
+    {
+      "cle": "id",
+      "nom": "N°",
+      "type": "texte",
+      "source": "systeme",
+      "description": "Identifiant stable de la bouteille, généré par l'outil."
+    },
+    {
+      "cle": "quantite",
+      "nom": "Qté",
+      "type": "nombre",
+      "source": "expert",
+      "description": "Nombre de bouteilles identiques et de même état. Saisi par l'expert, 1 par défaut."
+    },
+    {
+      "cle": "domaine",
+      "nom": "Domaine / Château",
+      "type": "texte",
+      "source": "modele",
+      "canonique": true,
+      "description": "Producteur tel qu'écrit sur l'étiquette (Domaine, Château, Maison...)."
+    },
+    {
+      "cle": "appellation",
+      "nom": "Appellation",
+      "type": "texte",
+      "source": "modele",
+      "canonique": true,
+      "description": "Appellation d'origine, avec la mention Grand Cru / 1er Cru si présente."
+    },
+    {
+      "cle": "cuvee",
+      "nom": "Cuvée / Climat",
+      "type": "texte",
+      "source": "modele",
+      "description": "Nom de cuvée ou de climat s'il est distinct de l'appellation. Vide sinon."
+    },
+    {
+      "cle": "millesime",
+      "nom": "Millésime",
+      "type": "texte",
+      "source": "modele",
+      "canonique": true,
+      "description": "Année sur 4 chiffres, ou NM si non millésimé. Uniquement si lue sur l'étiquette ou la contre-étiquette, jamais déduite."
+    },
+    {
+      "cle": "couleur",
+      "nom": "Couleur",
+      "type": "liste",
+      "source": "modele",
+      "valeurs": [
+        {
+          "code": "rouge",
+          "libelle": "Rouge",
+          "description": "Vin rouge tranquille."
+        },
+        {
+          "code": "blanc",
+          "libelle": "Blanc",
+          "description": "Vin blanc tranquille, sec ou liquoreux."
+        },
+        {
+          "code": "rose",
+          "libelle": "Rosé",
+          "description": "Vin rosé tranquille."
+        },
+        {
+          "code": "champagne",
+          "libelle": "Champagne",
+          "description": "Appellation Champagne uniquement."
+        },
+        {
+          "code": "effervescent",
+          "libelle": "Effervescent",
+          "description": "Autre vin effervescent (crémant, mousseux...)."
+        },
+        {
+          "code": "autre",
+          "libelle": "Autre",
+          "description": "Vin doux naturel, vin muté, spiritueux ou cas non couvert."
+        }
+      ]
+    },
+    {
+      "cle": "format",
+      "nom": "Format",
+      "type": "liste",
+      "source": "modele_best_effort",
+      "canonique": true,
+      "valeurs": [
+        {
+          "code": "demi_bouteille",
+          "libelle": "Demi-bouteille",
+          "description": "37,5 cl."
+        },
+        {
+          "code": "bouteille",
+          "libelle": "Bouteille",
+          "description": "75 cl."
+        },
+        {
+          "code": "magnum",
+          "libelle": "Magnum",
+          "description": "1,5 L."
+        },
+        {
+          "code": "double_magnum",
+          "libelle": "Double magnum",
+          "description": "3 L."
+        },
+        {
+          "code": "jeroboam",
+          "libelle": "Jéroboam",
+          "description": "3 L en Champagne / Bourgogne, 5 L à Bordeaux."
+        },
+        {
+          "code": "imperiale",
+          "libelle": "Impériale",
+          "description": "6 L."
+        },
+        {
+          "code": "autre",
+          "libelle": "Autre",
+          "description": "Tout autre format."
+        }
+      ],
+      "regle": "Seulement si la contenance est imprimée ou si la photo montre clairement la bouteille entière. Sinon non déterminable."
+    },
+    {
+      "cle": "niveau",
+      "nom": "Niveau",
+      "type": "liste",
+      "source": "modele_best_effort",
+      "description": "Hauteur du vin dans la bouteille, lue sur une photo qui montre le col et l'épaule.",
+      "regle": "Seulement si une photo montre la bouteille entière ou son col avec le vin visible. Sinon non déterminable.",
+      "valeurs": [
+        {
+          "code": "goulot",
+          "libelle": "Dans le goulot",
+          "description": "Le vin atteint le goulot."
+        },
+        {
+          "code": "base_goulot",
+          "libelle": "Base du goulot",
+          "description": "Le vin arrive à la base du goulot."
+        },
+        {
+          "code": "haute_epaule",
+          "libelle": "Haute épaule",
+          "description": "Le vin est en haut de l'épaule."
+        },
+        {
+          "code": "mi_epaule",
+          "libelle": "Mi-épaule",
+          "description": "Le vin est au milieu de l'épaule."
+        },
+        {
+          "code": "basse_epaule",
+          "libelle": "Basse épaule",
+          "description": "Le vin est en bas de l'épaule."
+        },
+        {
+          "code": "sous_epaule",
+          "libelle": "Sous l'épaule",
+          "description": "Le vin est descendu sous l'épaule."
+        }
+      ]
+    },
+    {
+      "cle": "etat_etiquette",
+      "nom": "État étiquette",
+      "type": "liste",
+      "source": "modele_best_effort",
+      "valeurs": [
+        {
+          "code": "parfait",
+          "libelle": "Parfait",
+          "description": "Aucune marque visible."
+        },
+        {
+          "code": "legerement_marquee",
+          "libelle": "Légèrement marquée",
+          "description": "Petite griffure, froissure ou tache discrète."
+        },
+        {
+          "code": "tachee",
+          "libelle": "Tachée",
+          "description": "Taches ou traces d'humidité visibles, texte entièrement lisible."
+        },
+        {
+          "code": "abimee",
+          "libelle": "Abîmée",
+          "description": "Déchirure, manque ou décoloration importante, texte partiellement lisible."
+        },
+        {
+          "code": "tres_abimee",
+          "libelle": "Très abîmée",
+          "description": "Étiquette en grande partie détruite ou illisible."
+        },
+        {
+          "code": "absente",
+          "libelle": "Absente",
+          "description": "Pas d'étiquette principale."
+        }
+      ]
+    },
+    {
+      "cle": "etat_capsule",
+      "nom": "État capsule",
+      "type": "liste",
+      "source": "modele_best_effort",
+      "description": "État de la capsule qui recouvre le bouchon.",
+      "regle": "Seulement si une photo montre le haut du col. Sinon non déterminable.",
+      "valeurs": [
+        {
+          "code": "intacte",
+          "libelle": "Intacte",
+          "description": "Capsule complète, sans marque visible."
+        },
+        {
+          "code": "legerement_abimee",
+          "libelle": "Légèrement abîmée",
+          "description": "Petite marque, froissure ou éraflure."
+        },
+        {
+          "code": "abimee",
+          "libelle": "Abîmée",
+          "description": "Capsule déchirée, percée ou corrodée."
+        },
+        {
+          "code": "absente",
+          "libelle": "Absente",
+          "description": "Le haut du col est visible et ne porte pas de capsule."
+        }
+      ]
+    },
+    {
+      "cle": "description_etat",
+      "nom": "Description de l'état",
+      "type": "texte",
+      "source": "modele_best_effort",
+      "description": "Une phrase courte et factuelle sur ce qui est visible (étiquette, capsule, niveau si visible). Ne rien affirmer de non visible. Style catalogue."
+    },
+    {
+      "cle": "estimation",
+      "nom": "Estimation (€)",
+      "type": "texte",
+      "source": "expert",
+      "description": "Saisie par l'expert. Jamais remplie par le modèle."
+    },
+    {
+      "cle": "caisse",
+      "nom": "Caisse",
+      "type": "liste",
+      "source": "expert",
+      "description": "Conditionnement d'origine. Saisi par l'expert : une photo de bouteille ne le montre pas.",
+      "valeurs": [
+        {
+          "code": "cbo",
+          "libelle": "CBO",
+          "description": "Caisse bois d'origine."
+        },
+        {
+          "code": "carton",
+          "libelle": "Carton",
+          "description": "Carton d'origine."
+        },
+        {
+          "code": "sans",
+          "libelle": "Sans",
+          "description": "Ni caisse ni carton."
+        }
+      ]
+    },
+    {
+      "cle": "numero_lot",
+      "nom": "N° de lot",
+      "type": "texte",
+      "source": "expert",
+      "description": "Numéro du lot dans la vente. Saisi par l'expert."
+    },
+    {
+      "cle": "a_verifier",
+      "nom": "À vérifier",
+      "type": "texte",
+      "source": "systeme",
+      "description": "Champs incertains signalés par le modèle, pour la relecture."
+    }
+  ]
+}

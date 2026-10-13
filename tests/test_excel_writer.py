@@ -30,7 +30,7 @@ from src.extract.schema import (
 )
 from tests.conftest import FIXTURES, RACINE
 
-CONFIG_TEST = RACINE / "config" / "maisons" / "maison_test.json"
+CONFIG_TEST = RACINE / "tests" / "fixtures" / "maison_test.json"
 
 
 @pytest.fixture
