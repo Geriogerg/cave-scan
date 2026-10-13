@@ -20,7 +20,7 @@ import json
 import os
 import re
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -167,7 +167,8 @@ def importer(session: Session, dossier_configs: Path, texte: str, nom_fichier: s
         brut = json.loads(texte)
     except json.JSONDecodeError as erreur:
         raise ConfigInvalide(
-            f"{source} : JSON illisible, ligne {erreur.lineno} colonne {erreur.colno} : {erreur.msg}."
+            f"{source} : JSON illisible — le fichier est incomplet ou abîmé (ligne {erreur.lineno}, "
+            f"colonne {erreur.colno})."
         ) from erreur
     if not isinstance(brut, dict) or not isinstance(brut.get("maison"), str) or not brut["maison"].strip():
         # Toutes les autres erreurs, la validation complète les listera.
@@ -379,6 +380,7 @@ class ColonneEditee:
     envoyee: bool  # lue par le modèle (modele, best effort)
     apercu: str | None  # ce que le modèle reçoit ; None si la colonne n'est pas encore valide
     regroupee: bool
+    en_erreur: bool = False  # citée par un refus : encadrée à l'écran
 
 
 @dataclass(frozen=True)
@@ -425,6 +427,9 @@ def edition(active: ConfigActive, brut: dict[str, Any] | None = None, verifier: 
             avertissements = list(config_depuis_texte(_texte(candidat), active.fichier.name).avertissements)
         except ConfigInvalide as refus:
             erreurs = refus.erreurs
+    if erreurs:
+        erreurs, fautives = _en_clair(erreurs, brut.get("colonnes") or [])
+        colonnes = [replace(c, en_erreur=c.index in fautives) for c in colonnes]
     commentaires = {cle: valeur for cle, valeur in brut.items() if cle.startswith("_")}
     return Edition(
         active=active,
@@ -435,6 +440,37 @@ def edition(active: ConfigActive, brut: dict[str, Any] | None = None, verifier: 
         avertissements=avertissements,
         verifiee=verifier,
     )
+
+
+def _en_clair(erreurs: list[str], colonnes: list[dict[str, Any]]) -> tuple[list[str], set[int]]:
+    """Les refus de la validation, dits pour la page (rapport du testeur, T1-M4) :
+    chaque colonne par son nom d'en-tête, pas par sa clé ; une colonne sans nom
+    n'a qu'un message (sa clé découle du nom). Renvoie aussi les index des
+    colonnes citées, pour les encadrer."""
+    fautives: set[int] = set()
+    en_clair: list[str] = []
+    for erreur in erreurs:
+        index = None
+        for i, donnees in enumerate(colonnes):
+            cle, nom = donnees.get("cle") or "", donnees.get("nom") or ""
+            if erreur.startswith(f"colonne n°{i + 1} ") or erreur.startswith(f"colonne n°{i + 1}:") or (
+                cle and erreur.startswith(f"colonne « {cle} »")
+            ):
+                index = i
+                if not nom:
+                    if "« cle »" in erreur:
+                        erreur = ""  # découle du nom : un seul message suffit
+                    elif "« nom »" in erreur:
+                        erreur = f"La colonne n°{i + 1} n'a pas de nom : donnez-lui un nom (l'en-tête de l'Excel) ou retirez-la."
+                elif cle:
+                    erreur = erreur.replace(f"colonne « {cle} »", f"Colonne « {nom} »", 1)
+                break
+        if index is not None:
+            fautives.add(index)
+        if erreur:
+            erreur = erreur.replace("« cle »", "« clé »").replace("« libelle »", "« libellé »")
+            en_clair.append(erreur)
+    return en_clair, fautives
 
 
 def commentaires_de_colonne(donnees: dict[str, Any]) -> str:

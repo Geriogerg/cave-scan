@@ -200,4 +200,4 @@ def test_les_doutes_des_bouteilles_regroupees_sont_reunis(tmp_path, config):
     a.champs_a_verifier = list(best_effort)
     b.champs_a_verifier = list(reversed(best_effort))
     feuille = exporter(tmp_path, [a, b], config)
-    assert colonne_xlsx(feuille, config, "a_verifier") == [", ".join(best_effort)]
+    assert colonne_xlsx(feuille, config, "a_verifier") == [", ".join(config.colonne(c).nom for c in best_effort)]

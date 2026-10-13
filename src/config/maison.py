@@ -210,8 +210,8 @@ def config_depuis_texte(texte: str, source: str | Path) -> ConfigMaison:
         brut = json.loads(texte, object_pairs_hook=_refuser_doublons)
     except json.JSONDecodeError as erreur:
         raise ConfigInvalide(
-            f"{source} : JSON illisible, ligne {erreur.lineno} colonne "
-            f"{erreur.colno} : {erreur.msg}."
+            f"{source} : JSON illisible — le fichier est incomplet ou abîmé (ligne "
+            f"{erreur.lineno}, colonne {erreur.colno})."
         ) from erreur
     except _CleEnDouble as erreur:
         raise ConfigInvalide(f"{source} : {erreur}") from None

@@ -142,7 +142,9 @@ def regrouper(bouteilles: Sequence[Bouteille], config: ConfigMaison, etats: Etat
     return lignes
 
 
-def valeur_affichee_ligne(groupe: Sequence[Bouteille], colonne: Colonne, etats: Etats | None = None) -> Any:
+def valeur_affichee_ligne(
+    groupe: Sequence[Bouteille], colonne: Colonne, etats: Etats | None = None, noms: Mapping[str, str] | None = None
+) -> Any:
     """Ce qui s'écrit dans la case d'une ligne d'export, regroupée ou non.
 
     Quantités additionnées, identifiants tous listés, doutes réunis. Pour les
@@ -159,7 +161,9 @@ def valeur_affichee_ligne(groupe: Sequence[Bouteille], colonne: Colonne, etats: 
             return MENTION_ERREUR
         if any(etat.saisie_manuelle for etat in lignes):
             return MENTION_SAISIE_MANUELLE
-        champs = dict.fromkeys(c for bouteille in groupe for c in bouteille.champs_a_verifier)
+        # Les doutes du modèle, par le nom de colonne de la maison (« État
+        # étiquette »), jamais par la clé interne (rapport du testeur, T1-M2).
+        champs = dict.fromkeys((noms or {}).get(c, c) for bouteille in groupe for c in bouteille.champs_a_verifier)
         return ", ".join(champs) or None
     if colonne.cle == COLONNE_RELUE:
         return "oui" if lignes and all(etat.relue for etat in lignes) else None
@@ -233,12 +237,13 @@ def ecrire_excel(
         cellule.font = police_entete
         cellule.alignment = Alignment(vertical="center", wrap_text=True)
 
+    noms = {c.cle: c.nom for c in config.colonnes}
     for numero_ligne, groupe in enumerate(regrouper(bouteilles, config, etats), start=2):
         # Une ligne regroupée est à relire dès qu'une de ses bouteilles l'est.
         surligner = any(a_relire(bouteille, config) for bouteille in groupe)
         en_erreur = any((etats or {}).get(bouteille.id, SANS_ETAT).erreur for bouteille in groupe)
         for index, colonne in enumerate(config.colonnes, start=1):
-            valeur = valeur_affichee_ligne(groupe, colonne, etats)
+            valeur = valeur_affichee_ligne(groupe, colonne, etats, noms)
             cellule = feuille.cell(row=numero_ligne, column=index, value=valeur)
             if isinstance(valeur, str) and valeur.startswith("="):
                 # Un texte lu sur une étiquette ne doit jamais devenir une

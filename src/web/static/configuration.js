@@ -12,8 +12,13 @@
     if (evenement.target.closest && evenement.target.closest("[data-config]")) modifiee = true;
   });
   // Ajouter, déplacer, retirer : la config affichée diffère de la version active.
+  // Un refus, ou un message, doit se voir : la page fait 10 000 px et le bouton
+  // « Enregistrer » est en bas (rapport du testeur, T1-M3).
   document.body.addEventListener("htmx:afterSwap", function (evenement) {
-    if (evenement.target.id === "editeur") modifiee = true;
+    if (evenement.target.id !== "editeur" && evenement.detail.target.id !== "editeur") return;
+    modifiee = true;
+    var message = document.querySelector("#editeur > .message");
+    if (message) message.scrollIntoView({ block: "start", behavior: "smooth" });
   });
   // Enregistrer (redirection) ou annuler volontairement : on peut partir.
   document.body.addEventListener("htmx:beforeRequest", function (evenement) {

@@ -129,7 +129,7 @@ def test_importer_pour_une_maison_connue_numerote_la_suite(session, dossier, mai
 
 
 def test_importer_un_json_illisible_dit_ou(session, dossier):
-    with pytest.raises(ConfigInvalide, match="JSON illisible, ligne 1"):
+    with pytest.raises(ConfigInvalide, match="JSON illisible — le fichier est incomplet ou abîmé \(ligne 1"):
         importer(session, dossier, '{"maison": ', "abime.json")
 
 

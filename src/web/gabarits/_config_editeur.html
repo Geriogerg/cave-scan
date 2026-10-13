@@ -34,7 +34,7 @@
     <ol class="colonnes-config">
     {% for c in vue.colonnes %}
       {% set d = c.donnees %}{% set i = c.index %}
-      <li class="colonne-config{% if c.nouvelle %} nouvelle{% endif %}" id="colonne-{{ i }}">
+      <li class="colonne-config{% if c.nouvelle %} nouvelle{% endif %}{% if c.en_erreur %} en-erreur{% endif %}" id="colonne-{{ i }}">
         <input type="hidden" name="c{{ i }}_commentaires" value="{{ commentaires_de_colonne(d) }}">
         <div class="colonne-tete">
           <strong>{{ i + 1 }}. {{ d.nom or "Nouvelle colonne" }}</strong>

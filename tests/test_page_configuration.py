@@ -214,6 +214,19 @@ def test_reimporter_la_version_active_n_est_pas_une_erreur(client):
     assert reponse.status_code == 200 and "Aucun changement" in reponse.text
 
 
+def test_un_refus_designe_la_colonne_par_son_nom_et_l_encadre(client):
+    """Rapport du testeur, T1-M3 / T1-M4 : une colonne sans nom n'a qu'un message,
+    en clair ; la colonne fautive est encadrée."""
+    champs = formulaire(ouvrir(client))
+    page = agir(client, champs, "ajouter_colonne").text
+    champs = formulaire(page)
+    reponse = agir(client, champs, "enregistrer")
+    assert reponse.status_code == 422
+    assert "n&#39;a pas de nom : donnez-lui un nom" in reponse.text
+    assert "« cle »" not in reponse.text and "doit être un identifiant" not in reponse.text
+    assert "colonne-config nouvelle en-erreur" in reponse.text
+
+
 def test_exporter_la_version_active_et_les_anciennes(client):
     active = client.get(f"/app/configuration/{NOM}/export")
     assert active.status_code == 200 and "attachment" in active.headers["content-disposition"]

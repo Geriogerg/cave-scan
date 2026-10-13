@@ -221,7 +221,7 @@ def test_les_champs_best_effort_ne_surlignent_pas_a_eux_seuls(tmp_path, config):
     assert bouteille.champs_a_verifier, "la config de test doit avoir des colonnes best effort"
     feuille = exporter(tmp_path, [bouteille], config)
     assert not surlignee(feuille, 2)
-    assert cellule(feuille, config, "a_verifier").value == ", ".join(bouteille.champs_a_verifier)
+    assert cellule(feuille, config, "a_verifier").value == ", ".join(c.nom for c in config.colonnes_best_effort)
 
 
 def test_un_code_hors_vocabulaire_est_affiche_et_surligne(tmp_path, config):
@@ -285,8 +285,11 @@ def test_les_colonnes_nombre_ne_contiennent_que_des_nombres(tmp_path):
         assert isinstance(valeur, int)
 
 
-def test_a_verifier_liste_les_champs(tmp_path, config):
+def test_a_verifier_liste_les_champs_par_leur_nom_de_colonne(tmp_path, config):
+    """Rapport du testeur, T1-M2 : les noms de colonnes de la maison, pas les clés."""
     bouteille = bouteille_complete(config)
     bouteille.champs_a_verifier = ["millesime", "format"]
     feuille = exporter(tmp_path, [bouteille], config)
-    assert cellule(feuille, config, "a_verifier").value == "millesime, format"
+    attendu = f"{config.colonne('millesime').nom}, {config.colonne('format').nom}"
+    assert attendu == "Millésime, Format"
+    assert cellule(feuille, config, "a_verifier").value == attendu
