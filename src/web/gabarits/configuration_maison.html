@@ -6,7 +6,8 @@
 {% block contenu %}
 <h1>{{ config.maison }}</h1>
 <p class="aide">
-  Version active : {{ config.version }} ({{ vue.active.fichier.name }}). Modifiez les colonnes
+  Version active : {{ config.version }}. Les colonnes marquées « noyau » (domaine, appellation, millésime,
+  format) sont toujours lues par le modèle, même retirées de l'Excel. Modifiez les colonnes
   ci-dessous puis « Enregistrer » : une version {{ config.version + 1 }} est créée pour les
   prochains inventaires ; ceux déjà créés gardent la leur.
 </p>

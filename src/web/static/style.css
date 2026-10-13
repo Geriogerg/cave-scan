@@ -113,6 +113,7 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 /* Les envois réussis se voient sur les vignettes : la liste ne garde que ce qui
    attend ou a été refusé (rapport du testeur, T1-S4). */
 .envois .envoi.ok, .envois .envoi.deja { display: none; }
+.refus-bouteille { margin: 0; padding: 8px 12px 8px 28px; color: var(--alerte); background: #fdf1ee; border-radius: 8px; font-size: 0.95rem; }
 
 /* Dépôt : une bouteille = ses photos (session 6) */
 .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 12px 0; border: 1px solid var(--bordure); border-radius: var(--rayon); overflow: hidden; }
@@ -157,6 +158,13 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 
 /* Vérifier les bouteilles en attente */
 .liste-attente { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 1100px) {
+  /* Deux cartes par rangée, vignettes plus petites : 50 bouteilles d'un coup d'œil (T2-DS2). */
+  body .contenu:has(.liste-attente) { max-width: 1240px; }
+  .liste-attente { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .liste-attente .attente-photos { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .liste-attente > .vide { grid-column: 1 / -1; }
+}
 .attente-titre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .quantite-attente { display: flex; align-items: center; gap: 6px; }
 .quantite-attente input { width: 4em; text-align: center; min-height: 44px; }
@@ -166,7 +174,7 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
   .attente-photos .vignette-actions .bouton { width: 100%; min-height: 40px; padding: 4px 6px; font-size: 0.8rem; }
   .attente-photos figcaption { display: none; }
 }
-.en-attente .barre-actions { position: sticky; margin: 16px -16px 0; }
+/* « Vérifier » : la même barre pleine largeur que les autres écrans (T2-D9). */
 .vignette { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .vignette img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; background: #eee; }
 .vignette figcaption { font-size: 0.9rem; color: var(--texte-doux); }
@@ -174,7 +182,9 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 
 /* Suivi */
 .chiffres { list-style: none; padding: 0; display: flex; gap: 18px; flex-wrap: wrap; }
-.actions-suivi { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.actions-suivi { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.actions-suivi > *, .actions-suivi form .bouton { flex: 1 1 240px; }
+.actions-suivi form { display: flex; flex: 1 1 240px; }
 
 @media (min-width: 720px) {
   .choix { flex-direction: row; }
@@ -256,7 +266,7 @@ fieldset.champs { border: none; padding: 0; margin: 0; min-width: 0; }
   border: 1px solid var(--bordure); border-radius: var(--rayon); background: var(--surface);
 }
 .saisie:focus { outline: 3px solid rgba(122, 31, 61, 0.35); outline-offset: 1px; border-color: var(--accent); }
-.champ.a-remplir input.saisie:placeholder-shown, .champ select.saisie:has(option[value=""]:checked) { background: #fdf1ee; border-color: #e7a99a; }
+.champ.a-remplir input.saisie:placeholder-shown, .champ.a-remplir select.saisie:has(option[value=""]:checked) { background: #fdf1ee; border-color: #e7a99a; }
 .champ.a-remplir input.saisie::placeholder { color: var(--alerte); font-style: italic; }
 input.saisie::placeholder { color: var(--texte-doux); }
 .champ-pied { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 0.84rem; color: var(--texte-doux); min-height: 1.2em; }
@@ -274,6 +284,7 @@ input.saisie::placeholder { color: var(--texte-doux); }
 .autres-actions summary, .historique summary { cursor: pointer; color: var(--texte-doux); padding: 6px 0; }
 .liste-actions { display: flex; flex-direction: column; gap: 10px; padding: 6px 0; }
 .liste-actions form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.liste-actions .aide.large { flex-basis: 100%; margin: 0; }
 .liste-actions input[type="text"] { min-height: 40px; padding: 6px 10px; border: 1px solid var(--bordure); border-radius: var(--rayon); font: inherit; }
 .petit-nombre { width: 5em; min-height: 40px; padding: 6px; border: 1px solid var(--bordure); border-radius: var(--rayon); font: inherit; }
 .liste-historique { margin: 0; padding-left: 0; list-style: none; font-size: 0.88rem; display: flex; flex-direction: column; gap: 3px; }
@@ -298,7 +309,12 @@ input.saisie::placeholder { color: var(--texte-doux); }
 @media (max-width: 720px) {
   .champs { grid-template-columns: 1fr; }
   .auteur-ecran { display: none; }
-  .visionneuse { height: 45vh; min-height: 260px; }
+  /* La photo reste en haut, plus petite, pendant la saisie (T2-DS3). */
+  .photos { position: sticky; top: 0; z-index: 4; background: var(--fond); padding-bottom: 6px; }
+  .visionneuse { height: 30vh; min-height: 180px; }
+  .champs { gap: 2px; }
+  .champ { padding: 4px 6px; }
+  .fiche-relecture { padding-bottom: 72px; }  /* Valider ne recouvre pas le dernier champ */
 }
 /* Sans clavier (téléphone, tablette), les touches ne veulent rien dire (T1-m7). */
 @media (hover: none) and (pointer: coarse) {
@@ -340,6 +356,11 @@ textarea {
 .bloc-repli { margin: 18px 0; }
 .liste-versions { padding-left: 20px; }
 .editeur-config .barre-actions { position: sticky; margin: 16px -16px 0; }
+.barre-config[data-sans-modification] { display: none; }
+@media (max-width: 719px) {
+  .barre-config { flex-wrap: nowrap; }
+  .barre-config > * { flex: 1 1 0; padding: 8px 6px; font-size: 0.9rem; }
+}
 @media (max-width: 640px) {
   .colonne-champs { grid-template-columns: minmax(0, 1fr); }
   .valeurs-config thead { display: none; }

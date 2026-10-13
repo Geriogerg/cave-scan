@@ -81,7 +81,7 @@ def creer_brouillon(session: Session, maison: str, config_path: str | Path, nom:
     """Un inventaire vide en brouillon. La config de la maison est figée dès
     maintenant, comme pour un inventaire créé d'un coup (decisions.md 0073)."""
     if not nom.strip():
-        raise EnvoiRefuse("Donner un nom à l'inventaire.")
+        raise EnvoiRefuse("Donnez un nom à la vente : il ne peut pas rester vide.")
     config, texte = lire_config(config_path)
     if plier(config.maison) != plier(maison):
         raise EnvoiRefuse(f"La config {Path(config_path).name} décrit « {config.maison} », pas « {maison} ».")
@@ -432,7 +432,7 @@ def _quantite(valeur: int | None) -> int | None:
     if valeur is None:
         return None
     if isinstance(valeur, bool) or not isinstance(valeur, int) or valeur < 1:
-        raise EnvoiRefuse(f"Quantité invalide : « {valeur} » (entier ≥ 1 attendu).")
+        raise EnvoiRefuse(f"Quantité invalide : « {valeur} » : indiquez un nombre de bouteilles (1 ou plus).")
     if valeur > QUANTITE_MAX:
         raise EnvoiRefuse(f"Quantité trop grande : « {valeur} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
     return valeur

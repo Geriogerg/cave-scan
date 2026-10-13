@@ -24,7 +24,7 @@
   var maximum = parseInt(racine.dataset.max, 10) || 4;
   var prochainServeur = parseInt(racine.dataset.prochain, 10) || 1;
   var dejaFormees = parseInt(racine.dataset.formees, 10) || 0;
-  var attenteServeur = lireJson(racine.dataset.attente);  // clé -> identifiants des photos déjà reçues
+  var attenteServeur = lireJson(racine.dataset.attente);  // clé -> { photos: identifiants reçus, numero }
   var tailleCible = parseInt(racine.dataset.taille, 10) || 2500;
   var SIMULTANES = 3;
   var CLE_ETAT = "cave-scan-depot-" + inventaire;
@@ -54,7 +54,9 @@
     try { lu = JSON.parse(localStorage.getItem(CLE_ETAT)); } catch (e) { /* stockage refusé */ }
     lu = lu || {};
     return {
-      mode: lu.mode === "galerie" ? "galerie" : "appareil",
+      // Premier passage : la galerie à l'ordinateur (souris), l'appareil photo au téléphone (T2-DS1).
+      mode: lu.mode ? (lu.mode === "galerie" ? "galerie" : "appareil")
+        : (window.matchMedia && matchMedia("(pointer: fine)").matches ? "galerie" : "appareil"),
       enCours: lu.enCours || null,
       precedentes: lu.precedentes || [],
       galerie: lu.galerie || [],
@@ -108,7 +110,7 @@
   function reconcilier() {
     function encoreAttendue(bouteille) {
       if (Object.prototype.hasOwnProperty.call(attenteServeur, bouteille.cle)) {
-        bouteille.miniatures = attenteServeur[bouteille.cle];
+        bouteille.miniatures = attenteServeur[bouteille.cle].photos;
         bouteille.recues = bouteille.miniatures.length;
         return true;
       }
@@ -117,6 +119,13 @@
       bouteille.recues = 0;
       return true;  // pas encore de photo : elle attend la première
     }
+    // Les bouteilles en attente reçues d'un autre appareil (ou d'un autre
+    // navigateur) : elles sont listées, numérotées, et comptées (T2-D1).
+    Object.keys(attenteServeur).forEach(function (cle) {
+      if (toutes().some(function (b) { return b.cle === cle; })) return;
+      etat.precedentes.push({ cle: cle, numero: attenteServeur[cle].numero, quantite: 1, recues: 0, quantiteAEnvoyer: false });
+    });
+    etat.precedentes.sort(function (a, b) { return a.numero - b.numero; });
     if (etat.enCours && !encoreAttendue(etat.enCours)) etat.enCours = null;
     etat.precedentes = etat.precedentes.filter(encoreAttendue);
     etat.galerie = etat.galerie.filter(encoreAttendue);
@@ -304,7 +313,7 @@
 
       var quantite = document.createElement("label");
       quantite.className = "quantite-galerie";
-      quantite.textContent = "× ";
+      quantite.textContent = "Quantité ";
       var champ = document.createElement("input");
       champ.type = "text";
       champ.inputMode = "numeric";
@@ -335,6 +344,22 @@
 
   function afficherVignettes(conteneur, bouteille) {
     conteneur.textContent = "";
+    // Les refus de cette bouteille, avec leur raison, là où l'on regarde (T2-D8).
+    var carte = conteneur.parentNode;
+    var refus = carte ? carte.querySelector(".refus-bouteille") : null;
+    if (refus) refus.remove();
+    var refusees = file.filter(function (envoi) { return envoi.bouteille.cle === bouteille.cle && envoi.etat === "refusee"; });
+    if (carte && refusees.length) {
+      refus = document.createElement("ul");
+      refus.className = "refus-bouteille";
+      refus.setAttribute("role", "alert");
+      refusees.forEach(function (envoi) {
+        var ligne = document.createElement("li");
+        ligne.textContent = envoi.message;
+        refus.appendChild(ligne);
+      });
+      conteneur.insertAdjacentElement("afterend", refus);
+    }
     file.forEach(function (envoi) {
       if (envoi.bouteille.cle !== bouteille.cle || envoi.etat === "refusee") return;
       var element = document.createElement("li");
@@ -674,7 +699,13 @@
     return file.filter(function (envoi) { return envoi.etat === etatEnvoi; }).length;
   }
 
+  function mettreEnAvantLaVerification() {
+    var pret = toutes().some(function (b) { return nombrePhotos(b) > 0; });
+    versVerification.classList.toggle("principal", pret);  // T2-DS4
+  }
+
   function rafraichir() {
+    mettreEnAvantLaVerification();
     afficherAppareil();
     afficherGalerie();
     afficherResume();

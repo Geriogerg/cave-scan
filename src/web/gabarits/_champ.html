@@ -9,7 +9,7 @@
   {% if c.type == "liste" %}
     {% set codes = c.options | map(attribute=0) | list %}
     <select id="saisie-{{ c.cle }}" name="{{ c.cle }}" class="saisie" {{ enregistrement }}{{ lue }}>
-      {% if c.saisie == "" %}<option value="" selected>— à remplir —</option>{% endif %}
+      {% if c.saisie == "" %}<option value="" selected>{{ "— à remplir —" if c.a_remplir else "— à saisir —" }}</option>{% endif %}
       {% if c.saisie and c.saisie not in codes %}<option value="{{ c.saisie }}" selected>{{ c.saisie }} (hors liste)</option>{% endif %}
       {% for code, libelle in c.options %}
         <option value="{{ code }}"{% if code == c.saisie %} selected{% endif %}>{{ libelle }}</option>

@@ -4,12 +4,23 @@
   "use strict";
 
   var modifiee = false;
+  // La barre « Annuler / Vérifier / Enregistrer » n'occupe l'écran qu'une fois
+  // quelque chose de modifié (T2-DS5).
+  function montrerLaBarre() {
+    var barre = document.querySelector(".barre-config");
+    if (barre) barre.removeAttribute("data-sans-modification");
+  }
+  // Masquée au chargement par le script seulement : sans JavaScript, elle reste là.
+  var barreInitiale = document.querySelector(".barre-config");
+  if (barreInitiale && !document.querySelector("#editeur > .message.alerte")) {
+    barreInitiale.setAttribute("data-sans-modification", "");
+  }
 
   document.addEventListener("input", function (evenement) {
-    if (evenement.target.closest && evenement.target.closest("[data-config]")) modifiee = true;
+    if (evenement.target.closest && evenement.target.closest("[data-config]")) { modifiee = true; montrerLaBarre(); }
   });
   document.addEventListener("change", function (evenement) {
-    if (evenement.target.closest && evenement.target.closest("[data-config]")) modifiee = true;
+    if (evenement.target.closest && evenement.target.closest("[data-config]")) { modifiee = true; montrerLaBarre(); }
   });
   // Ajouter, déplacer, retirer : la config affichée diffère de la version active.
   // Les colonnes ouvertes le restent après une action (ajouter une valeur,
@@ -41,6 +52,7 @@
   document.body.addEventListener("htmx:afterSwap", function (evenement) {
     if (evenement.target.id !== "editeur" && evenement.detail.target.id !== "editeur") return;
     modifiee = true;
+    montrerLaBarre();
     (ouvertes || []).concat(active === null ? [] : [active]).forEach(function (k) {
       var d = k === null ? null : document.querySelector("#colonne-" + k + " details.colonne-detail");
       if (d) d.open = true;

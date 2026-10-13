@@ -117,7 +117,7 @@ def creer_inventaire_depuis_envoi(
     taille_max = taille_max or TAILLE_MAX_OCTETS
     nombre_max = nombre_max or NOMBRE_MAX
     if not nom.strip():
-        raise EnvoiRefuse("Donner un nom à l'inventaire.")
+        raise EnvoiRefuse("Donnez un nom à la vente : il ne peut pas rester vide.")
     fichiers = list(fichiers)
     if not fichiers:
         raise EnvoiRefuse("Aucune photo envoyée.")

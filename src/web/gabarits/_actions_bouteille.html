@@ -29,9 +29,9 @@
     {% if b.statut in ("extraite", "validee") %}
     <form method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/separer" data-action>
       {% include "_filtre_cache.html" %}
+      <label class="separer">Séparer <input type="number" name="quantite" min="1" value="1" class="petit-nombre"> exemplaire(s)</label>
       <button class="bouton petit">Séparer</button>
-      <input type="number" name="quantite" min="1" value="1" aria-label="Exemplaires à séparer" class="petit-nombre">
-      <span class="aide">exemplaire(s) d'état différent : une seconde bouteille, mêmes photos (quantité actuelle : {{ b.quantite }}).</span>
+      <span class="aide large">D'état différent (5 bonnes, 1 abîmée…) : une seconde bouteille, mêmes photos. Quantité actuelle : {{ b.quantite }}.</span>
     </form>
     {% endif %}
   </div>

@@ -42,7 +42,7 @@
         <button class="bouton petit" hx-post="/app/inventaires/{{ id }}/verifier/rattacher/{{ g.id }}" {{ cible | safe }}>Rattacher à la précédente</button>
         {% endif %}
         <button class="bouton petit danger" hx-post="/app/inventaires/{{ id }}/verifier/supprimer/{{ g.id }}" {{ cible | safe }}
-                hx-confirm="Supprimer la bouteille {{ b.numero }} et ses {{ b.photos | length }} photo(s) ?">Supprimer la bouteille</button>
+                hx-confirm="Supprimer la bouteille {{ b.numero }} et {{ 'sa photo' if b.photos | length == 1 else 'ses ' ~ (b.photos | length) ~ ' photos' }} ?">Supprimer la bouteille</button>
       </div>
     </li>
   {% else %}

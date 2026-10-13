@@ -270,7 +270,7 @@ def test_deux_onglets_sur_la_meme_bouteille(application, ordinateur, tmp_path):
     onglet_a.fill("#saisie-millesime", "1990")
     onglet_a.keyboard.press("Escape")
     onglet_a.wait_for_selector("#pied-millesime [data-conflit]", timeout=10_000)
-    assert "Modifiée ailleurs" in onglet_a.inner_text("#pied-millesime")
+    assert "modifiée ailleurs" in onglet_a.inner_text("#pied-millesime")
     assert "2001" in onglet_a.inner_text("#pied-millesime")
     assert onglet_a.inner_text("#indicateur") == "Une saisie n'est pas enregistrée"
     onglet_a.keyboard.press("k")  # changer de bouteille : bloqué, avec la raison

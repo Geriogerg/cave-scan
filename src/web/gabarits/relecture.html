@@ -35,7 +35,7 @@
   </nav>
 </div>
 
-<div class="relecture-grille" data-relecture tabindex="-1"
+<div class="relecture-grille" data-relecture tabindex="-1" data-position="{{ b.position }}"
      data-precedente="{{ adresse_precedente or '' }}" data-suivante="{{ adresse_suivante or '' }}">
   <section class="photos" aria-label="Photos de la bouteille">
     {#- Toutes les photos de la bouteille, dans l'ordre de l'expert (decisions.md 0166). #}

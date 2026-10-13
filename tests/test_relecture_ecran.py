@@ -194,7 +194,7 @@ def test_une_valeur_hors_liste_ou_une_quantite_invalide_est_refusee_et_bloque_la
     cible = bouteille(session, inventaire_id)
     with pytest.raises(CorrectionRefusee, match="« bleu » n'est pas une valeur de la liste « couleur »"):
         corriger_en_relecture(session, cible.id, "couleur", "bleu", EXPERT, None)
-    with pytest.raises(CorrectionRefusee, match=r"Quantité invalide : « 0 » \(entier ≥ 1 attendu\)"):
+    with pytest.raises(CorrectionRefusee, match=r"Quantité invalide : « 0 » : indiquez un nombre de bouteilles \(1 ou plus\)"):
         corriger_en_relecture(session, cible.id, "quantite", "0", EXPERT, None)
 
     saisies = saisies_affichees(session, inventaire_id, cible.id) | {"couleur": "bleu", "quantite": "0", "millesime": "2017"}

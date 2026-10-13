@@ -126,7 +126,7 @@ def test_retirer_une_photo_supprimer_une_bouteille_changer_la_quantite(api):
     quantite = api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{premiere['groupe_id']}", data={"quantite": "6"}, headers=HX)
     assert 'value="6"' in quantite.text
     refus = api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{premiere['groupe_id']}", data={"quantite": "zéro"}, headers=HX)
-    assert "Quantité invalide" in refus.text
+    assert "quantité invalide" in refus.text
 
     supprimee = api.post(f"/app/inventaires/{inventaire_id}/verifier/supprimer/{premiere['groupe_id']}", headers=HX)
     assert "1 bouteille(s) en attente" in supprimee.text
@@ -142,7 +142,7 @@ def test_la_quantite_tapee_part_avec_le_lancement(api):
     assert 'hx-include=".quantite-attente"' in page and 'hx-trigger="change, submit"' in page
     refus = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX,
                      data={"groupe": [str(g) for g in groupes], "quantite": ["6", "zéro"]})
-    assert "Quantité invalide" in refus.text and "Rien n&#39;a été lancé" in refus.text
+    assert "quantité invalide" in refus.text and "Rien n&#39;a été lancé" in refus.text
     assert api.get(f"/inventaires/{inventaire_id}").json()["statut"] == "brouillon"
     lance = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX,
                      data={"groupe": [str(g) for g in groupes], "quantite": ["6", "1"]})
@@ -169,7 +169,7 @@ def test_ajouter_des_bouteilles_apres_le_lancement(api):
 
 def test_nouvel_inventaire_sans_nom_reaffiche_le_formulaire_avec_la_raison(api):
     reponse = api.post("/app/nouveau", data={"nom": "  ", "maison": "Maison Test"})
-    assert reponse.status_code == 422 and "Donner un nom" in reponse.text and "<form" in reponse.text
+    assert reponse.status_code == 422 and "Donnez un nom à la vente" in reponse.text and "<form" in reponse.text
 
 
 def test_relancer_les_erreurs_depuis_le_suivi(api):

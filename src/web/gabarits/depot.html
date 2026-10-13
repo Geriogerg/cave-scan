@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set brouillon = vue.inventaire.statut == "brouillon" %}
 {% block titre %}Photos — {{ vue.inventaire.nom }}{% endblock %}
-{% block fil %}<span class="fil">{{ vue.inventaire.nom }}</span>{% endblock %}
+{% block fil %}{% if vue.inventaire.statut == "brouillon" %}<span class="fil">{{ vue.inventaire.nom }}</span>{% else %}<a class="fil" href="/app/inventaires/{{ vue.inventaire.id }}/suivi">{{ vue.inventaire.nom }}</a>{% endif %}{% endblock %}
 {% block contenu %}
 <section id="depot"
          data-depot
@@ -38,7 +38,7 @@
         <button type="button" class="bouton petit" data-quantite="-1" aria-label="Une bouteille de moins">−</button>
         <input id="quantite" type="text" inputmode="numeric" value="1" aria-label="Quantité de bouteilles identiques">
         <button type="button" class="bouton petit" data-quantite="1" aria-label="Une bouteille de plus">+</button>
-        <span class="aide">bouteille(s) identique(s)</span>
+        <span class="aide">identiques</span>
       </div>
       <button type="button" class="bouton grand" id="suivante">Bouteille suivante</button>
     </div>

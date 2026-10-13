@@ -14,7 +14,7 @@
     <span class="etat-champ refuse" role="alert">Refusé : {{ message }}</span>
   {% elif etat == "conflit" %}
     <span class="etat-champ conflit" role="alert" data-conflit>
-      Modifiée ailleurs depuis l'ouverture de la page : {{ changements | join(" ; ") }}.
+      Pas enregistré : la bouteille a été modifiée ailleurs depuis l'ouverture de la page ({{ changements | join(" ; ") }}).
       <button type="button" class="lien" tabindex="-1" hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/champ/{{ c.cle }}"
               hx-vals='{"_forcer": "1"}' hx-target="#pied-{{ c.cle }}" hx-swap="outerHTML" hx-sync="#fiche:queue all">Enregistrer quand même</button>
       ou <a href="" data-recharger>recharger la bouteille</a>.

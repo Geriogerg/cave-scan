@@ -437,8 +437,8 @@ def _valider_valeurs(brutes: Any, type_: Any, ou: str, erreurs: list[str]) -> tu
             continue
         if plier(libelle) in libelles_vus:
             erreurs.append(
-                f"{ou} : libellé « {libelle} » en double (à la casse ou aux accents "
-                f"près, il serait impossible à relire dans le fichier de l'expert)."
+                f"{ou} : libellé « {libelle} » en double (deux libellés qui ne diffèrent que par "
+                f"les majuscules ou les accents se confondraient dans l'Excel)."
             )
             continue
         codes_vus.add(code)

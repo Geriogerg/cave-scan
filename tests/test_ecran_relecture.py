@@ -164,7 +164,7 @@ def test_deux_onglets_l_avertissement_se_declenche(api, inventaire, base):
     assert enregistrer(api, inventaire, premiere, "millesime", "2001", onglet_b).status_code == 200
     conflit = enregistrer(api, inventaire, premiere, "millesime", "1990", onglet_a)
     assert conflit.status_code == 409
-    assert "Modifiée ailleurs depuis l'ouverture de la page" in conflit.text and "2001" in conflit.text
+    assert "modifiée ailleurs depuis l'ouverture de la page" in conflit.text and "2001" in conflit.text
     assert "Enregistrer quand même" in conflit.text
     base.expire_all()
     assert valeurs_courantes(base, premiere).millesime == "2001"

@@ -24,7 +24,13 @@ from src.export.excel_writer import EtatLigne, ecrire_excel
 from src.io.manual_listing import colonnes_toujours_vides, load_manual
 from src.services.cycle_de_vie import bilan
 from src.services.inventaires import charger_inventaire, config_figee
-from src.services.relecture import CHAMP_STATUT, extraction_qui_fait_foi, valeurs_courantes, valeurs_modele
+from src.services.relecture import (
+    CHAMP_STATUT,
+    extraction_qui_fait_foi,
+    valeur_courante,
+    valeurs_courantes,
+    valeurs_modele,
+)
 
 
 class ExportRefuse(ValueError):
@@ -92,6 +98,22 @@ def signaux_du_modele(session: Session, inventaire_id: int) -> SignauxModele:
     config = config_figee(inventaire)
     auto = [valeurs_modele(session, bouteille.id) for bouteille in _photographiees(inventaire)]
     return relever_signaux(auto, [colonne.cle for colonne in config.colonnes_best_effort])
+
+
+def _champs_vraiment_corriges(session: Session, corrections: list[Correction]) -> list[tuple[str, int]]:
+    """Par champ, le nombre de bouteilles dont la valeur DIFFÈRE de la lecture du
+    modèle : une correction suivie d'un « Revenir à la valeur du modèle » n'en est
+    plus une (T2-D12). Les colonnes de l'expert comptent dès qu'elles sont saisies."""
+    par_bouteille: dict[int, set[str]] = {}
+    for correction in corrections:
+        par_bouteille.setdefault(correction.bouteille_id, set()).add(correction.champ)
+    compte: Counter[str] = Counter()
+    for bouteille_id, champs in par_bouteille.items():
+        courantes, modele = valeurs_courantes(session, bouteille_id), valeurs_modele(session, bouteille_id)
+        for champ in champs:
+            if valeur_courante(courantes, champ) != valeur_courante(modele, champ):
+                compte[champ] += 1
+    return compte.most_common()
 
 
 def _photographiees(inventaire) -> list[FicheBouteille]:
@@ -196,7 +218,7 @@ def stats_inventaire(session: Session, inventaire_id: int) -> StatsInventaire:
         duree_totale_ms=sum(e.duree_ms for e in extractions),
         nb_corrections=len(corrections),
         nb_bouteilles_corrigees=len({c.bouteille_id for c in corrections}),
-        champs_les_plus_corriges=Counter(c.champ for c in corrections).most_common(),
+        champs_les_plus_corriges=_champs_vraiment_corriges(session, corrections),
         bouteilles_mesurees=len({e.bouteille_id for e in mesurees}),
         corrections_par_bouteille={
             identifiants[bouteille_id]: nombre

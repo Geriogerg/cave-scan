@@ -505,7 +505,7 @@ TEXTE_MAX = 1000  # une description d'état tient largement ; au-delà, un colla
 def quantite_valide(valeur: Any) -> int:
     texte = str(valeur).strip()
     if isinstance(valeur, bool) or not texte.isdigit() or int(texte) < 1:
-        raise CorrectionRefusee(f"Quantité invalide : « {valeur} » (entier ≥ 1 attendu).")
+        raise CorrectionRefusee(f"Quantité invalide : « {valeur} » : indiquez un nombre de bouteilles (1 ou plus).")
     if int(texte) > QUANTITE_MAX:
         raise CorrectionRefusee(f"Quantité trop grande : « {texte} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
     return int(texte)

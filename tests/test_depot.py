@@ -312,7 +312,7 @@ def test_lancer_un_brouillon_sans_le_finaliser_est_refuse(session, trois):
 
 
 def test_creer_un_brouillon_demande_un_nom_et_la_bonne_maison(session, nom_maison):
-    with pytest.raises(EnvoiRefuse, match="Donner un nom"):
+    with pytest.raises(EnvoiRefuse, match="Donnez un nom à la vente"):
         creer_brouillon(session, nom_maison, CONFIG_TEST, "  ")
     with pytest.raises(EnvoiRefuse, match="décrit"):
         creer_brouillon(session, "Autre maison", CONFIG_TEST, "Vente")

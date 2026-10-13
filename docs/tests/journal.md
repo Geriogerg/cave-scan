@@ -48,3 +48,17 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 2 | T2-B6 | mineur | Bouteille vide « Bouteille 1 » en double | Corrigé : la bouteille vide prend le numéro qui suit | lot 7 |
 | 2 | T2-B7 | suggestion | Cibles tactiles de 19–21 px | Corrigé : 44 px | lot 7 |
 | 2 | T2-B8 | suggestion | Texte cité pris pour un bouton | Corrigé : « le bouton … ci-dessous / en bas de l'écran » | lot 7 |
+| 2 | T2-D1 | mineur | Dépôt dans un autre navigateur : numérotation à 1 | Corrigé : les bouteilles en attente du serveur sont listées et numérotées | lot 8 |
+| 2 | T2-D5 | mineur | Conflit qui fige un autre champ | Corrigé : après « Enregistrer quand même », les champs bloqués repartent seuls ; message « Pas enregistré : … » | lot 8 |
+| 2 | T2-D6 | mineur | « Donner un nom », « entier ≥ 1 attendu », bouteille non citée | Corrigé : « Donnez un nom à la vente », « indiquez un nombre de bouteilles (1 ou plus) », numéro de la bouteille | lot 8 |
+| 2 | T2-D7 | mineur | « à saisir » / « — à remplir — » | Corrigé : un mot par état, fond rose réservé à « à remplir » | lot 8 |
+| 2 | T2-D8 | mineur | Refus de photo caché sous la barre | Corrigé : affiché dans la carte de la bouteille | lot 8 |
+| 2 | T2-D9 | mineur | Incohérences d'écran | Corrigé : nom d'inventaire en lien (dépôt, vérifier), « Quantité » en galerie, barre pleine largeur, boutons du suivi, « sa photo / ses N photos », espaces insécables | lot 8 |
+| 2 | T2-D10 | mineur | Archivé invisible | Corrigé : bandeau « Inventaire archivé — Sortir des archives », avancement sur les cartes d'archives, « se met à jour » seulement pendant l'analyse | lot 8 |
+| 2 | T2-D11 | mineur | Pas de confirmation après Valider | Corrigé : « Bouteille n°X validée. » sur la suivante. Focus sur un champ : écarté (Entrée dans un champ enregistre le champ au lieu de valider la bouteille : le flux clavier de l'expert serait cassé) | lot 8 |
+| 2 | T2-D12 | mineur | Récapitulatif / configuration techniques | Corrigé : un retour au modèle n'est plus compté, plus de nom de fichier, « noyau » expliqué, « Séparer » relibellé, doublon de liste dit simplement | lot 8 |
+| 2 | T2-DS1 | suggestion | Dépôt en mode galerie à l'ordinateur | Corrigé (premier passage, selon le pointeur) | lot 8 |
+| 2 | T2-DS2 | suggestion | « Vérifier » compact à l'ordinateur | Corrigé : deux cartes par rangée, vignettes plus petites | lot 8 |
+| 2 | T2-DS3 | suggestion | Photo visible pendant la saisie au téléphone | Corrigé : photo collée en haut (30 % de l'écran), champs resserrés, Valider ne recouvre plus | lot 8 |
+| 2 | T2-DS4 | suggestion | « Vérifier et lancer » trop tôt en avant | Corrigé : bouton principal seulement avec des photos | lot 8 |
+| 2 | T2-DS5 | suggestion | Barre de configuration trop haute | Corrigé : une rangée au téléphone, affichée après une modification (toujours là sans JavaScript) | lot 8 |

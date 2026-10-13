@@ -153,8 +153,13 @@ def depot(request: Request, inventaire_id: int, base: SessionBase):
     if charger_inventaire(base, inventaire_id).clos_le is not None:
         return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi", status_code=303)
     vue = apercu(base, inventaire_id)
-    # Clé -> photos déjà reçues (leurs identifiants : la page montre leurs miniatures).
-    attente = {b.groupe.cle: [p.id for p in b.photos] for b in vue.bouteilles if b.groupe.cle}
+    # Clé -> photos déjà reçues (leurs identifiants : la page montre leurs
+    # miniatures) et numéro : un autre appareil voit aussi ces bouteilles (T2-D1).
+    attente = {
+        b.groupe.cle: {"photos": [p.id for p in b.photos], "numero": b.groupe.numero}
+        for b in vue.bouteilles
+        if b.groupe.cle
+    }
     return page(
         request,
         "depot.html",
@@ -205,14 +210,28 @@ def supprimer_bouteille(request: Request, inventaire_id: int, groupe_id: int, ba
     return _en_attente(request, base, inventaire_id, lambda: supprimer_groupe(base, inventaire_id, groupe_id))
 
 
+def _numero(base, inventaire_id: int, groupe_id: int) -> str:
+    """Le numéro affiché d'une bouteille en attente, pour dire laquelle est en cause (T2-D6)."""
+    for bouteille in apercu(base, inventaire_id).bouteilles:
+        if bouteille.groupe.id == groupe_id:
+            return str(bouteille.numero)
+    return "?"
+
+
 @routeur.post("/app/inventaires/{inventaire_id}/verifier/quantite/{groupe_id}")
 def quantite(request: Request, inventaire_id: int, groupe_id: int, base: SessionBase,
              quantite: Annotated[str, Form()] = ""):
     def changer():
         if not quantite.strip().isdigit() or int(quantite) < 1:
-            raise ModificationRefusee(f"Quantité invalide : « {quantite} » (entier ≥ 1 attendu).")
+            raise ModificationRefusee(
+                f"Bouteille {_numero(base, inventaire_id, groupe_id)} — quantité invalide : « {quantite} » : "
+                f"indiquez un nombre de bouteilles (1 ou plus)."
+            )
         if int(quantite) > QUANTITE_MAX:
-            raise ModificationRefusee(f"Quantité trop grande : « {quantite} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
+            raise ModificationRefusee(
+                f"Bouteille {_numero(base, inventaire_id, groupe_id)} — quantité trop grande : « {quantite} » "
+                f"({QUANTITE_MAX:,} au plus).".replace(",", " ")
+            )
         quantite_du_groupe(base, inventaire_id, groupe_id, int(quantite))
 
     return _en_attente(request, base, inventaire_id, changer)
@@ -226,7 +245,10 @@ async def lancer_l_analyse(request: Request, inventaire_id: int, base: SessionBa
     try:
         for groupe, quantite in zip(saisies.getlist("groupe"), saisies.getlist("quantite"), strict=False):
             if not str(quantite).strip().isdigit() or int(quantite) < 1:
-                raise ModificationRefusee(f"Quantité invalide : « {quantite} » (entier ≥ 1 attendu). Rien n'a été lancé.")
+                raise ModificationRefusee(
+                    f"Bouteille {_numero(base, inventaire_id, int(groupe))} — quantité invalide : « {quantite} » : "
+                    f"indiquez un nombre de bouteilles (1 ou plus). Rien n'a été lancé."
+                )
             if int(quantite) > QUANTITE_MAX:
                 raise ModificationRefusee(
                     f"Quantité trop grande : « {quantite} » ({QUANTITE_MAX:,} au plus). Rien n'a été lancé.".replace(",", " ")

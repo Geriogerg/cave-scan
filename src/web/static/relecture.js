@@ -73,6 +73,18 @@
     indicateur.className = "indicateur " + classe;
   }
 
+  (function confirmerLaValidation() {
+    var position = null;
+    try { position = sessionStorage.getItem("cave-scan-validee"); sessionStorage.removeItem("cave-scan-validee"); } catch (e) { return; }
+    if (position === null) return;
+    var zone = document.getElementById("messages");
+    var message = document.createElement("p");
+    message.className = "message ok";
+    message.setAttribute("role", "status");
+    message.textContent = position ? "Bouteille n°" + position + " validée." : "Bouteille validée.";
+    zone.appendChild(message);
+  })();
+
   function annoncer(texte) {
     var zone = document.getElementById("messages");
     zone.innerHTML = "";
@@ -126,6 +138,9 @@
       if (evenement.detail.xhr.status === 204) {
         etats = {};
         quitterSansAlerte = true;
+        // La bouteille suivante le dira (T2-D11) — sans toucher à son adresse,
+        // qui doit rester celle qu'on a préchargée.
+        try { sessionStorage.setItem("cave-scan-validee", racine.dataset.position || ""); } catch (e) { /* stockage refusé */ }
       }
     }
   });
@@ -154,6 +169,14 @@
     // Saisi de nouveau pendant l'envoi : le prochain envoi suit déjà.
     if (etats[cle] === "modifie") return;
     poser(cle, etat);
+    // Un conflit tranché (« Enregistrer quand même ») : la version affichée est à
+    // jour, les autres champs bloqués par ce conflit repartent seuls (T2-D5).
+    if (etat === "enregistre") {
+      cles(function (e) { return e === "conflit"; }).forEach(function (autre) {
+        var saisie = document.getElementById("saisie-" + autre);
+        if (autre !== cle && saisie) htmx.trigger(saisie, "change");
+      });
+    }
   });
 
   function apresValidation(statut) {
