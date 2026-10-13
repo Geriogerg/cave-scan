@@ -100,3 +100,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 3 | T3-DS6 | suggestion | Fin de relecture : clore caché | Corrigé : « Clore l'inventaire » au récapitulatif | lot 14 |
 | 3 | T3-DS7 | suggestion | Dépôt : ligne d'enchaînement ; « identiques » | « bouteilles identiques » corrigé. Ligne d'enchaînement écartée : l'utilisateur a demandé moins de texte (35c9ae0) | lot 14 |
 | 3 | T3-DS8 | suggestion | Brouillons sans compte ; nom en double | Compte corrigé. Nom en double écarté : deux ventes peuvent porter le même nom, la date les distingue | lot 14 |
+| 4 | T4-D1 | majeur | Après corbeille puis restauration, « Réanalyser » dans une impasse | Corrigé : une analyse finie n'est plus mise en pause par la corbeille ; la restauration la remet ; en pause sans rien à analyser, « Réanalyser » relance seul. En pause AVEC des bouteilles à analyser : toujours refusé (0147), message « Reprendre l'analyse » | lot 15 |
+| 4 | T3-D5 / T4-B6 | majeur | Galerie : refus de photo absent de la carte | Corrigé (liste insérée dans la carte avant d'y chercher sa place) ; test navigateur | lot 15 |
+| 4 | T4-D2 | mineur (régression) | « Raccourcis » réapparu au téléphone ; « ☐Seulement » | Corrigé | lot 15 |
+| 4 | T4-D6 | mineur | Excel refusé affiché en vert | Corrigé : en jaune | lot 15 |
+| 4 | T4-D11 | mineur | « Séparer » retire la validation sans le dire | Corrigé : « la bouteille d'origine est à revalider » | lot 15 |
+| 4 | T3-D2 / T4-B11 | mineur | « (few-shot) » ; alerte sur toute citation des consignes | Corrigé : plus de jargon ; dans les consignes, seule une annonce d'exemple ou « réponds … « » » alerte ; test | lot 15 |

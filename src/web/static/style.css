@@ -229,9 +229,9 @@ body.relecture .contenu { max-width: 1680px; padding-bottom: 32px; }
 .chiffres-relecture { color: var(--texte-doux); font-size: 0.92rem; }
 .navigation-relecture { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .navigation-relecture .filtre { color: var(--texte-doux); }
-.navigation-relecture .filtre::before { content: "☐ "; }
+.navigation-relecture .filtre::before { content: "☐\00a0"; }
 .navigation-relecture .filtre.actif { color: var(--accent); font-weight: 600; }
-.navigation-relecture .filtre.actif::before { content: "☑ "; }
+.navigation-relecture .filtre.actif::before { content: "☑\00a0"; }
 
 .relecture-grille { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(380px, 1fr); gap: 22px; align-items: start; outline: none; }
 .photos { position: sticky; top: 8px; display: flex; flex-direction: column; gap: 10px; }
@@ -335,6 +335,9 @@ input[type="file"] { min-height: 44px; font: inherit; }
   .autres-actions summary, .historique summary { display: inline-flex; align-items: center; min-height: 44px; }
   .colonne-boutons .bouton { min-width: 44px; }
   .case input, .colonne-champs .case input { width: 28px; height: 28px; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .navigation-relecture [data-aide] { display: none; }  /* après la règle des 44 px, qui l'affichait (T4-D2) */
 }
 
 /* Configuration d'une maison (session 6) */

@@ -103,7 +103,9 @@ def test_supprimer_met_a_la_corbeille_sans_rien_effacer(session, extrait):
     with pytest.raises(InventaireIntrouvable, match="dans la corbeille"):
         charger_inventaire(session, extrait)
     assert {modele: compter(session, modele) for modele in avant} == avant  # rien n'est effacé
-    assert charger_inventaire(session, extrait, corbeille=True).extraction == "annulee"  # le worker s'arrête
+    # Analyse finie : rien à arrêter (T4-D1) ; le worker ignore de toute façon la
+    # corbeille (test_le_worker_ne_traite_jamais_un_inventaire_a_la_corbeille).
+    assert charger_inventaire(session, extrait, corbeille=True).extraction == "lancee"
 
     restaurer(session, extrait, EXPERT)
     assert [i.id for i in lister_inventaires(session)] == [extrait]

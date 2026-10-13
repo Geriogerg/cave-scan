@@ -166,7 +166,7 @@ def test_un_exemple_de_reponse_est_signale_a_l_enregistrement(session, dossier, 
     colonne["description"] += " Par exemple « Étiquette tachée »."
     enregistree = enregistrer_version(session, dossier, maison, brut)
     nom = next(c for c in brut["colonnes"] if c["cle"] == "description_etat")["nom"]
-    assert any("few-shot" in a and f"« {nom} »" in a for a in enregistree.avertissements)
+    assert any("exemple de réponse" in a and f"« {nom} »" in a for a in enregistree.avertissements)
 
 
 def test_la_config_de_test_n_a_plus_d_exemple_de_reponse():

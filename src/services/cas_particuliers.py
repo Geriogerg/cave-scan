@@ -71,12 +71,17 @@ def reanalyser(session: Session, bouteille_id: int, auteur: str) -> bool:
     if bouteille.statut in ("a_extraire", "en_cours"):
         return False
     inventaire = bouteille.inventaire
-    if inventaire.extraction != "lancee":
-        etat = {"annulee": "a été annulée", "arretee": "s'est arrêtée"}.get(inventaire.extraction, "n'est pas lancée")
-        raise ActionRefusee(
-            f"L'analyse de cet inventaire {etat} : relancez-la depuis l'écran de suivi, "
-            f"puis réanalysez la bouteille."
-        )
+    reste = any(b.statut in ("a_extraire", "en_cours") for b in inventaire.bouteilles)
+    if inventaire.extraction == "annulee" and not reste:
+        # En pause, mais plus rien à analyser : relancer ne touche que cette
+        # bouteille. Plus d'impasse après une restauration (T4-D1).
+        inventaire.extraction = "lancee"
+    elif inventaire.extraction != "lancee":
+        consigne = {
+            "annulee": "est en pause : « Reprendre l'analyse » sur l'écran de suivi",
+            "arretee": "s'est arrêtée : « Relancer les erreurs » sur l'écran de suivi",
+        }.get(inventaire.extraction, "n'est pas lancée : lancez-la depuis l'écran de suivi")
+        raise ActionRefusee(f"L'analyse de cet inventaire {consigne}, puis réanalysez la bouteille.")
     statut_precedent = bouteille.statut
     remettre_a_relire(bouteille, auteur, statut="a_extraire")
     bouteille.statut = "a_extraire"

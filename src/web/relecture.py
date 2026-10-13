@@ -53,7 +53,7 @@ FILTRE = "a_verifier"
 MESSAGES_FAIT = {
     "remise": "Bouteille remise dans l'inventaire : elle revient dans la relecture et dans l'Excel.",
     "levee": "Signalement levé : la bouteille peut de nouveau être validée.",
-    "separee": "Bouteille séparée. Ajustez l'état et la description de cet exemplaire.",
+    "separee": "Bouteille séparée. Ajustez l'état et la description de cet exemplaire ; la bouteille d'origine est à revalider.",
     "retiree": "Bouteille retirée de l'inventaire. Elle se remet depuis le récapitulatif.",
 }
 

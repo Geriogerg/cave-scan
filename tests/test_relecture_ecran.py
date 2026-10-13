@@ -302,9 +302,13 @@ def test_reanalyser_une_bouteille_en_erreur(session, nom_maison, dossier_photos,
 
 
 def test_reanalyser_refuse_si_l_analyse_de_l_inventaire_est_annulee(session, inventaire_id):
+    """En pause avec des bouteilles encore à analyser : relancer les ferait repartir
+    (decisions.md 0147) — refusé. Plus rien à analyser : la réanalyse relance
+    seule, sans impasse (T4-D1)."""
+    reanalyser(session, bouteille(session, inventaire_id, 0).id, EXPERT)  # une bouteille en attente
     annuler(session, inventaire_id)
-    with pytest.raises(ActionRefusee, match="relancez-la depuis l'écran de suivi"):
-        reanalyser(session, bouteille(session, inventaire_id).id, EXPERT)
+    with pytest.raises(ActionRefusee, match="Reprendre l'analyse"):
+        reanalyser(session, bouteille(session, inventaire_id, 1).id, EXPERT)
 
 
 # --- signaler un problème de photos (« Inverser les photos » a disparu avec les rôles, 0166) ---

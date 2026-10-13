@@ -180,3 +180,35 @@ def test_suggestions_du_tour_3(api, dossier_photos):
         api.post(f"/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/valider", json={}, headers=AUTEUR)
     recap = api.get(f"/app/inventaires/{inventaire_id}/recapitulatif").text
     assert f'href="/app/inventaires/{inventaire_id}/clore"' in recap
+
+
+def test_restaurer_un_inventaire_analyse_laisse_reanalyser(session, nom_maison, dossier_photos, stockage):
+    """T4-D1 : corbeille puis restauration d'un inventaire fini : « Réanalyser »
+    marche (plus d'impasse « analyse annulée »)."""
+    from src.services.cas_particuliers import reanalyser
+    from src.services.cycle_de_vie import restaurer, supprimer
+    from src.services.pilotage import lancer
+
+    cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Cave", stockage)
+    lancer(session, cree.inventaire_id)
+    extraire_inventaire(session, cree.inventaire_id, ExtracteurScenario(), stockage)
+    supprimer(session, cree.inventaire_id, "Expert test")
+    restaurer(session, cree.inventaire_id, "Expert test")
+    inventaire = charger_inventaire(session, cree.inventaire_id)
+    assert inventaire.extraction == "lancee"
+    assert reanalyser(session, inventaire.bouteilles[0].id, "Expert test") is True
+
+
+def test_une_citation_dans_les_consignes_n_est_pas_un_exemple(tmp_path):
+    """T3-D2 : « Grand Cru » à recopier tel quel est une précision, pas un exemple."""
+    import json
+
+    from src.config.maison import charger_config
+    from src.extract.consignes import CONSIGNES_MODIFIABLES
+
+    brut = json.loads(CONFIG_TEST.read_text(encoding="utf-8"))
+    brut["consignes"] = CONSIGNES_MODIFIABLES + "\nPRÉCISION : la mention « Grand Cru » se recopie telle quelle."
+    chemin = tmp_path / "c.json"
+    chemin.write_text(json.dumps(brut, ensure_ascii=False), encoding="utf-8")
+    alertes = [a for a in charger_config(chemin).avertissements if a.startswith("Consignes")]
+    assert alertes == [] and not any("few-shot" in a for a in charger_config(chemin).avertissements)

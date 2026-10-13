@@ -156,7 +156,10 @@ def supprimer(session: Session, inventaire_id: int, auteur: str) -> None:
     auteur = auteur_valide(auteur)
     inventaire = charger_inventaire(session, inventaire_id)
     detail = {"extraction": inventaire.extraction}
-    if inventaire.extraction == "lancee":
+    # Une analyse finie n'a rien à arrêter : la mettre « en pause » la rendait
+    # impossible à reprendre une fois restaurée (T4-D1).
+    reste = any(b.statut in ("a_extraire", "en_cours") for b in inventaire.bouteilles)
+    if inventaire.extraction == "lancee" and reste:
         inventaire.extraction = "annulee"
     inventaire.supprime_le = maintenant()
     _tracer(session, inventaire_id, "suppression", auteur, detail)
@@ -171,6 +174,12 @@ def restaurer(session: Session, inventaire_id: int, auteur: str) -> None:
     if inventaire.supprime_le is None:
         raise CycleRefuse(f"L'inventaire « {inventaire.nom} » n'est pas dans la corbeille.")
     inventaire.supprime_le = None
+    # Restauré « tel qu'il y était entré » : une analyse finie redevient lancée
+    # (les inventaires mis en pause à tort avant T4-D1 aussi).
+    if inventaire.extraction == "annulee" and not any(
+        b.statut in ("a_extraire", "en_cours") for b in inventaire.bouteilles
+    ):
+        inventaire.extraction = "lancee"
     _tracer(session, inventaire_id, "restauration", auteur)
     session.commit()
 

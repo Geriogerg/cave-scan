@@ -281,3 +281,27 @@ def test_consignes_case_de_confirmation_cachee_jusqu_au_deverrouillage(applicati
     page.click("#deverrouiller-consignes")
     assert page.locator("#confirmer-consignes").is_visible()
     assert not page.eval_on_selector("#consignes", "e => e.readOnly")
+
+
+def test_en_galerie_le_refus_d_une_photo_est_dans_la_carte(application, telephone, tmp_path):
+    """T3-D5 / T4-B6 : à l'ordinateur (galerie), la raison d'un refus est dans la
+    carte de la bouteille, pas seulement en bas de page."""
+    dossier = tmp_path / "photos"
+    dossier.mkdir()
+    faux = dossier / "faux.jpg"
+    faux.write_bytes(b"pas une image")
+    ordinateur = telephone.browser.new_context(viewport={"width": 1440, "height": 900})
+    try:
+        page = ordinateur.new_page()
+        page.goto(f"{application}/app")
+        page.get_by_role("link", name="Nouvel inventaire").click()
+        page.get_by_label("Nom de la vente").fill("Vente refus galerie")
+        page.get_by_role("button", name="Créer et ajouter les photos").click()
+        page.wait_for_url("**/depot")
+        page.get_by_role("tab", name="Galerie ou ordinateur").click()
+        carte = page.locator(".carte-galerie").first
+        carte.locator("input[type=file]").set_input_files([faux])
+        page.wait_for_selector(".carte-galerie .refus-bouteille", timeout=30_000)
+        assert "faux.jpg" in page.locator(".carte-galerie .refus-bouteille").inner_text()
+    finally:
+        ordinateur.close()

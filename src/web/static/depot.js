@@ -300,8 +300,8 @@
 
       var vignettes = document.createElement("ul");
       vignettes.className = "vignettes-depot";
+      carte.appendChild(vignettes);  // d'abord dans la carte : le refus s'y insère (T3-D5)
       afficherVignettes(vignettes, bouteille);
-      carte.appendChild(vignettes);
 
       var actions = document.createElement("div");
       actions.className = "actions-galerie";

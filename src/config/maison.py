@@ -92,6 +92,12 @@ MOTIFS_EXEMPLE = (
 )
 
 
+MOTIFS_EXEMPLE_CONSIGNES = (
+    re.compile(r"\b(ex\.|exemple|e\.g\.)", re.IGNORECASE),
+    re.compile(r"\b(réponds|répondre|renvoie)\b[^.]*[«{\"]", re.IGNORECASE),
+)
+
+
 class ConfigInvalide(ValueError):
     """La config ne respecte pas le format attendu. Le message liste tout ;
     `erreurs` : chaque anomalie à part, pour les montrer une à une (page
@@ -347,12 +353,14 @@ def _reperer_exemple_consignes(consignes: Any) -> list[str]:
     # Import local : la config ne dépend du module des consignes que pour ce repère.
     from src.extract.consignes import CONSIGNES_MODIFIABLES
 
-    for motif in MOTIFS_EXEMPLE:
+    # Dans les consignes, une citation est souvent une précision (« Grand Cru » à
+    # recopier tel quel) : seule une annonce d'exemple compte (T3-D2).
+    for motif in MOTIFS_EXEMPLE_CONSIGNES:
         trouve = next((m for m in motif.finditer(consignes) if m.group(0) not in CONSIGNES_MODIFIABLES), None)
         if trouve:
             return [
-                f"Consignes générales : contiennent un exemple de réponse ({trouve.group(0)}) : le "
-                f"modèle risque de le recopier (few-shot). Retirez-le si ce n'est pas voulu."
+                f"Consignes générales : elles semblent donner un exemple de réponse (« {trouve.group(0)} ») ; "
+                f"le modèle risque de le recopier. Retirez-le si ce n'est pas voulu."
             ]
     return []
 
@@ -601,8 +609,8 @@ def _reperer_exemples(colonnes: list[Colonne]) -> list[str]:
                 if trouve:
                     avertissements.append(
                         f"Colonne « {colonne.nom} », {ou} : contient un exemple "
-                        f"de réponse ({trouve.group(0)}) : le modèle risque de le recopier "
-                        f"(few-shot). Retirez-le si ce n'est pas voulu."
+                        f"de réponse ({trouve.group(0)}) : le modèle risque de le recopier. "
+                        f"Retirez-le si ce n'est pas voulu."
                     )
                     break
     return avertissements

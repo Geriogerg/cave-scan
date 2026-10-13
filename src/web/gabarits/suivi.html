@@ -8,7 +8,7 @@
   <div class="message info">Inventaire archivé.
     <form method="post" action="/app/inventaires/{{ inventaire.id }}/desarchiver" class="en-ligne"><button class="lien">Sortir des archives</button></form></div>
 {% endif %}
-{% if fait %}<p class="message ok" role="status">{{ fait }}</p>{% endif %}
+{% if fait %}<p class="message {{ 'attention' if fait_attention else 'ok' }}" role="status">{{ fait }}</p>{% endif %}
 {% if inventaire.clos_le %}
   <p class="message info">Inventaire clos le {{ inventaire.clos_le | horodatage }} : il est en lecture seule.
     L'Excel reste téléchargeable. <a href="/app/inventaires/{{ inventaire.id }}/rouvrir">Rouvrir</a></p>
