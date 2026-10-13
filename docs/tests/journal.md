@@ -32,3 +32,10 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 1 | T1-S8 | suggestion | Clôture sans liste | Corrigé : lien vers le récapitulatif, qui liste les bouteilles non validées | lot 5 |
 | 1 | T1-S9 | suggestion | Export d'un inventaire vide | Corrigé : refusé, avec la raison | lot 5 |
 | 1 | T1-S7 | suggestion | Confirmation au-delà de 100 exemplaires | Écarté : une caisse ou un lot de cave dépasse parfois 100 ; une confirmation ralentirait l'expert pour un cas rare, la quantité est visible au dépôt, à la vérification et dans l'Excel | — |
+| 1 | T1-m4 | mineur | Numérotation galerie / vérification | Corrigé : le dépôt affiche les numéros de « Vérifier » ; la bouteille vide ne compte pas | lot 6 |
+| 1 | T1-m5 | mineur | Dépôt : compteur après reprise, miniatures, HEIC | Corrigé : resynchronisation avec le serveur, miniatures des photos reçues, pastille « 📷 HEIC » au lieu d'une image cassée | lot 6 |
+| 1 | T1-S1 | suggestion | « Vérifier » au téléphone trop long | Corrigé : trois vignettes par rangée | lot 6 |
+| 1 | T1-S3 | suggestion | Configuration trop longue | Corrigé : chaque colonne repliable (ouverte si nouvelle ou refusée) | lot 6 |
+| 1 | T1-S3b | suggestion | Aperçu modèle en phrases | Écarté : l'aperçu montre EXACTEMENT ce qui part au modèle (demande de la session 6) ; une paraphrase pourrait s'en écarter | — |
+| 1 | T1-S4 | suggestion | Liste des envois qui s'allonge | Corrigé : les envois réussis ne s'affichent plus (ils sont sur les vignettes) | lot 6 |
+| 1 | T1-S6 | suggestion | Clé interne visible | Corrigé : identifiant dans un « réglage avancé » pour une nouvelle colonne, caché ensuite | lot 6 |

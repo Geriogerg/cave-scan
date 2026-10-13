@@ -152,7 +152,8 @@ def depot(request: Request, inventaire_id: int, base: SessionBase):
     if charger_inventaire(base, inventaire_id).clos_le is not None:
         return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi", status_code=303)
     vue = apercu(base, inventaire_id)
-    attente = {b.groupe.cle: len(b.photos) for b in vue.bouteilles if b.groupe.cle}
+    # Clé -> photos déjà reçues (leurs identifiants : la page montre leurs miniatures).
+    attente = {b.groupe.cle: [p.id for p in b.photos] for b in vue.bouteilles if b.groupe.cle}
     return page(
         request,
         "depot.html",

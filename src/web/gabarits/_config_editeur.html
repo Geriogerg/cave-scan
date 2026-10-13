@@ -49,18 +49,29 @@
           </span>
         </div>
 
+        {#- Repliée par défaut : 16 colonnes ouvertes faisaient 10 000 px (T1-S3). Une
+            colonne nouvelle ou refusée s'ouvre d'elle-même. Fermée, elle part quand même. #}
+        <details class="colonne-detail" {% if c.nouvelle or c.en_erreur %}open{% endif %}>
+        <summary>Modifier ·
+          {% for v, l in types %}{% if v == d.type %}{{ l }}{% endif %}{% endfor %} ·
+          {% for v, l in sources %}{% if v == d.source %}{{ l }}{% endif %}{% endfor %}
+          {% if d.type == "liste" %} · {{ (d.valeurs or []) | length }} valeur(s){% endif %}
+        </summary>
         <div class="colonne-champs">
           <label>Nom (en-tête de l'Excel)
             <input type="text" name="c{{ i }}_nom" value="{{ d.nom or '' }}" maxlength="200">
           </label>
-          <label>Clé
-            {% if c.nouvelle %}
-              <input type="text" name="c{{ i }}_cle" value="{{ d.cle or '' }}" placeholder="créée à partir du nom" maxlength="60">
-            {% else %}
-              <input type="hidden" name="c{{ i }}_cle" value="{{ d.cle }}">
-              <code class="cle-figee" title="Une clé enregistrée ne change plus : les inventaires s'y réfèrent">{{ d.cle }}</code>
-            {% endif %}
-          </label>
+          {#- La clé est un détail technique (T1-S6) : créée à partir du nom, figée ensuite. #}
+          {% if c.nouvelle %}
+          <details class="large detail-avance">
+            <summary>Réglage avancé : identifiant interne</summary>
+            <label>Identifiant (facultatif)
+              <input type="text" name="c{{ i }}_cle" value="{{ d.cle or '' }}" placeholder="créé à partir du nom" maxlength="60">
+            </label>
+          </details>
+          {% else %}
+          <input type="hidden" name="c{{ i }}_cle" value="{{ d.cle }}">
+          {% endif %}
           <label>Type
             <select name="c{{ i }}_type" hx-post="{{ adresse }}" hx-trigger="change" hx-target="#editeur"
                     hx-swap="outerHTML" hx-vals='{"action": "afficher"}'>
@@ -128,6 +139,7 @@
           {% else %}
             <p class="aide">Aperçu disponible quand la colonne est complète (nom, clé, type, valeurs).</p>
           {% endif %}
+        </details>
         </details>
       </li>
     {% endfor %}

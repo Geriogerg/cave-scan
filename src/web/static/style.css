@@ -110,6 +110,9 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 .envoi.refusee { border-color: var(--alerte); }
 .envoi.refusee .envoi-etat { color: var(--alerte); white-space: normal; max-width: 60%; }
 .envoi.reessai .envoi-etat { color: var(--attention); }
+/* Les envois réussis se voient sur les vignettes : la liste ne garde que ce qui
+   attend ou a été refusé (rapport du testeur, T1-S4). */
+.envois .envoi.ok, .envois .envoi.deja { display: none; }
 
 /* Dépôt : une bouteille = ses photos (session 6) */
 .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 12px 0; border: 1px solid var(--bordure); border-radius: var(--rayon); overflow: hidden; }
@@ -158,6 +161,11 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 .quantite-attente { display: flex; align-items: center; gap: 6px; }
 .quantite-attente input { width: 4em; text-align: center; min-height: 44px; }
 .attente-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+@media (max-width: 719px) {
+  .attente-photos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .attente-photos .vignette-actions .bouton { width: 100%; min-height: 40px; padding: 4px 6px; font-size: 0.8rem; }
+  .attente-photos figcaption { display: none; }
+}
 .en-attente .barre-actions { position: sticky; margin: 16px -16px 0; }
 .vignette { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .vignette img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; background: #eee; }
@@ -318,7 +326,9 @@ textarea {
 .colonne-champs label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 0.95rem; }
 .colonne-champs .large { grid-column: 1 / -1; }
 .colonne-champs .case { flex-direction: row; font-weight: 400; margin: 4px 0; }
-.cle-figee { padding: 12px 0; }
+.colonne-detail > summary { cursor: pointer; color: var(--texte-doux); padding: 10px 0; }
+.colonne-detail[open] > summary { margin-bottom: 8px; }
+.detail-avance > summary { cursor: pointer; color: var(--texte-doux); font-weight: 400; padding: 8px 0; }
 .valeurs-config { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
 .valeurs-config th { text-align: left; font-weight: 600; padding: 4px; color: var(--texte-doux); }
 .valeurs-config td { padding: 3px 4px; }

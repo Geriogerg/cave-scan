@@ -23,7 +23,8 @@
   var inventaire = racine.dataset.inventaire;
   var maximum = parseInt(racine.dataset.max, 10) || 4;
   var prochainServeur = parseInt(racine.dataset.prochain, 10) || 1;
-  var attenteServeur = lireJson(racine.dataset.attente);  // clé -> photos déjà reçues
+  var dejaFormees = parseInt(racine.dataset.formees, 10) || 0;
+  var attenteServeur = lireJson(racine.dataset.attente);  // clé -> identifiants des photos déjà reçues
   var tailleCible = parseInt(racine.dataset.taille, 10) || 2500;
   var SIMULTANES = 3;
   var CLE_ETAT = "cave-scan-depot-" + inventaire;
@@ -89,13 +90,25 @@
 
   function nombrePhotos(bouteille) { return bouteille.recues + enAttenteLocale(bouteille); }
 
+  // Le numéro AFFICHÉ, celui que donnera l'écran « Vérifier » : les bouteilles
+  // déjà dans l'inventaire, puis celles qui ont des photos, dans l'ordre. Une
+  // bouteille encore vide (celle de l'appareil photo, en mode galerie) ne
+  // prend pas de numéro aux autres (rapport du testeur, T1-m4).
+  function rang(bouteille) {
+    var avant = toutes().filter(function (b) {
+      return b !== bouteille && b.numero < bouteille.numero && nombrePhotos(b) > 0;
+    }).length;
+    return dejaFormees + avant + 1;
+  }
+
   // Au chargement : le serveur dit ce qu'il a déjà. Une bouteille qu'il n'attend
   // plus (lancée, ou supprimée à la vérification) et sans envoi en cours est
   // terminée : la page passe à une nouvelle.
   function reconcilier() {
     function encoreAttendue(bouteille) {
       if (Object.prototype.hasOwnProperty.call(attenteServeur, bouteille.cle)) {
-        bouteille.recues = attenteServeur[bouteille.cle];
+        bouteille.miniatures = attenteServeur[bouteille.cle];
+        bouteille.recues = bouteille.miniatures.length;
         return true;
       }
       if (enAttenteLocale(bouteille)) return true;
@@ -210,7 +223,7 @@
   function afficherAppareil() {
     var bouteille = etat.enCours;
     var nombre = nombrePhotos(bouteille);
-    titreEnCours.textContent = "Bouteille " + bouteille.numero;
+    titreEnCours.textContent = "Bouteille " + rang(bouteille);
     compteur.textContent = nombre + " / " + maximum + " photo" + (nombre > 1 ? "s" : "");
     champQuantite.value = bouteille.quantite;
     var plein = nombre >= maximum;
@@ -225,7 +238,7 @@
       ligne.className = "precedente";
       var texte = document.createElement("span");
       var enCours = enAttenteLocale(b);
-      texte.textContent = "Bouteille " + b.numero + " · " + nombrePhotos(b) + " photo(s)"
+      texte.textContent = "Bouteille " + rang(b) + " · " + nombrePhotos(b) + " photo(s)"
         + (b.quantite > 1 ? " · × " + b.quantite : "") + (enCours ? " · envoi en cours" : " · reçue");
       var bouton = document.createElement("button");
       bouton.type = "button";
@@ -256,7 +269,7 @@
       var tete = document.createElement("div");
       tete.className = "en-cours-tete";
       var titre = document.createElement("strong");
-      titre.textContent = "Bouteille " + bouteille.numero;
+      titre.textContent = "Bouteille " + rang(bouteille);
       var nombre = document.createElement("span");
       nombre.className = "compteur";
       nombre.textContent = nombrePhotos(bouteille) + " / " + maximum + " photo(s)";
@@ -296,7 +309,7 @@
       champ.inputMode = "numeric";
       champ.size = 3;
       champ.value = bouteille.quantite;
-      champ.setAttribute("aria-label", "Quantité de la bouteille " + bouteille.numero);
+      champ.setAttribute("aria-label", "Quantité de la bouteille " + rang(bouteille));
       champ.addEventListener("change", function () { changerQuantite(bouteille, parseInt(champ.value, 10)); });
       quantite.appendChild(champ);
       actions.appendChild(quantite);
@@ -332,17 +345,29 @@
         image.alt = envoi.nom;
         element.appendChild(image);
       } else {
-        element.textContent = envoi.nom;
+        element.textContent = /\.hei[cf]$/i.test(envoi.nom) ? "📷 HEIC" : envoi.nom;
       }
       conteneur.appendChild(element);
     });
     var anciennes = bouteille.recues - file.filter(function (envoi) {
       return envoi.bouteille.cle === bouteille.cle && (envoi.etat === "ok");
     }).length;
-    if (anciennes > 0) {
+    var miniatures = (bouteille.miniatures || []).slice(0, Math.max(anciennes, 0));
+    miniatures.forEach(function (id) {
+      var recue = document.createElement("li");
+      recue.className = "vignette-depot ok";
+      recue.title = "Photo déjà reçue";
+      var image = document.createElement("img");
+      image.src = api("/photos/" + id + "?taille=miniature");
+      image.alt = "Photo déjà reçue";
+      image.loading = "lazy";
+      recue.appendChild(image);
+      conteneur.appendChild(recue);
+    });
+    if (anciennes > miniatures.length) {
       var note = document.createElement("li");
       note.className = "vignette-depot deja";
-      note.textContent = "+ " + anciennes + " déjà reçue(s)";
+      note.textContent = "+ " + (anciennes - miniatures.length) + " déjà reçue(s)";
       conteneur.appendChild(note);
     }
   }
@@ -411,11 +436,11 @@
     var envoi = {
       bouteille: bouteille, fichier: fichier, nom: fichier.name || "photo.jpg", signature: signature,
       etat: "attente", message: "En attente", essais: 0, idb: null,
-      apercu: window.URL && URL.createObjectURL ? URL.createObjectURL(fichier) : null,
+      apercu: apercuLocal(fichier, fichier.name),
     };
     if (nombrePhotos(bouteille) >= maximum) {
       envoi.ligne = creerLigne(envoi);
-      marquer(envoi, "refusee", "Bouteille " + bouteille.numero + " : " + maximum
+      marquer(envoi, "refusee", "Bouteille " + rang(bouteille) + " : " + maximum
         + " photos au plus. Ajoutez celle-ci à une autre bouteille.");
       return;
     }
@@ -448,7 +473,7 @@
         var envoi = {
           bouteille: bouteille, fichier: garde.fichier, nom: garde.nom, signature: garde.signature,
           etat: "attente", message: "Reprise après interruption", essais: 0, idb: garde.id,
-          apercu: window.URL && URL.createObjectURL ? URL.createObjectURL(garde.fichier) : null,
+          apercu: apercuLocal(garde.fichier, garde.nom),
         };
         envoi.ligne = creerLigne(envoi);
         file.push(envoi);
@@ -524,9 +549,38 @@
       });
   }
 
+  // Le navigateur n'affiche pas une photo HEIC : pas d'aperçu local, plutôt
+  // qu'une image cassée (rapport du testeur, T1-m5). Elle est bien reçue.
+  function apercuLocal(fichier, nom) {
+    if (/\.hei[cf]$/i.test(nom || "") || /hei[cf]/i.test(fichier.type || "")) return null;
+    return window.URL && URL.createObjectURL ? URL.createObjectURL(fichier) : null;
+  }
+
+  // Ce que le serveur a vraiment reçu, bouteille par bouteille : après une
+  // reprise, le compteur dit juste (rapport du testeur, T1-m5).
+  function resynchroniser() {
+    return fetch(api("/apercu"), { headers: { Accept: "application/json" } })
+      .then(function (reponse) { return reponse.ok ? reponse.json() : null; })
+      .then(function (corps) {
+        if (!corps) return;
+        corps.bouteilles.forEach(function (attendue) {
+          toutes().forEach(function (b) {
+            if (b.cle && b.cle === attendue.cle) {
+              b.miniatures = attendue.photos.map(function (p) { return p.id; });
+              b.recues = b.miniatures.length;
+            }
+          });
+        });
+        sauver();
+        rafraichir();
+      })
+      .catch(function () { /* hors ligne : on resynchronisera plus tard */ });
+  }
+
   function terminer(envoi, etatFinal, message) {
     oublier(envoi);  // reçue (ou refusée, avec sa raison affichée) : plus besoin de la garder
     marquer(envoi, etatFinal, message);
+    if (etatFinal === "deja") resynchroniser();
   }
 
   function reessayerPlusTard(envoi) {
@@ -592,7 +646,7 @@
     ligne.className = "envoi attente";
     var nom = document.createElement("span");
     nom.className = "envoi-nom";
-    nom.textContent = "Bouteille " + envoi.bouteille.numero + " · " + envoi.nom;
+    nom.textContent = "Bouteille " + rang(envoi.bouteille) + " · " + envoi.nom;
     var etatEnvoi = document.createElement("span");
     etatEnvoi.className = "envoi-etat";
     etatEnvoi.textContent = envoi.message;

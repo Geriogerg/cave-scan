@@ -182,3 +182,31 @@ def test_parcours_complet_au_format_telephone(application, telephone, tmp_path):
     assert feuille.max_row - 1 == 4  # 4 bouteilles
     quantites = [feuille.cell(row=r, column=2).value for r in range(2, 6)]
     assert quantites == [3, 1, 1, 1]  # « × 3 » saisi à la capture
+
+
+def test_en_mode_galerie_la_premiere_carte_est_la_bouteille_1(application, telephone, tmp_path):
+    """Rapport du testeur, T1-m4 : la bouteille vide de l'appareil photo ne prend
+    pas de numéro ; les numéros du dépôt sont ceux de l'écran « Vérifier »."""
+    dossier = tmp_path / "photos"
+    dossier.mkdir()
+    a, b = photo(dossier / "a.jpg", 1), photo(dossier / "b.jpg", 2)
+    page = telephone.new_page()
+    page.goto(f"{application}/app")
+    page.get_by_role("link", name="Nouvel inventaire").click()
+    page.get_by_label("Nom de la vente").fill("Vente galerie")
+    page.get_by_role("button", name="Créer et ajouter les photos").click()
+    page.wait_for_url("**/depot")
+    page.get_by_role("tab", name="Galerie ou ordinateur").click()
+    carte = page.locator(".carte-galerie").first
+    assert "Bouteille 1" in carte.inner_text()
+    carte.locator("input[type=file]").set_input_files([a])
+    envoyees(page, 1)
+    page.get_by_role("button", name="Ajouter une bouteille").click()
+    seconde = page.locator(".carte-galerie").nth(1)
+    assert "Bouteille 2" in seconde.inner_text()
+    seconde.locator("input[type=file]").set_input_files([b])
+    envoyees(page, 2)
+    page.get_by_role("link", name="Vérifier et lancer").click()
+    page.wait_for_url("**/verifier")
+    titres = page.locator(".carte-attente .attente-titre strong").all_inner_texts()
+    assert titres == ["Bouteille 1", "Bouteille 2"]
