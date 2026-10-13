@@ -4,13 +4,13 @@ Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 
 - Tour : 3
 - Phase : tester
-- Agents lancés : non
+- Agents lancés : oui (2026-10-13 — bugs, design, vérificateur)
 - Rapport précédent : docs/tests/rapports/tour2.md
 - À tester en priorité : corrections du tour 2 (lots 7–8, jamais revérifiées)
   et nouveautés non vues par un agent — une instance = une maison (0171),
   configuration créée à la main (0172), consignes modifiables (0173), textes
   raccourcis (parcours P10, P11, P12).
-- Dernière mise à jour : 2026-10-13, R2 faite et R2b tranchée, boucle non lancée.
+- Dernière mise à jour : 2026-10-13, boucle lancée par /loop ; tour 3 en cours de test.
 
 ## Recommandations (vérifiées par l'agent `verificateur` à chaque tour)
 
