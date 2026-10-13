@@ -603,6 +603,14 @@
             .catch(function () { return { message: "Refusée par le serveur." }; })
             .then(function (corps) { terminer(envoi, "refusee", corps.message || "Refusée par le serveur."); });
         }
+        // 502/503/504 : passage ; toute autre erreur du serveur n'est PAS une
+        // coupure : au bout de 3 essais, la photo est refusée avec la raison,
+        // et elle n'est plus renvoyée (T4-B1).
+        if ([502, 503, 504].indexOf(reponse.status) < 0 && envoi.essais >= 2) {
+          terminer(envoi, "refusee", "« " + envoi.nom + " » : le serveur n'a pas pu l'enregistrer. Retirez-la, "
+            + "ou reprenez la photo.");
+          return;
+        }
         throw new Error("serveur " + reponse.status);
       })
       .catch(function () { reessayerPlusTard(envoi); })

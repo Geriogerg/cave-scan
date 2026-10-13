@@ -124,7 +124,25 @@
     }
   });
 
+  // Une validation acceptée : la page change ; tout nouvel envoi de validation est
+  // ignoré, et la page suivante n'en accepte pas pendant ses 500 premières ms —
+  // un double appui ne valide jamais la bouteille d'après sans l'avoir vue (T4-B2).
+  window.addEventListener("pageshow", function (evenement) { if (evenement.persisted) location.reload(); });
+  var validationAcceptee = false;
+  var afficheeLe = Date.now();
+  var DELAI_APRES_AFFICHAGE_MS = 500;
+
   document.body.addEventListener("htmx:beforeRequest", function (evenement) {
+    var config = evenement.detail.requestConfig || {};
+    var chemin = config.path || "";
+    // Un APPUI sur le bouton juste après l'affichage : c'est le second appui d'un
+    // double appui. Au clavier, l'expert enchaîne vite : pas de délai (T4-B2).
+    var parAppui = config.triggeringEvent && config.triggeringEvent.submitter;
+    if (/\/valider$/.test(chemin)
+        && (validationAcceptee || (parAppui && Date.now() - afficheeLe < DELAI_APRES_AFFICHAGE_MS))) {
+      evenement.preventDefault();
+      return;
+    }
     var cle = cleDe(evenement.detail.elt);
     // Le champ de la requête est retenu : l'élément qui l'a envoyée (le bouton
     // « Revenir à la valeur du modèle ») peut avoir disparu à la réponse.
@@ -138,6 +156,7 @@
       if (evenement.detail.xhr.status === 204) {
         etats = {};
         quitterSansAlerte = true;
+        validationAcceptee = true;
         // La bouteille suivante le dira (T2-D11) — sans toucher à son adresse,
         // qui doit rester celle qu'on a préchargée.
         try { sessionStorage.setItem("cave-scan-validee", racine.dataset.position || ""); } catch (e) { /* stockage refusé */ }
@@ -161,6 +180,11 @@
     if (statut === 0) {
       poser(cle, "erreur");
       reessayer(cle);
+      return;
+    }
+    if (statut >= 400 && statut !== 409 && statut !== 422) {  // 404… : rien n'est enregistré (T4-B4)
+      poser(cle, "refuse");
+      annoncer("Cette bouteille ou cet inventaire n'est plus disponible (mis à la corbeille, retiré ou clos ailleurs ?) : rechargez la page. Votre dernière saisie n'est pas enregistrée.");
       return;
     }
     essais[cle] = 0;
@@ -189,6 +213,10 @@
       return;
     }
     if (statut === 204) return;
+    if (statut >= 400 && statut !== 409 && statut !== 422) {
+      annoncer("Cette bouteille ou cet inventaire n'est plus disponible (mis à la corbeille, retiré ou clos ailleurs ?) : rechargez la page. La bouteille n'est pas validée.");
+      return;
+    }
     if (document.querySelector("#messages [data-conflit]")) return;  // rien n'a été écrit
     // Refus : le serveur a enregistré les saisies valides, les autres sont signalées.
     Object.keys(etats).forEach(function (cle) {
@@ -280,6 +308,7 @@
 
   function valider() {
     if (aide && aide.open) return;
+    if (validationAcceptee) return;  // déjà partie : la page change (T4-B2)
     compterLeTemps();
     var suivante = document.querySelector("#valider[data-lecture-seule]");
     if (suivante) { location.href = suivante.href; return; }  // inventaire clos : on passe, simplement
@@ -314,6 +343,7 @@
       if (touche === "?") { evenement.preventDefault(); aide.close(); }
       return;  // Échap ferme la boîte d'aide (navigateur)
     }
+    if (touche === "Enter" && evenement.repeat) { evenement.preventDefault(); return; }  // touche maintenue (T4-B2)
     if (touche === "Enter" && (evenement.ctrlKey || evenement.metaKey)) {
       evenement.preventDefault();
       valider();

@@ -106,3 +106,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 4 | T4-D6 | mineur | Excel refusé affiché en vert | Corrigé : en jaune | lot 15 |
 | 4 | T4-D11 | mineur | « Séparer » retire la validation sans le dire | Corrigé : « la bouteille d'origine est à revalider » | lot 15 |
 | 4 | T3-D2 / T4-B11 | mineur | « (few-shot) » ; alerte sur toute citation des consignes | Corrigé : plus de jargon ; dans les consignes, seule une annonce d'exemple ou « réponds … « » » alerte ; test | lot 15 |
+| 4 | T4-B1 | bloquant | Photo tronquée ou de plus de 179 Mpx : 500, boucle « Coupure », dépôt bloqué | Corrigé : refus en clair (« abîmée », « trop de pixels »), décodage vérifié à la réception ; côté écran, une erreur serveur qui n'est pas un passage (502–504) devient un refus au 3e essai, la photo n'est plus renvoyée ; test | lot 16 |
+| 4 | T4-B2 | majeur | Double appui sur Valider : bouteille suivante validée sans être vue | Corrigé : une validation acceptée ferme la page aux suivantes ; un appui au bouton dans les 500 ms d'un affichage est ignoré (le clavier de l'expert, non) ; Entrée maintenue ignorée ; test navigateur | lot 16 |
+| 4 | T4-B3 / T4-D12 | majeur | Retour arrière : page périmée, faux conflit | Corrigé : `Cache-Control: no-store` sur les écrans, rechargement si la page vient du cache ; test | lot 16 |
+| 4 | T4-B4 | majeur | 404 affiché « Tout est enregistré » | Corrigé : « n'est plus disponible : rechargez la page », champ refusé, validation dite non faite | lot 16 |
+| 4 | T4-B5 | majeur | Coupure réseau muette sur Vérifier et la configuration | Corrigé : « Connexion interrompue : l'action n'a pas été faite » | lot 16 |
+| 4 | T4-B7 | mineur | Double appui : deux inventaires, faux « Action impossible » | Corrigé : un formulaire classique ne part qu'une fois ; test navigateur | lot 16 |

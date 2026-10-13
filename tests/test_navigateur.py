@@ -305,3 +305,16 @@ def test_en_galerie_le_refus_d_une_photo_est_dans_la_carte(application, telephon
         assert "faux.jpg" in page.locator(".carte-galerie .refus-bouteille").inner_text()
     finally:
         ordinateur.close()
+
+
+def test_un_double_appui_sur_creer_ne_cree_qu_un_inventaire(application, telephone):
+    """T4-B7 : au doigt, deux appuis sur « Créer et ajouter les photos » = un inventaire."""
+    page = telephone.new_page()
+    page.goto(f"{application}/app/nouveau")
+    page.get_by_label("Nom de la vente").fill("Vente double appui")
+    # Deux appuis à 80 ms, comme au doigt, avant que la page ne change.
+    page.evaluate("() => { const b = document.querySelector('button[form=formulaire-nouveau]'); b.click(); setTimeout(() => b.click(), 80); }")
+    page.wait_for_timeout(1500)
+    page.wait_for_url("**/depot")
+    noms = [i["nom"] for i in httpx.get(f"{application}/inventaires").json()]
+    assert noms.count("Vente double appui") == 1

@@ -192,6 +192,13 @@ def _verifier_image(chemin: Path, nom_origine: str) -> Path:
     return chemin
 
 
+TROP_GRANDE = (
+    "« {nom} » a trop de pixels pour être lue (plus de 179 millions) : réglez l'appareil sur une "
+    "résolution plus basse, ou cochez « Réduire les photos avant l'envoi »."
+)
+ABIMEE = "« {nom} » est abîmée (fichier incomplet ?) : reprenez la photo, ou copiez-la de nouveau."
+
+
 def verifier_image(chemin: Path, nom_origine: str) -> str:
     """Le fichier est-il vraiment une image JPEG, PNG ou HEIC ? On l'OUVRE pour le
     savoir. Renvoie l'extension qui correspond à son contenu (« .jpg », « .png »
@@ -200,6 +207,8 @@ def verifier_image(chemin: Path, nom_origine: str) -> str:
         with Image.open(chemin) as image:
             format_lu = image.format
             image.verify()
+    except Image.DecompressionBombError:
+        raise EnvoiRefuse(TROP_GRANDE.format(nom=nom_origine)) from None
     except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
         raise EnvoiRefuse(f"« {nom_origine} » n'est pas une image lisible (JPEG, PNG ou HEIC attendu).") from None
     if format_lu not in FORMATS_ACCEPTES:

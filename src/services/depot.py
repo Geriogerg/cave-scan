@@ -35,6 +35,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO
 
+from PIL import Image
 from sqlalchemy import exists, func, select, update
 from sqlalchemy.orm import Session
 
@@ -141,7 +142,14 @@ def ajouter_photo(
         empreinte = empreinte_fichier(fichier)
         date = prise_de_vue or date_de_prise_de_vue(fichier)
         relatif = stocker(fichier, stockage, empreinte)
-    envoi.miniature(stockage, relatif, empreinte)
+    try:
+        # Décoder la photo entière : une photo tronquée passe `verify()` et ne se
+        # révèle qu'ici (T4-B1) — refusée en clair, jamais une erreur 500.
+        envoi.miniature(stockage, relatif, empreinte)
+    except Image.DecompressionBombError:
+        raise EnvoiRefuse(envoi.TROP_GRANDE.format(nom=nom_origine)) from None
+    except (OSError, SyntaxError, ValueError):
+        raise EnvoiRefuse(envoi.ABIMEE.format(nom=nom_origine)) from None
 
     inventaire = _verrouiller(session, inventaire_id)
     deja = session.scalar(

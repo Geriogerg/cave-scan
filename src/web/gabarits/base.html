@@ -21,6 +21,34 @@
   <script>
     /* Toute réponse 500 à une action HTMX se dit, en français, au lieu d'un
        écran qui ne bouge pas (rapport du testeur, T2-1). */
+    function signaler(texte) {
+      var zone = document.getElementById("erreur-serveur");
+      if (!zone) {
+        zone = document.createElement("p");
+        zone.id = "erreur-serveur";
+        zone.className = "message alerte";
+        zone.setAttribute("role", "alert");
+        document.querySelector("main").prepend(zone);
+      }
+      zone.textContent = texte;
+      zone.scrollIntoView({ block: "center" });
+    }
+    /* Coupure réseau ou délai dépassé : l'action n'a pas été faite, et l'écran le dit
+       (Vérifier, Configuration… ; la relecture a son propre message, T4-B5). */
+    ["htmx:sendError", "htmx:timeout"].forEach(function (nom) {
+      document.addEventListener(nom, function () {
+        if (document.getElementById("indicateur")) return;
+        signaler("Connexion interrompue : l'action n'a pas été faite. Vérifiez le réseau et réessayez.");
+      });
+    });
+    /* Un formulaire classique (créer, rouvrir, corbeille…) ne part qu'une fois :
+       un double appui ne crée pas deux inventaires (T4-B7). */
+    document.addEventListener("submit", function (e) {
+      var formulaire = e.target;
+      if (e.defaultPrevented || formulaire.hasAttribute("hx-post")) return;  // annulé (confirmation refusée) ou HTMX
+      if (formulaire.dataset.envoye) { e.preventDefault(); return; }
+      formulaire.dataset.envoye = "1";
+    });
     document.addEventListener("htmx:responseError", function (e) {
       if (e.detail.xhr.status < 500 || document.getElementById("indicateur")) return;  // la relecture a son propre message
       var zone = document.getElementById("erreur-serveur");

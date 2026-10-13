@@ -87,7 +87,11 @@ gabarits.env.globals["auteur_des_ecrans"] = auteur_des_ecrans
 
 
 def page(request: Request, gabarit: str, statut: int = 200, **contexte) -> HTMLResponse:
-    return gabarits.TemplateResponse(request, gabarit, contexte, status_code=statut)
+    reponse = gabarits.TemplateResponse(request, gabarit, contexte, status_code=statut)
+    # Jamais une page périmée au « retour arrière » : elle se recharge à jour
+    # (une bouteille validée paraissait non validée, puis faux conflit, T4-B3).
+    reponse.headers["Cache-Control"] = "no-store"
+    return reponse
 
 
 # --- accueil et création -------------------------------------------------------------------------

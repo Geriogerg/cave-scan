@@ -362,3 +362,23 @@ def test_passer_a_la_suivante_est_immediat_sur_300_bouteilles(trois_cents, ordin
           f"max {max(durees) * 1000:.0f} ms")
     assert mediane < 0.5, durees  # perçu comme immédiat
     assert sum(1 for d in demandes if "taille=reduite" in d) >= 12
+
+
+def test_un_double_appui_sur_valider_ne_valide_qu_une_bouteille(application, ordinateur, tmp_path):
+    """T4-B2 : deux appuis à 250 ms ne valident jamais la bouteille suivante sans l'avoir vue."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 3)
+    b = ids(application, inventaire_id)
+    page = ordinateur.new_page()
+    page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{b[0]}")
+    sur_la_bouteille(page, b[0])
+    page.wait_for_timeout(600)  # passé le délai de garde de l'affichage
+    page.click("#valider")
+    page.wait_for_timeout(250)
+    try:
+        page.click("#valider", timeout=1000)
+    except Exception:  # bouton désactivé ou page en train de changer : c'est le but
+        pass
+    sur_la_bouteille(page, b[1])
+    page.wait_for_timeout(800)
+    statuts = [httpx.get(f"{application}/inventaires/{inventaire_id}/bouteilles/{x}").json()["statut"] for x in b]
+    assert statuts == ["validee", "extraite", "extraite"]

@@ -212,3 +212,34 @@ def test_une_citation_dans_les_consignes_n_est_pas_un_exemple(tmp_path):
     chemin.write_text(json.dumps(brut, ensure_ascii=False), encoding="utf-8")
     alertes = [a for a in charger_config(chemin).avertissements if a.startswith("Consignes")]
     assert alertes == [] and not any("few-shot" in a for a in charger_config(chemin).avertissements)
+
+
+def test_une_photo_abimee_ou_demesuree_est_refusee_en_clair(session, nom_maison, dossier_photos, stockage, monkeypatch, tmp_path):
+    """T4-B1 (bloquant) : une photo tronquée ou de trop de pixels donnait une 500
+    et bloquait le dépôt ; elle est refusée avec la raison."""
+    import io
+
+    import pytest
+    from PIL import Image
+
+    from src.services.depot import ajouter_photo, creer_brouillon
+    from src.services.envoi import EnvoiRefuse
+
+    brouillon = creer_brouillon(session, nom_maison, CONFIG_TEST, "Vente")
+    tampon = io.BytesIO()
+    Image.new("RGB", (1600, 1200), (120, 40, 60)).save(tampon, "JPEG", quality=95)
+    tronquee = tampon.getvalue()[: len(tampon.getvalue()) // 2]
+    with pytest.raises(EnvoiRefuse, match="abîmée"):
+        ajouter_photo(session, brouillon.inventaire_id, io.BytesIO(tronquee), "tronque.jpg", stockage, bouteille="b1", numero=1)
+
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 1000)  # 100 × 100 = 10 000 : plus de 2 × la limite
+    petite = io.BytesIO()
+    Image.new("RGB", (100, 100)).save(petite, "PNG")
+    with pytest.raises(EnvoiRefuse, match="trop de pixels"):
+        ajouter_photo(session, brouillon.inventaire_id, io.BytesIO(petite.getvalue()), "enorme.png", stockage, bouteille="b1", numero=1)
+
+
+def test_les_ecrans_ne_sont_jamais_servis_depuis_le_cache(api, dossier_photos):
+    """T4-B3 : « retour arrière » = page rechargée, à jour."""
+    inventaire_id = envoyer(api, dossier_photos).json()["id"]
+    assert api.get(f"/app/inventaires/{inventaire_id}/suivi").headers["cache-control"] == "no-store"
