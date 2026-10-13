@@ -132,6 +132,25 @@ def test_retirer_une_photo_supprimer_une_bouteille_changer_la_quantite(api):
     assert "1 bouteille(s) en attente" in supprimee.text
 
 
+def test_la_quantite_tapee_part_avec_le_lancement(api):
+    """Rapport du testeur, T1-B1 : une quantité tapée sans quitter son champ ne
+    doit jamais être perdue au lancement."""
+    inventaire_id = creer(api)
+    deposer(api, inventaire_id, bouteilles=2, photos=1)
+    groupes = [b["groupe_id"] for b in attente(api, inventaire_id)]
+    page = api.get(f"/app/inventaires/{inventaire_id}/verifier").text
+    assert 'hx-include=".quantite-attente"' in page and 'hx-trigger="change, submit"' in page
+    refus = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX,
+                     data={"groupe": [str(g) for g in groupes], "quantite": ["6", "zéro"]})
+    assert "Quantité invalide" in refus.text and "Rien n&#39;a été lancé" in refus.text
+    assert api.get(f"/inventaires/{inventaire_id}").json()["statut"] == "brouillon"
+    lance = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX,
+                     data={"groupe": [str(g) for g in groupes], "quantite": ["6", "1"]})
+    assert lance.status_code == 204
+    quantites = [b["quantite"] for b in api.get(f"/inventaires/{inventaire_id}/bouteilles").json()["bouteilles"]]
+    assert quantites == [6, 1]
+
+
 def test_ajouter_des_bouteilles_apres_le_lancement(api):
     inventaire_id = creer(api)
     deposer(api, inventaire_id, bouteilles=2, photos=1)

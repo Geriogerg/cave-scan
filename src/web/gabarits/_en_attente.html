@@ -13,10 +13,12 @@
     <li class="carte-attente" id="groupe-{{ g.id }}">
       <div class="attente-titre">
         <strong>Bouteille {{ b.numero }}</strong>
-        <form class="quantite-attente" hx-post="/app/inventaires/{{ id }}/verifier/quantite/{{ g.id }}" {{ cible | safe }}>
-          <label>× <input type="text" inputmode="numeric" name="quantite" value="{{ g.quantite }}" size="3"
+        {#- Enregistrée dès qu'elle change ; « Lancer l'analyse » l'emporte aussi (rien de perdu). #}
+        <form class="quantite-attente" hx-post="/app/inventaires/{{ id }}/verifier/quantite/{{ g.id }}"
+              hx-trigger="change, submit" {{ cible | safe }}>
+          <input type="hidden" name="groupe" value="{{ g.id }}">
+          <label>Quantité <input type="text" inputmode="numeric" name="quantite" value="{{ g.quantite }}" size="3"
                           aria-label="Quantité de la bouteille {{ b.numero }}"></label>
-          <button class="lien" type="submit">Enregistrer</button>
         </form>
       </div>
       <div class="attente-photos">
@@ -50,7 +52,7 @@
   <nav class="barre-actions">
     <a class="bouton" href="/app/inventaires/{{ id }}/depot">Ajouter des photos</a>
     <button class="bouton principal" id="lancer" {% if not vue.peut_lancer %}disabled{% endif %}
-            hx-post="/app/inventaires/{{ id }}/lancer" {{ cible | safe }}
+            hx-post="/app/inventaires/{{ id }}/lancer" hx-include=".quantite-attente" {{ cible | safe }}
             hx-confirm="Lancer l'analyse de {{ vue.bouteilles | length }} bouteille(s) ? Leurs photos ne pourront plus être modifiées.">Lancer l'analyse</button>
   </nav>
 </section>

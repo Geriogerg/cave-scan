@@ -88,6 +88,11 @@ async def importer_un_fichier(
         erreurs = [f"« {fichier.filename} » n'est pas un fichier texte JSON (UTF-8 attendu)."]
     except ConfigInvalide as refus:
         erreurs = refus.erreurs
+    except ConfigInchangee as refus:  # le fichier qu'on vient d'exporter : rien à faire
+        return page(
+            request, "configuration.html",
+            maisons=configs_disponibles(base, request.app.state.configs), info=f"« {fichier.filename} » : {refus}",
+        )
     else:
         cible = f"/app/configuration/{enregistree.fichier.stem}?enregistree={enregistree.version}"
         return RedirectResponse(cible, status_code=303)

@@ -215,8 +215,15 @@ def quantite(request: Request, inventaire_id: int, groupe_id: int, base: Session
 
 
 @routeur.post("/app/inventaires/{inventaire_id}/lancer")
-def lancer_l_analyse(request: Request, inventaire_id: int, base: SessionBase, stockage: Stockage):
+async def lancer_l_analyse(request: Request, inventaire_id: int, base: SessionBase, stockage: Stockage):
+    # Les quantités affichées partent avec le lancement : une quantité tapée
+    # sans avoir quitté son champ n'est jamais perdue.
+    saisies = await request.form()
     try:
+        for groupe, quantite in zip(saisies.getlist("groupe"), saisies.getlist("quantite"), strict=False):
+            if not str(quantite).strip().isdigit() or int(quantite) < 1:
+                raise ModificationRefusee(f"Quantité invalide : « {quantite} » (entier ≥ 1 attendu). Rien n'a été lancé.")
+            quantite_du_groupe(base, inventaire_id, int(groupe), int(quantite))
         finaliser(base, inventaire_id, stockage)
     except ERREURS_DE_SERVICE as refus:
         return page(request, "_en_attente.html", vue=apercu(base, inventaire_id), erreur=str(refus))

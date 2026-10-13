@@ -205,6 +205,15 @@ def test_importer_un_fichier(client, configs):
     assert "type &#39;date&#39; inconnu" in refus.text
 
 
+def test_reimporter_la_version_active_n_est_pas_une_erreur(client):
+    """Rapport du testeur, T1-B2 : le fichier qu'on vient d'exporter, réimporté tel quel."""
+    active = client.get(f"/app/configuration/{NOM}/export")
+    reponse = client.post(
+        "/app/configuration/importer", files={"fichier": ("maison.json", active.content, "application/json")}
+    )
+    assert reponse.status_code == 200 and "Aucun changement" in reponse.text
+
+
 def test_exporter_la_version_active_et_les_anciennes(client):
     active = client.get(f"/app/configuration/{NOM}/export")
     assert active.status_code == 200 and "attachment" in active.headers["content-disposition"]

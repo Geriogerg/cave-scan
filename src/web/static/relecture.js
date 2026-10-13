@@ -83,9 +83,23 @@
     zone.appendChild(message);
   }
 
+  // Revenue à la valeur affichée au chargement : rien à enregistrer (aucun
+  // « change » ne suivra), le champ n'est donc pas « en cours ».
+  function commeAuChargement(saisie) {
+    if (saisie.tagName === "SELECT") {
+      return Array.prototype.every.call(saisie.options, function (o) { return o.selected === o.defaultSelected; });
+    }
+    return "defaultValue" in saisie && saisie.value === saisie.defaultValue;
+  }
+
   fiche.addEventListener("input", function (evenement) {
     var cle = cleDe(evenement.target);
-    if (cle) poser(cle, "modifie");
+    if (!cle) return;
+    if (commeAuChargement(evenement.target)) {
+      if (etats[cle] === "modifie") poser(cle, "enregistre");
+      return;
+    }
+    poser(cle, "modifie");
   });
 
   // Une réponse « refusé » (422) ou « modifié ailleurs » (409) est une page à
@@ -100,6 +114,9 @@
 
   document.body.addEventListener("htmx:beforeRequest", function (evenement) {
     var cle = cleDe(evenement.detail.elt);
+    // Le champ de la requête est retenu : l'élément qui l'a envoyée (le bouton
+    // « Revenir à la valeur du modèle ») peut avoir disparu à la réponse.
+    if (evenement.detail.xhr) evenement.detail.xhr.cleDuChamp = cle;
     if (cle) poser(cle, "envoi");
   });
 
@@ -118,7 +135,7 @@
     var statut = evenement.detail.xhr ? evenement.detail.xhr.status : 0;
     var chemin = evenement.detail.requestConfig ? evenement.detail.requestConfig.path : "";
     if (/\/valider$/.test(chemin)) return apresValidation(statut);
-    var cle = cleDe(elt);
+    var cle = (evenement.detail.xhr && evenement.detail.xhr.cleDuChamp) || cleDe(elt);
     if (!cle) return;
     if (statut === 0 || statut >= 500) {
       poser(cle, "erreur");

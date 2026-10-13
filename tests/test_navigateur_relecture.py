@@ -226,6 +226,35 @@ def test_le_temps_passe_sur_une_bouteille_compte_meme_sans_la_valider(applicatio
     assert httpx.get(f"{application}/inventaires/{inventaire_id}/bouteilles/{b[0]}").json()["statut"] == "extraite"
 
 
+def test_revenir_au_modele_ou_retaper_la_meme_valeur_ne_bloque_pas(application, ordinateur, tmp_path):
+    """Rapport du testeur, T1-M1 : après « Revenir à la valeur du modèle », ou une
+    saisie revenue à l'identique, l'écran ne doit pas rester « en cours »."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 3)
+    b = ids(application, inventaire_id)
+    page = ordinateur.new_page()
+    page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{b[0]}")
+    sur_la_bouteille(page, b[0])
+
+    page.fill("#saisie-millesime", "1961")
+    page.keyboard.press("Escape")
+    tout_est_enregistre(page)
+    page.click("#pied-millesime button:has-text('Revenir')")
+    tout_est_enregistre(page)
+    page.keyboard.press("k")
+    sur_la_bouteille(page, b[1])
+
+    domaine = page.input_value("#saisie-domaine")
+    page.click("#saisie-domaine")
+    page.keyboard.press("End")
+    page.keyboard.type("x")
+    page.keyboard.press("Backspace")
+    assert page.input_value("#saisie-domaine") == domaine
+    page.keyboard.press("Escape")
+    tout_est_enregistre(page)
+    page.keyboard.press("k")
+    sur_la_bouteille(page, b[2])
+
+
 def test_deux_onglets_sur_la_meme_bouteille(application, ordinateur, tmp_path):
     inventaire_id = inventaire_extrait(application, tmp_path, 2)
     premiere = ids(application, inventaire_id)[0]
