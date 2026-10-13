@@ -2,15 +2,13 @@
 
 Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 
-- Tour : 3
-- Phase : corriger (tour 3 : rapports vérificateur et design ; le passage bugs s'est arrêté sur la limite de session, sans rapport — non relancé : le tour 4 complet revérifiera)
+- Tour : 4
+- Phase : tester
 - Agents lancés : oui (2026-10-13 — bugs, design, vérificateur)
-- Rapport précédent : docs/tests/rapports/tour2.md
-- À tester en priorité : corrections du tour 2 (lots 7–8, jamais revérifiées)
-  et nouveautés non vues par un agent — une instance = une maison (0171),
-  configuration créée à la main (0172), consignes modifiables (0173), textes
-  raccourcis (parcours P10, P11, P12).
-- Dernière mise à jour : 2026-10-13, boucle lancée par /loop ; tour 3 en cours de test.
+- Rapport précédent : docs/tests/rapports/tour3.md
+- À tester en priorité : les corrections des lots 9 à 14 (tour 3), et tout ce
+  que le passage bugs du tour 3 n'a pas pu voir (il s'est arrêté sans rapport).
+- Dernière mise à jour : 2026-10-13, tour 3 corrigé (lots 9 à 14), tour 4 lancé.
 
 ## Recommandations (vérifiées par l'agent `verificateur` à chaque tour)
 
@@ -29,3 +27,4 @@ Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 |---|---|---|---|
 | 1 | rapports/tour1.md | 2 bloquants, 4 majeurs, 14 mineurs, 9 suggestions | 1–6 |
 | 2 | rapports/tour2.md | 1 bloquant, 2 majeurs, 15 mineurs, 7 suggestions | 7–8 |
+| 3 | rapports/tour3.md | vérificateur : R2b ✅, R1/R2 ⚠️, R3/R5 ❌ ; design : 1 bloquant, 4 majeurs, 19 mineurs, 8 suggestions ; bugs : sans rapport (limite de session) | 9–14 |
