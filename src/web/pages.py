@@ -150,7 +150,7 @@ def depot(request: Request, inventaire_id: int, base: SessionBase):
     # Clé -> photos déjà reçues (leurs identifiants : la page montre leurs
     # miniatures) et numéro : un autre appareil voit aussi ces bouteilles (T2-D1).
     attente = {
-        b.groupe.cle: {"photos": [p.id for p in b.photos], "numero": b.groupe.numero}
+        b.groupe.cle: {"photos": [p.id for p in b.photos], "numero": b.groupe.numero, "quantite": b.groupe.quantite}
         for b in vue.bouteilles
         if b.groupe.cle
     }

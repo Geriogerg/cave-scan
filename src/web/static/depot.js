@@ -112,6 +112,9 @@
       if (Object.prototype.hasOwnProperty.call(attenteServeur, bouteille.cle)) {
         bouteille.miniatures = attenteServeur[bouteille.cle].photos;
         bouteille.recues = bouteille.miniatures.length;
+        // La quantité du serveur fait foi, sauf un changement fait ici et pas
+        // encore envoyé (T3-D1 : jamais « 1 » écrasant la vraie quantité).
+        if (!bouteille.quantiteAEnvoyer) bouteille.quantite = attenteServeur[bouteille.cle].quantite || 1;
         return true;
       }
       if (enAttenteLocale(bouteille)) return true;
@@ -123,7 +126,8 @@
     // navigateur) : elles sont listées, numérotées, et comptées (T2-D1).
     Object.keys(attenteServeur).forEach(function (cle) {
       if (toutes().some(function (b) { return b.cle === cle; })) return;
-      etat.precedentes.push({ cle: cle, numero: attenteServeur[cle].numero, quantite: 1, recues: 0, quantiteAEnvoyer: false });
+      etat.precedentes.push({ cle: cle, numero: attenteServeur[cle].numero, quantite: attenteServeur[cle].quantite || 1,
+                              recues: 0, quantiteAEnvoyer: false });
     });
     etat.precedentes.sort(function (a, b) { return a.numero - b.numero; });
     if (etat.enCours && !encoreAttendue(etat.enCours)) etat.enCours = null;
@@ -207,7 +211,7 @@
     });
   });
   champQuantite.addEventListener("change", function () {
-    changerQuantite(etat.enCours, parseInt(champQuantite.value, 10));
+    changerQuantite(etat.enCours, parseInt(champQuantite.value, 10), champQuantite);
   });
 
   document.getElementById("suivante").addEventListener("click", function () {
@@ -243,7 +247,7 @@
     afficherVignettes(vignettesEnCours, bouteille);
 
     precedentes.textContent = "";
-    etat.precedentes.forEach(function (b) {
+    etat.precedentes.slice().sort(function (a, b) { return a.numero - b.numero; }).forEach(function (b) {
       var ligne = document.createElement("li");
       ligne.className = "precedente";
       var texte = document.createElement("span");
@@ -271,9 +275,16 @@
     afficherGalerie();
   });
 
+  // En galerie : les bouteilles déjà photographiées (ici, à l'appareil photo, ou
+  // reçues d'un autre appareil) ont aussi leur carte, dans l'ordre (T3-D12).
+  function bouteillesDeLaGalerie() {
+    var avecPhotos = etat.precedentes.concat(etat.enCours && nombrePhotos(etat.enCours) ? [etat.enCours] : []);
+    return avecPhotos.concat(etat.galerie).sort(function (a, b) { return a.numero - b.numero; });
+  }
+
   function afficherGalerie() {
     cartes.textContent = "";
-    etat.galerie.forEach(function (bouteille) {
+    bouteillesDeLaGalerie().forEach(function (bouteille) {
       var carte = document.createElement("li");
       carte.className = "carte-galerie";
       var tete = document.createElement("div");
@@ -320,7 +331,7 @@
       champ.size = 3;
       champ.value = bouteille.quantite;
       champ.setAttribute("aria-label", "Quantité de la bouteille " + rang(bouteille));
-      champ.addEventListener("change", function () { changerQuantite(bouteille, parseInt(champ.value, 10)); });
+      champ.addEventListener("change", function () { changerQuantite(bouteille, parseInt(champ.value, 10), champ); });
       quantite.appendChild(champ);
       actions.appendChild(quantite);
 
@@ -328,7 +339,7 @@
         var retirer = document.createElement("button");
         retirer.type = "button";
         retirer.className = "lien";
-        retirer.textContent = "Retirer cette carte";
+        retirer.textContent = "Retirer cette bouteille";
         retirer.addEventListener("click", function () {
           etat.galerie = etat.galerie.filter(function (b) { return b !== bouteille; });
           if (!etat.galerie.length) etat.galerie.push(nouvelleBouteille());
@@ -424,13 +435,34 @@
 
   // --- quantité (« × N ») ----------------------------------------------------------------------------
 
-  function changerQuantite(bouteille, valeur) {
+  var QUANTITE_MAX = 100000;
+
+  function changerQuantite(bouteille, valeur, champ) {
+    if (valeur > QUANTITE_MAX) {
+      signalerQuantite(champ, "100 000 au plus.");
+      if (champ) champ.value = bouteille.quantite;
+      return;
+    }
+    signalerQuantite(champ, "");
     if (!(valeur >= 1)) valeur = 1;
     bouteille.quantite = valeur;
     bouteille.quantiteAEnvoyer = true;
     sauver();
     rafraichir();
     envoyerQuantites();
+  }
+
+  // Le refus d'une quantité s'affiche juste à côté du champ (T3-D8).
+  function signalerQuantite(champ, message) {
+    if (!champ) { if (message) afficherResume("Quantité : " + message); return; }
+    var zone = champ.parentNode.querySelector(".refus-quantite");
+    if (!zone && message) {
+      zone = document.createElement("span");
+      zone.className = "refus-quantite alerte-texte";
+      zone.setAttribute("role", "alert");
+      champ.insertAdjacentElement("afterend", zone);
+    }
+    if (zone) zone.textContent = message;
   }
 
   // Une bouteille déjà connue du serveur reçoit sa quantité tout de suite ; sinon
@@ -466,8 +498,10 @@
     };
     if (nombrePhotos(bouteille) >= maximum) {
       envoi.ligne = creerLigne(envoi);
-      marquer(envoi, "refusee", "Bouteille " + rang(bouteille) + " : " + maximum
-        + " photos au plus. Ajoutez celle-ci à une autre bouteille.");
+      file.push(envoi);  // affiché dans la carte et compté dans le résumé (T3-D5)
+      marquer(envoi, "refusee", "« " + envoi.nom + " » : " + maximum
+        + " photos au plus par bouteille. Ajoutez-la à une autre bouteille.");
+      rafraichir();
       return;
     }
     envoi.ligne = creerLigne(envoi);
@@ -538,7 +572,8 @@
     actifs += 1;
     marquer(envoi, "actif", "Préparation…");
     garderEcranAllume();
-    var quantite = envoi.bouteille.quantite;
+    // La quantité ne part que si elle a été changée sur cet appareil (T3-D1).
+    var quantite = envoi.bouteille.quantiteAEnvoyer ? envoi.bouteille.quantite : null;
     preparer(envoi.fichier, envoi.nom)
       .then(function (prete) {
         marquer(envoi, "actif", "Envoi…");
@@ -546,7 +581,7 @@
         donnees.append("fichier", prete.contenu, prete.nom);
         donnees.append("bouteille", envoi.bouteille.cle);
         donnees.append("numero", envoi.bouteille.numero);
-        donnees.append("quantite", quantite);
+        if (quantite !== null) donnees.append("quantite", quantite);
         donnees.append("signature", envoi.signature);
         return fetch(api("/photos"), { method: "POST", body: donnees });
       })

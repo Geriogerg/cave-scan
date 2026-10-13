@@ -68,3 +68,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 3 | T3-R8 / T3-D2 (partie) | majeur | Fausse alerte few-shot sur « observee » | Corrigé : une citation déjà dans le texte d'origine n'est pas signalée ; test. Le jargon du message reste à traiter (T3-D2) | lot 9 |
 | 3 | T3-R7 / T3-R10 | — | Documentation fausse (tests.sh, vérificateur) | Corrigé : textes à jour. Le message du commit e464954 reste faux (historique non réécrit) : R2 n'était pas faite à ce moment | lot 9 |
 | 3 | T3-R9 | — | `test_arret_brutal…` instable sous forte charge | À surveiller, non affaibli (une occurrence, non reproduite) | — |
+| 3 | T3-D1 | bloquant | Quantité remise à 1 en reprenant une bouteille sur un autre appareil | Corrigé : quantité lue sur le serveur, n'est renvoyée que si changée sur cet appareil ; test navigateur à deux appareils | lot 10 |
+| 3 | T3-D12 (T2-D1) | mineur | Bouteilles d'un autre appareil invisibles en galerie | Corrigé : toutes les bouteilles photographiées ont leur carte, dans l'ordre | lot 10 |
+| 3 | T3-D5 (T2-D8) | majeur | Photo refusée pour le plafond, invisible | Corrigé : refus dans la carte et dans le résumé | lot 10 |
+| 3 | T3-D8 | mineur | Quantité démesurée au dépôt : photo refusée | Corrigé : contrôlée à la saisie (message sous le champ) ; la photo n'est plus refusée pour la quantité ; champ de 6 chiffres | lot 10 |
+| 3 | T3-D16 | mineur | Refus de photo : nom coupé | Corrigé : nom entier. Le doublon carte / liste reste : la liste du bas est le seul endroit visible pour une bouteille sans carte à l'écran | lot 10 |
+| 3 | T3-D19 | mineur | Ordre des bouteilles instable | Corrigé : toujours par numéro | lot 10 |

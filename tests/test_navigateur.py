@@ -149,7 +149,9 @@ def test_parcours_complet_au_format_telephone(application, telephone, tmp_path):
 
     # 4. Mode galerie : bouteille 4 = deux photos de la galerie, et un fichier refusé.
     page.get_by_role("tab", name="Galerie ou ordinateur").click()
-    carte = page.locator(".carte-galerie").first
+    # La galerie montre d'abord les bouteilles déjà photographiées (T3-D12), puis la nouvelle.
+    assert page.locator(".carte-galerie").count() == 4
+    carte = page.locator(".carte-galerie").last
     assert "Bouteille 4" in carte.inner_text()
     carte.locator("input[type=file]").set_input_files([e, f, pas_une_image])
     envoyees(page, 3)
@@ -228,3 +230,40 @@ def test_configuration_la_colonne_modifiee_reste_ouverte(application, telephone)
 
     page.locator(f'#colonne-{index} button[value="monter-{index}"]').click()
     page.wait_for_function(f"document.querySelector('#colonne-{index - 1} details.colonne-detail').open === true", timeout=10_000)
+
+
+def test_reprendre_une_bouteille_depuis_un_autre_appareil_garde_sa_quantite(application, telephone, tmp_path):
+    """Rapport du testeur, T3-D1 / T3-D12 : un autre appareil voit les bouteilles
+    déjà reçues (en galerie aussi), avec leur quantité ; y ajouter une photo ne
+    la remet jamais à 1."""
+    dossier = tmp_path / "photos"
+    dossier.mkdir()
+    a, b = photo(dossier / "a.jpg", 1), photo(dossier / "b.jpg", 2)
+    page = telephone.new_page()
+    page.goto(f"{application}/app")
+    page.get_by_role("link", name="Nouvel inventaire").click()
+    page.get_by_label("Nom de la vente").fill("Vente deux appareils")
+    page.get_by_role("button", name="Créer et ajouter les photos").click()
+    page.wait_for_url("**/depot")
+    inventaire_id = page.url.split("/inventaires/")[1].split("/")[0]
+    page.set_input_files("#camera", a)
+    envoyees(page, 1)
+    page.fill("#quantite", "6")
+    page.locator("#quantite").dispatch_event("change")
+    attendre(lambda: httpx.get(f"{application}/inventaires/{inventaire_id}/apercu").json()["bouteilles"][0]["quantite"] == 6,
+             message="quantité 6 reçue")
+
+    ordinateur = telephone.browser.new_context(viewport={"width": 1440, "height": 900})
+    try:
+        autre = ordinateur.new_page()
+        autre.goto(f"{application}/app/inventaires/{inventaire_id}/depot")
+        autre.get_by_role("tab", name="Galerie ou ordinateur").click()
+        carte = autre.locator(".carte-galerie").first
+        assert "Bouteille 1" in carte.inner_text()
+        assert carte.locator("input[inputmode=numeric]").input_value() == "6"
+        carte.locator("input[type=file]").set_input_files([b])
+        autre.wait_for_function("document.querySelectorAll('.envoi.ok').length === 1", timeout=60_000)
+        vue = httpx.get(f"{application}/inventaires/{inventaire_id}/apercu").json()
+        assert [(len(x["photos"]), x["quantite"]) for x in vue["bouteilles"]] == [(2, 6)]
+    finally:
+        ordinateur.close()

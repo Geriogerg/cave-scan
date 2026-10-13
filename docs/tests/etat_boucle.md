@@ -3,7 +3,7 @@
 Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 
 - Tour : 3
-- Phase : tester (rapports vérificateur et design reçus ; bugs attendu)
+- Phase : corriger (tour 3 : rapports vérificateur et design ; le passage bugs s'est arrêté sur la limite de session, sans rapport — non relancé : le tour 4 complet revérifiera)
 - Agents lancés : oui (2026-10-13 — bugs, design, vérificateur)
 - Rapport précédent : docs/tests/rapports/tour2.md
 - À tester en priorité : corrections du tour 2 (lots 7–8, jamais revérifiées)

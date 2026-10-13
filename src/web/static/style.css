@@ -110,6 +110,7 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 .envoi-etat { flex: none; font-weight: 600; text-align: right; }
 .envoi.ok .envoi-etat, .envoi.deja .envoi-etat { color: var(--ok); }
 .envoi.refusee { border-color: var(--alerte); }
+.envoi.refusee .envoi-nom { white-space: normal; overflow-wrap: anywhere; }
 .envoi.refusee .envoi-etat { color: var(--alerte); white-space: normal; max-width: 60%; }
 .envoi.reessai .envoi-etat { color: var(--attention); }
 /* Les envois réussis se voient sur les vignettes : la liste ne garde que ce qui
@@ -140,12 +141,12 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 .vignette-depot.reessai { border-color: var(--attention); }
 .vignette-depot.deja { width: auto; padding: 0 8px; background: none; color: var(--texte-doux); border-style: dotted; }
 .quantite-depot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.quantite-depot input { width: 4em; text-align: center; }
+.quantite-depot input { width: 6em; text-align: center; }  /* 6 chiffres lisibles (T3-D8) */
 .precedentes { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .precedente { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--texte-doux); }
 .bouteilles-galerie { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .actions-galerie { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.quantite-galerie input { width: 4em; text-align: center; min-height: 44px; }
+.quantite-galerie input { width: 6em; text-align: center; min-height: 44px; }
 .bouton.inactif { opacity: 0.5; pointer-events: none; }
 
 /* Cycle de vie de l'inventaire (session 6) */
