@@ -255,3 +255,40 @@ def test_une_maison_inconnue_est_une_page_introuvable(client):
     reponse = client.get("/app/configuration/inconnue")
     assert reponse.status_code == 404 and "Aucune configuration" in reponse.text
     assert client.get("/app/configuration/..%2F..%2Fsecret").status_code == 404
+
+
+def test_creer_la_configuration_a_la_main_sans_json(tmp_path):
+    """decisions.md 0172 : sans aucun fichier, « Créer la configuration » part
+    des colonnes de base ; on ajoute ensuite une colonne à la main et on enregistre."""
+    vide = tmp_path / "configs_vides"
+    vide.mkdir()
+    with TestClient(creer_app(tmp_path / "base.db", stockage=tmp_path / "stockage", configs=vide)) as client:
+        page = client.get("/app/configuration").text
+        assert "Créer la configuration" in page and "Aucune configuration" in page
+        assert "Choisir" not in client.get("/app/nouveau").text and "importez-la" in client.get("/app/nouveau").text
+
+        creee = client.post("/app/configuration/creer", follow_redirects=False)
+        assert creee.status_code == 303 and "creee=1" in creee.headers["location"]
+        nom = creee.headers["location"].split("/app/configuration/")[1].split("?")[0]
+        editeur = client.get(creee.headers["location"]).text
+        assert "Configuration créée avec les colonnes de base" in editeur
+        config = charger_config(vide / f"{nom}.json")
+        assert [c.cle for c in config.colonnes][:3] == ["id", "quantite", "domaine"]
+
+        # Une colonne ajoutée à la main : nom, type liste, valeurs.
+        champs = formulaire(editeur)
+        champs = formulaire(client.post(f"/app/configuration/{nom}", data=dict(champs, action="ajouter_colonne"),
+                                        headers=HX).text)
+        i = int(champs["nb_colonnes"]) - 1
+        champs.update({f"c{i}_nom": "Caisse", f"c{i}_type": "liste", f"c{i}_source": "expert"})
+        champs = formulaire(client.post(f"/app/configuration/{nom}", data=dict(champs, action="afficher"), headers=HX).text)
+        champs = formulaire(client.post(f"/app/configuration/{nom}", data=dict(champs, action=f"ajouter_valeur-{i}"),
+                                        headers=HX).text)
+        champs.update({f"c{i}_v0_libelle": "Caisse bois d'origine", f"c{i}_v0_description": "CBO"})
+        enregistree = client.post(f"/app/configuration/{nom}", data=dict(champs, action="enregistrer"), headers=HX)
+        assert enregistree.status_code == 204, enregistree.text
+        caisse = charger_config(vide / f"{nom}.json").colonne("caisse")
+        assert caisse is not None and caisse.source == "expert" and "Caisse bois d'origine" in [v.libelle for v in caisse.valeurs]
+
+        assert client.post("/app/configuration/creer").status_code == 409  # une seule configuration
+        assert client.post("/app/nouveau", data={"nom": "Vente"}, follow_redirects=False).status_code == 303

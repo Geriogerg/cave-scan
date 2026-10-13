@@ -345,6 +345,7 @@ textarea {
 .colonne-champs .large { grid-column: 1 / -1; }
 .colonne-champs .case { flex-direction: row; font-weight: 400; margin: 4px 0; }
 .colonne-detail > summary { cursor: pointer; color: var(--texte-doux); padding: 10px 0; }
+.colonne-detail > summary .modifier { color: var(--accent); font-weight: 600; }
 .colonne-detail[open] > summary { margin-bottom: 8px; }
 .detail-avance > summary { cursor: pointer; color: var(--texte-doux); font-weight: 400; padding: 8px 0; }
 .valeurs-config { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }

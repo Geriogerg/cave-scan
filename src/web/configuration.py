@@ -21,6 +21,7 @@ from src.extract.consignes import SYSTEM_PROMPT
 from src.extract.schema import CHAMPS_MODELE
 from src.services.configuration import (
     config_de_l_instance,
+    creer_configuration,
     SOURCES_EDITABLES,
     TYPES_EDITABLES,
     ConfigInchangee,
@@ -81,6 +82,16 @@ def liste(request: Request, base: SessionBase):
     return page(request, "configuration.html")
 
 
+@routeur.post("/app/configuration/creer")
+def creer(request: Request, base: SessionBase):
+    """Créer la configuration à la main, sans JSON (decisions.md 0172)."""
+    try:
+        creee = creer_configuration(base, request.app.state.configs)
+    except ConfigInvalide as refus:
+        return page(request, "configuration.html", 409, erreurs=refus.erreurs, importe=None)
+    return RedirectResponse(f"/app/configuration/{creee.fichier.stem}?creee=1", status_code=303)
+
+
 @routeur.post("/app/configuration/importer")
 async def importer_un_fichier(
     request: Request, base: SessionBase, fichier: Annotated[UploadFile, File()]
@@ -116,9 +127,15 @@ async def importer_un_fichier(
 
 
 @routeur.get("/app/configuration/{nom}")
-def ouvrir(request: Request, nom: str, base: SessionBase, enregistree: Annotated[int | None, Query()] = None):
+def ouvrir(request: Request, nom: str, base: SessionBase, enregistree: Annotated[int | None, Query()] = None,
+           creee: Annotated[int | None, Query()] = None):
     vue = edition(config_du_fichier(request.app.state.configs, nom))
     fait = None
+    if creee:
+        fait = (
+            "Configuration créée avec les colonnes de base. Ajoutez vos colonnes (« Ajouter une colonne », en bas), "
+            "donnez-leur un nom, une description et, pour une liste, ses valeurs ; puis « Enregistrer »."
+        )
     if enregistree is not None:
         fait = (
             f"Version {enregistree} enregistrée : elle s'applique aux prochains inventaires. "

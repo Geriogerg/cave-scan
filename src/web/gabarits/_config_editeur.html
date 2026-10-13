@@ -52,7 +52,7 @@
         {#- Repliée par défaut : 16 colonnes ouvertes faisaient 10 000 px (T1-S3). Une
             colonne nouvelle ou refusée s'ouvre d'elle-même. Fermée, elle part quand même. #}
         <details class="colonne-detail" {% if c.nouvelle or c.en_erreur %}open{% endif %}>
-        <summary>Modifier ·
+        <summary><span class="modifier">✎ Modifier</span> ·
           {% for v, l in types %}{% if v == d.type %}{{ l }}{% endif %}{% endfor %} ·
           {% for v, l in sources %}{% if v == d.source %}{{ l }}{% endif %}{% endfor %}
           {% if d.type == "liste" %} · {{ (d.valeurs or []) | length }} valeur(s){% endif %}

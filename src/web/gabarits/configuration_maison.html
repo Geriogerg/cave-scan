@@ -6,7 +6,9 @@
 {% block contenu %}
 <h1>Configuration</h1>
 <p class="aide">
-  Version active : {{ config.version }}. Les colonnes marquées « noyau » (domaine, appellation, millésime,
+  Version active : {{ config.version }}. Chaque colonne de l'Excel se règle à la main : « ✎ Modifier » pour
+  son nom, sa description pour le modèle, son type, les valeurs d'une liste ; « Ajouter une colonne » en bas
+  de la liste. Les colonnes marquées « noyau » (domaine, appellation, millésime,
   format) sont toujours lues par le modèle, même retirées de l'Excel. Modifiez les colonnes
   ci-dessous puis « Enregistrer » : une version {{ config.version + 1 }} est créée pour les
   prochains inventaires ; ceux déjà créés gardent la leur.

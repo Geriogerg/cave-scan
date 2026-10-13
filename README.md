@@ -310,7 +310,9 @@ configuration : les pages ne parlent jamais de « maison ». La configuration es
 le fichier de `config/maisons/` (s'il y en a plusieurs, `CAVE_SCAN_MAISON` dans
 `.env` désigne le bon).
 
-Depuis l'accueil, **Configuration** : les colonnes de votre Excel.
+Depuis l'accueil, **Configuration** : les colonnes de votre Excel. Sans
+configuration, « Créer la configuration » part des colonnes de base, sans aucun
+fichier : on ajoute ensuite les siennes à la main.
 On ajoute, modifie, réordonne ou retire une colonne (nom, type, source, valeurs
 et leur description, règle), on voit pour chacune ce qui est envoyé au modèle,
 on importe ou exporte le JSON. Chaque enregistrement est vérifié comme un

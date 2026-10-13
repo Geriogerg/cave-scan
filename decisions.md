@@ -1151,6 +1151,16 @@ un renvoi d'une ligne à leur place.
   par sa config JSON (contrainte 6) — écarté : supprimer la notion de maison des
   données (migration sans bénéfice, et les inventaires passés y sont liés).
 
+- 0172 — La configuration se crée à la main, sans JSON (demande de
+  l'utilisateur, 2026-10-13) : sans configuration, la page propose « Créer la
+  configuration », qui part des colonnes de base (N°, quantité, domaine,
+  appellation, millésime, format, à vérifier — le noyau canonique est toujours
+  lu) ; l'expert ajoute ensuite ses colonnes une à une dans l'éditeur (nom,
+  type, source, description, règle, valeurs d'une liste) et enregistre. Le
+  résultat est un fichier JSON comme un autre (contrainte 6), validé de la même
+  façon. L'import d'un JSON reste possible — écarté : un assistant pas à pas
+  (l'éditeur fait déjà tout, sur la même page).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

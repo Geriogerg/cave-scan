@@ -16,6 +16,7 @@ d'autre que produire une NOUVELLE version de ce fichier :
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -118,6 +119,54 @@ def maison_de_l_instance(dossier_configs: Path) -> str | None:
             if plier(maison) == plier(choisie):
                 return maison
     return valides[0] if valides else None
+
+
+# Le point de départ d'une configuration créée à la main (decisions.md 0172) :
+# le numéro, la quantité, le noyau canonique toujours lu par le modèle et la
+# colonne des doutes. Tout le reste s'ajoute ensuite sur la page.
+CONFIGURATION_DE_DEPART: dict[str, Any] = {
+    "version": 1,
+    "langue": "fr",
+    "photos_max_par_bouteille": 4,
+    "regroupement_export": ["domaine", "appellation", "millesime", "format"],
+    "colonnes": [
+        {"cle": "id", "nom": "N°", "type": "texte", "source": "systeme",
+         "description": "Identifiant stable de la bouteille, généré par l'outil."},
+        {"cle": "quantite", "nom": "Quantité", "type": "nombre", "source": "expert",
+         "description": "Nombre de bouteilles identiques et de même état. 1 par défaut."},
+        {"cle": "domaine", "nom": "Domaine / Château", "type": "texte", "source": "modele",
+         "description": "Producteur tel qu'écrit sur l'étiquette."},
+        {"cle": "appellation", "nom": "Appellation", "type": "texte", "source": "modele",
+         "description": "Appellation d'origine, avec la mention Grand Cru / 1er Cru si présente."},
+        {"cle": "millesime", "nom": "Millésime", "type": "texte", "source": "modele",
+         "description": "Année sur 4 chiffres, uniquement si lue sur l'étiquette, jamais déduite."},
+        {"cle": "format", "nom": "Format", "type": "liste", "source": "modele_best_effort",
+         "regle": "Seulement si la contenance est imprimée ou si la photo montre la bouteille entière.",
+         "valeurs": [
+             {"code": "demi_bouteille", "libelle": "Demi-bouteille", "description": "37,5 cl."},
+             {"code": "bouteille", "libelle": "Bouteille", "description": "75 cl."},
+             {"code": "magnum", "libelle": "Magnum", "description": "1,5 L."},
+             {"code": "autre", "libelle": "Autre", "description": "Tout autre format."},
+         ]},
+        {"cle": "a_verifier", "nom": "À vérifier", "type": "texte", "source": "systeme",
+         "description": "Champs incertains signalés par le modèle, pour la relecture."},
+    ],
+}
+
+
+def creer_configuration(session: Session, dossier_configs: Path) -> VersionEnregistree:
+    """Une configuration créée à la main, sans fichier JSON : le point de départ
+    ci-dessus, que l'expert complète ensuite colonne par colonne (0172). Refusé
+    si l'application en a déjà une : on la modifie, on n'en crée pas une autre."""
+    if maison_de_l_instance(dossier_configs) is not None:
+        raise ConfigInvalide("L'application a déjà sa configuration : modifiez-la plutôt.")
+    brut = copy.deepcopy(CONFIGURATION_DE_DEPART)
+    for colonne in brut["colonnes"]:
+        if colonne["cle"] in NOYAU_CANONIQUE:
+            colonne["canonique"] = True
+    # Le nom n'est jamais affiché (une instance = une maison, 0171) ; il nomme le fichier.
+    brut["maison"] = os.environ.get("CAVE_SCAN_MAISON", "").strip() or "Maison de vente"
+    return importer(session, dossier_configs, json.dumps(brut, ensure_ascii=False), "configuration de départ")
 
 
 def config_de_l_instance(dossier_configs: Path) -> ConfigActive | None:
