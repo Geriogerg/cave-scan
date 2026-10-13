@@ -29,3 +29,5 @@ paths:
   une lettre désactivés pendant la saisie dans un champ.
 - Textes courts, orientés action ; chaque état visible (en cours, enregistré,
   refusé avec la raison).
+- Une instance de l'application = une maison : aucune page ne nomme ni ne fait
+  choisir la maison (decisions.md 0171).
