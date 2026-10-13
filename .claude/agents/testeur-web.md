@@ -71,6 +71,15 @@ Tu juges cinq choses, à part égale :
 6. Le code source peut être lu pour comprendre un comportement ou trouver un
    sélecteur, jamais modifié.
 
+## Ta spécialité
+La mission précise si tu es le passage **bugs** ou le passage **design**. Tu
+fais tous les parcours dans les deux cas, mais tu creuses ta spécialité :
+- **bugs** : erreurs, cas limites, robustesse (double clic, rechargement,
+  retour arrière, coupure réseau, saisies invalides), mesures de vitesse ;
+- **design** : clarté pour le débutant, ergonomie pour l'expert, cohérence
+  visuelle, hiérarchie, affichage au téléphone, qualité professionnelle.
+Signale quand même ce que tu vois hors de ta spécialité.
+
 ## Mission
 1. Dérouler TOUS les parcours de `docs/tests/parcours.md`, en débutant puis en
    expert, aux deux formats.
