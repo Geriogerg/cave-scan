@@ -115,6 +115,21 @@
     bouton.hidden = true;
   });
 
+  // L'en-tête d'une colonne ouvre ou ferme son détail ; « Tout ouvrir / fermer » (T3-DS4).
+  document.addEventListener("click", function (evenement) {
+    var cible = evenement.target;
+    var toutes = cible.closest && cible.closest("[data-toutes]");
+    if (toutes) {
+      document.querySelectorAll("details.colonne-detail").forEach(function (d) { d.open = toutes.dataset.toutes === "ouvrir"; });
+      return;
+    }
+    var titre = cible.closest && cible.closest(".colonne-tete strong");
+    if (titre) {
+      var detail = titre.closest("li.colonne-config").querySelector("details.colonne-detail");
+      if (detail) detail.open = !detail.open;
+    }
+  });
+
   window.addEventListener("beforeunload", function (evenement) {
     if (modifiee) { evenement.preventDefault(); evenement.returnValue = ""; }
   });

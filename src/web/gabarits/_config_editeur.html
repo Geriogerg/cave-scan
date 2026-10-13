@@ -31,6 +31,10 @@
       <span class="aide">1 à 10</span>
     </div>
 
+    <p class="tout-ouvrir">
+      <button class="lien" type="button" data-toutes="ouvrir">Tout ouvrir</button> ·
+      <button class="lien" type="button" data-toutes="fermer">Tout fermer</button>
+    </p>
     <ol class="colonnes-config">
     {% for c in vue.colonnes %}
       {% set d = c.donnees %}{% set i = c.index %}
@@ -163,6 +167,7 @@
 {{ regles_fixes[1] }}</pre>
       </details>
       <textarea name="consignes" id="consignes" rows="10">{{ consignes }}</textarea>
+      <p class="aide">Gardez tels quels les mots entre « » et en MAJUSCULES : l'outil les attend.</p>
       {% if erreur_consignes %}<p class="message alerte" role="alert" id="refus-consignes">{{ erreur_consignes }}</p>{% endif %}
       <p class="consignes-actions">
         <button class="bouton petit" type="button" id="deverrouiller-consignes"

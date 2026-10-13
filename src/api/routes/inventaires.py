@@ -8,7 +8,7 @@ from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 
 from src.api import schemas
 from src.api.dependances import Auteur, SessionBase, Stockage
-from src.services.consultation import etat_inventaire, exporter_en_octets, recapitulatif
+from src.services.consultation import entete_telechargement, etat_inventaire, exporter_en_octets, recapitulatif
 from src.services.cycle_de_vie import archiver, clore, desarchiver, renommer, restaurer, rouvrir, supprimer
 from src.services.envoi import creer_inventaire_depuis_envoi
 from src.services.inventaires import charger_inventaire, lister_inventaires
@@ -112,7 +112,7 @@ def recapituler(inventaire_id: int, base: SessionBase):
 )
 def exporter(inventaire_id: int, base: SessionBase):
     nom, contenu = exporter_en_octets(base, inventaire_id)
-    return Response(contenu, media_type=EXCEL, headers={"Content-Disposition": f'attachment; filename="{nom}"'})
+    return Response(contenu, media_type=EXCEL, headers={"Content-Disposition": entete_telechargement(nom)})
 
 
 # --- cycle de vie (session 6 ; decisions.md 0168) -----------------------------------------------

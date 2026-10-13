@@ -70,7 +70,27 @@ def exporter_en_octets(session: Session, inventaire_id: int) -> tuple[str, bytes
     with tempfile.TemporaryDirectory(prefix="cave-scan-export-") as dossier:
         chemin = exporter(session, inventaire_id, Path(dossier) / "export.xlsx")
         contenu = Path(chemin).read_bytes()
-    return f"inventaire_{inventaire.id}.xlsx", contenu
+    return nom_du_fichier_excel(inventaire), contenu
+
+
+def nom_du_fichier_excel(inventaire: Inventaire) -> str:
+    """« Vente de printemps — 2026-10-13.xlsx » plutôt que « inventaire_5.xlsx »
+    (T3-DS2) ; sans les caractères interdits dans un nom de fichier."""
+    import re
+
+    nom = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', " ", inventaire.nom).strip(" .") or f"inventaire {inventaire.id}"
+    return f"{nom[:80]} — {inventaire.cree_le:%Y-%m-%d}.xlsx"
+
+
+def entete_telechargement(nom: str) -> str:
+    """`Content-Disposition` d'un fichier au nom accentué : un nom de secours en
+    ASCII, et le vrai nom en UTF-8 (RFC 6266) — un en-tête HTTP n'accepte pas
+    « — » ni « é » tels quels."""
+    import unicodedata
+    from urllib.parse import quote
+
+    secours = unicodedata.normalize("NFKD", nom).encode("ascii", "ignore").decode("ascii").replace('"', "")
+    return f"attachment; filename=\"{secours or 'export.xlsx'}\"; filename*=UTF-8''{quote(nom)}"
 
 
 # --- bouteilles ------------------------------------------------------------------------------

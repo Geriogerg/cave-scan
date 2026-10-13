@@ -92,3 +92,11 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 3 | T3-D22 | mineur | Durée : seul le dernier lancement | Corrigé : « (dernier lancement : X) » | lot 13 |
 | 3 | T3-D23 | mineur | Double clic « Lancer » : deux confirmations | Corrigé : un clic par seconde, bouton désactivé pendant l'envoi | lot 13 |
 | 3 | T3-D24 | mineur | Configuration peu explicite | Corrigé : « Les colonnes de votre Excel, dans l'ordre » ; « toujours lue » au lieu de « noyau » ; « Identifiant » discret ; pas de description « pour le modèle » sur une liste de l'expert ; « Non déterminable est toujours proposé » | lot 13 |
+| 3 | T3-DS1 | suggestion | Suivi titré « Analyse des photos » | Corrigé : titré du nom de la vente ; « Inventaires » dans l'en-tête | lot 14 |
+| 3 | T3-DS2 | suggestion | Excel « inventaire_5.xlsx » ; position absente | Corrigé : « Vente — date.xlsx » (en-tête RFC 6266). Position dans l'Excel : écartée — les colonnes viennent de la configuration (contrainte 6) ; la maison peut y ajouter ce dont elle a besoin | lot 14 |
+| 3 | T3-DS3 | suggestion | Bouteille signalée : Valider actif puis refusé | Corrigé : bouton désactivé avec la raison | lot 14 |
+| 3 | T3-DS4 | suggestion | En-tête de colonne inerte | Corrigé : cliquable ; « Tout ouvrir / Tout fermer » | lot 14 |
+| 3 | T3-DS5 | suggestion | Consignes : mots attendus par l'outil | Corrigé : une ligne sous le texte | lot 14 |
+| 3 | T3-DS6 | suggestion | Fin de relecture : clore caché | Corrigé : « Clore l'inventaire » au récapitulatif | lot 14 |
+| 3 | T3-DS7 | suggestion | Dépôt : ligne d'enchaînement ; « identiques » | « bouteilles identiques » corrigé. Ligne d'enchaînement écartée : l'utilisateur a demandé moins de texte (35c9ae0) | lot 14 |
+| 3 | T3-DS8 | suggestion | Brouillons sans compte ; nom en double | Compte corrigé. Nom en double écarté : deux ventes peuvent porter le même nom, la date les distingue | lot 14 |

@@ -17,6 +17,7 @@
             <span class="etiquette ok">Clos</span>
           {% elif inventaire.statut == "brouillon" %}
             <span class="etiquette neutre">Brouillon — dépôt des photos</span>
+            {% if etat.en_attente %}{{ etat.en_attente }} bouteille(s) photographiée(s){% endif %}
           {% elif inventaire.statut == "valide" %}
             <span class="etiquette ok">Validé</span>
           {% elif etat.extraction == "arretee" %}

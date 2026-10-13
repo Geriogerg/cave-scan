@@ -178,7 +178,8 @@ def test_parcours_complet_au_format_telephone(application, telephone, tmp_path):
     with page.expect_download() as telechargement:
         page.get_by_role("link", name="Télécharger l'Excel").click()
     fichier = telechargement.value
-    assert fichier.suggested_filename == f"inventaire_{inventaire_id}.xlsx"
+    # Le nom de la vente et la date, accents compris (T3-DS2).
+    assert fichier.suggested_filename.startswith("Vente test navigateur — ") and fichier.suggested_filename.endswith(".xlsx")
     fichier.save_as(tmp_path / fichier.suggested_filename)
     feuille = load_workbook(tmp_path / fichier.suggested_filename).active
     assert feuille.max_row - 1 == 4  # 4 bouteilles

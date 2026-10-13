@@ -93,10 +93,15 @@
           {% if adresse_suivante %}<a class="bouton principal" id="valider" data-navigation data-lecture-seule
              href="{{ adresse_suivante }}">Bouteille suivante <kbd>Ctrl+Entrée</kbd></a>{% endif %}
         {% else %}
+        {% if b.paire_signalee %}
+        <button type="submit" class="bouton principal" id="valider" disabled
+                title="Problème de photos signalé : levez le signalement pour valider">Valider — problème de photos signalé</button>
+        {% else %}
         <button type="submit" class="bouton principal" id="valider">
           {% if b.statut == "validee" %}Déjà validée — passer à la suivante{% else %}Valider et passer à la suivante{% endif %}
           <kbd>Ctrl+Entrée</kbd>
         </button>
+        {% endif %}
         {% endif %}
       </div>
     </form>

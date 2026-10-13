@@ -279,14 +279,14 @@ def excel(inventaire_id: int, base: SessionBase):
     on revient au suivi avec la raison, au lieu d'un téléchargement annulé en
     silence ou de JSON brut (T3-D4)."""
     from src.api.routes.inventaires import EXCEL
-    from src.services.consultation import exporter_en_octets
+    from src.services.consultation import entete_telechargement, exporter_en_octets
     from src.services.restitution import ExportRefuse
 
     try:
         nom, contenu = exporter_en_octets(base, inventaire_id)
     except ExportRefuse:
         return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=excel_refuse", status_code=303)
-    return Response(contenu, media_type=EXCEL, headers={"Content-Disposition": f'attachment; filename="{nom}"'})
+    return Response(contenu, media_type=EXCEL, headers={"Content-Disposition": entete_telechargement(nom)})
 
 
 @routeur.get("/app/inventaires/{inventaire_id}/progression")

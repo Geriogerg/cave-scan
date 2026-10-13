@@ -160,3 +160,23 @@ def test_l_excel_refuse_depuis_un_ecran_revient_au_suivi_avec_la_raison(api, dos
     extraire_en_arriere_plan(api, inventaire_id, FixtureExtractor(charges(), charger_config(CONFIG_TEST)))
     fichier = api.get(f"/app/inventaires/{inventaire_id}/excel")
     assert fichier.status_code == 200 and "attachment" in fichier.headers["content-disposition"]
+
+
+def test_suggestions_du_tour_3(api, dossier_photos):
+    """T3-DS2 : l'Excel porte le nom de la vente ; T3-DS3 : bouteille signalée, Valider
+    désactivé avec la raison ; T3-DS6 : relecture finie, « Clore » sur place."""
+    inventaire_id = envoyer(api, dossier_photos, nom="Cave Dupont").json()["id"]
+    extraire_en_arriere_plan(api, inventaire_id, FixtureExtractor(charges(), charger_config(CONFIG_TEST)))
+    entete = api.get(f"/app/inventaires/{inventaire_id}/excel").headers["content-disposition"]
+    assert "filename*=UTF-8''Cave%20Dupont" in entete and "%E2%80%94" in entete and entete.endswith(".xlsx")
+
+    ids = [b["id"] for b in api.get(f"/inventaires/{inventaire_id}/bouteilles").json()["bouteilles"]]
+    api.post(f"/app/inventaires/{inventaire_id}/relecture/{ids[0]}/signaler", headers=AUTEUR)
+    page = api.get(f"/app/inventaires/{inventaire_id}/relecture/{ids[0]}").text
+    assert 'id="valider" disabled' in page and "problème de photos signalé" in page
+
+    api.post(f"/app/inventaires/{inventaire_id}/relecture/{ids[0]}/lever-signalement", headers=AUTEUR)
+    for bouteille_id in ids:
+        api.post(f"/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/valider", json={}, headers=AUTEUR)
+    recap = api.get(f"/app/inventaires/{inventaire_id}/recapitulatif").text
+    assert f'href="/app/inventaires/{inventaire_id}/clore"' in recap
