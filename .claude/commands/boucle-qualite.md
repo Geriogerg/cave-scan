@@ -9,6 +9,10 @@ consulter l'utilisateur (décision du 2026-10-13).
    - **bugs**, modèle Sonnet : bugs, robustesse, erreurs, fluidité mesurée ;
    - **design**, modèle Opus : clarté, ergonomie, design, affichage.
    À partir du tour 2, passer à chacun son rapport précédent.
+   Enregistrer la synthèse fusionnée de chaque tour dans
+   `docs/tests/rapports/tourN.md`. Au démarrage, si un rapport existe dont les
+   points ne sont pas tous traités dans le journal, reprendre à l'étape 2 avec
+   lui au lieu de retester.
 2. **Corriger TOUT ce qu'il remarque**, du plus grave au moins grave :
    bloquants, majeurs, mineurs ET suggestions (ergonomie, clarté, design,
    fluidité).
