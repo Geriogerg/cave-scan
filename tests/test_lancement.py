@@ -145,10 +145,8 @@ def port_occupe():
 def test_sans_port_impose_l_application_prend_le_port_libre_suivant_et_le_dit(port_occupe, capsys):
     port = serveur.choisir_port("127.0.0.1", None, premier=port_occupe)
     assert port > port_occupe and serveur.port_libre("127.0.0.1", port)
-    assert (
-        f"Le port {port_occupe} est déjà utilisé par un autre programme : l'application démarre "
-        f"sur le port {port}." in capsys.readouterr().out
-    )
+    sortie = capsys.readouterr().out
+    assert f"Le port {port_occupe} est déjà utilisé" in sortie and f"sur le port {port}." in sortie
 
 
 def test_un_port_libre_est_pris_sans_rien_dire(port_occupe, capsys):

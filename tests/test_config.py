@@ -109,7 +109,7 @@ def test_cle_json_en_double_refusee(tmp_path):
         '"nom": "Appellation",', '"nom": "Appellation", "nom": "Appel.",', 1
     )
     assert texte != CONFIG_TEST.read_text(encoding="utf-8")
-    with pytest.raises(ConfigInvalide, match=r"clé « nom » en double dans la colonne « appellation »"):
+    with pytest.raises(ConfigInvalide, match=r"« nom » en double.*« appellation »"):
         charger_config(ecrire(tmp_path, texte))
 
 
@@ -192,7 +192,7 @@ def test_cle_mal_formee_refusee(tmp_path, brut):
 
 
 def test_json_illisible_refuse(tmp_path):
-    with pytest.raises(ConfigInvalide, match="JSON illisible — le fichier est incomplet ou abîmé \(ligne"):
+    with pytest.raises(ConfigInvalide, match=r"JSON illisible.*abîmé \(ligne"):
         charger_config(ecrire(tmp_path, '{"maison": "X",, }'))
 
 

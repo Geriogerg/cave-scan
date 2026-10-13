@@ -16,8 +16,9 @@ est un RAPPORT : tu ne corriges rien.
 - Ne jamais ouvrir `data/`, `.env`, ni appeler un vrai modèle.
 - `git` : lecture seule (status, log, diff, show, merge-tree). Jamais commit,
   merge, checkout, stash, reset.
-- Lancer les tests uniquement par `bash docs/tests/tests.sh …` (il protège la
-  config locale de l'utilisateur).
+- Lancer les tests par `bash docs/tests/tests.sh …` ou `python -m pytest …`
+  (identiques) ; pour une expérience qui modifie des fichiers, travailler dans
+  une COPIE du projet sous ton dossier de travail.
 
 ## Méthode
 Pour chaque recommandation : appliquer SON critère de vérification (dans

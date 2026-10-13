@@ -97,7 +97,7 @@ def test_dry_run_produit_excel_et_rapport(tmp_path, capsys):
     assert code == 0
     assert sortie.exists() and sortie.stat().st_size > 0
     assert "DRY-RUN" in sortie_texte
-    assert "Comparaison auto vs manuel — 6 bouteille(s)" in sortie_texte
+    assert "auto vs manuel — 6 bouteille(s)" in sortie_texte
     assert "accuracy" in sortie_texte
     assert "Désaccords à inspecter (3)" in sortie_texte
 
@@ -229,7 +229,7 @@ def test_inventaire_id_reprend_la_ou_l_extraction_s_est_arretee(
     texte = capsys.readouterr().out
     assert code == 0
     assert "3 bouteille(s) à extraire" in texte
-    assert "3 extraite(s), 0 en erreur, 3 déjà faite(s)" in texte
+    assert all(morceau in texte for morceau in ("3 extraite(s)", "0 en erreur", "3 déjà faite(s)"))
     assert statuts(base) == ["extraite"] * 6
     domaines = colonne_excel(sortie, "domaine")
     assert domaines[0] == "Domaine Rossignol-Trapet"

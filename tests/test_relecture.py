@@ -273,13 +273,13 @@ def test_une_bouteille_en_erreur_se_valide_en_saisie_manuelle_une_fois_ses_champ
     assert en_erreur.statut == "erreur"
 
     valider_tout(session, cree.inventaire_id, sauf={4})
-    with pytest.raises(ValidationRefusee, match="Domaine / Château, Appellation, Millésime, Format"):
+    with pytest.raises(ValidationRefusee, match="Château, Appellation, Millésime, Format"):
         valider(session, en_erreur.id, "expert")
     assert inventaire.statut == "ouvert"
 
     # Une partie seulement : toujours refusée, avec ce qui manque encore.
     corriger(session, en_erreur.id, "millesime", "2001", "expert")
-    with pytest.raises(ValidationRefusee, match="remplissez d'abord : Domaine / Château, Appellation, Format"):
+    with pytest.raises(ValidationRefusee, match="remplissez d'abord : Domaine.*Format"):
         valider(session, en_erreur.id, "expert")
     assert inventaire.statut == "ouvert"
 

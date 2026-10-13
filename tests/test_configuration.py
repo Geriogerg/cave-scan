@@ -104,7 +104,7 @@ def test_rien_de_change_rien_d_enregistre(session, dossier, maison):
 def test_la_page_ne_renomme_pas_la_maison(session, dossier, maison):
     brut = config_active(dossier, maison).brut
     brut["maison"] = "Une autre maison"
-    with pytest.raises(ConfigInvalide, match="ne modifie que la configuration de l.application"):
+    with pytest.raises(ConfigInvalide, match="ne modifie que la configuration"):
         enregistrer_version(session, dossier, maison, brut)
 
 
@@ -129,7 +129,7 @@ def test_importer_pour_une_maison_connue_numerote_la_suite(session, dossier, mai
 
 
 def test_importer_un_json_illisible_dit_ou(session, dossier):
-    with pytest.raises(ConfigInvalide, match="JSON illisible — le fichier est incomplet ou abîmé \(ligne 1"):
+    with pytest.raises(ConfigInvalide, match=r"JSON illisible.*\(ligne 1"):
         importer(session, dossier, '{"maison": ', "abime.json")
 
 

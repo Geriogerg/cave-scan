@@ -62,3 +62,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 2 | T2-DS3 | suggestion | Photo visible pendant la saisie au téléphone | Corrigé : photo collée en haut (30 % de l'écran), champs resserrés, Valider ne recouvre plus | lot 8 |
 | 2 | T2-DS4 | suggestion | « Vérifier et lancer » trop tôt en avant | Corrigé : bouton principal seulement avec des photos | lot 8 |
 | 2 | T2-DS5 | suggestion | Barre de configuration trop haute | Corrigé : une rangée au téléphone, affichée après une modification (toujours là sans JavaScript) | lot 8 |
+| 3 | T3-R2 | majeur | Tests encore liés à `config/maisons/` (105 tests, indirectement) | Corrigé : `CAVE_SCAN_CONFIGS`, copie figée par test ; suite verte avec dossier vide et avec colonne renommée | lot 9 |
+| 3 | T3-R3 | — | 42 assertions sur de longues phrases | Corrigé : mots-clés ; `test_style_des_tests.py` l'impose ; 3 exceptions (données) justifiées dans ce fichier | lot 9 |
+| 3 | T3-R5 | — | Score muet sur des consignes modifiées | Corrigé : avertissement dans le rapport de score et les signaux ; test | lot 9 |
+| 3 | T3-R8 / T3-D2 (partie) | majeur | Fausse alerte few-shot sur « observee » | Corrigé : une citation déjà dans le texte d'origine n'est pas signalée ; test. Le jargon du message reste à traiter (T3-D2) | lot 9 |
+| 3 | T3-R7 / T3-R10 | — | Documentation fausse (tests.sh, vérificateur) | Corrigé : textes à jour. Le message du commit e464954 reste faux (historique non réécrit) : R2 n'était pas faite à ce moment | lot 9 |
+| 3 | T3-R9 | — | `test_arret_brutal…` instable sous forte charge | À surveiller, non affaibli (une occurrence, non reproduite) | — |

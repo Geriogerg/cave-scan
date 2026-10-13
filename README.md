@@ -295,6 +295,8 @@ Les corrections faites à l'écran sont signées « Expert », ou du nom indiqu�
   ou URL PostgreSQL) ou l'option `--base`.
 - **Photos** : `data/stockage/`, nommées par leur empreinte. Se change avec
   `CAVE_SCAN_STOCKAGE`.
+- **Configuration** : `config/maisons/`. Se change avec `CAVE_SCAN_CONFIGS` (les
+  tests y mettent leur propre copie, `tests/fixtures/maison_test.json`).
 - `data/` et `out/` ne sont jamais versionnés.
 - Le schéma évolue par migrations Alembic (`migrations/`), appliquées
   automatiquement à l'ouverture de la base.

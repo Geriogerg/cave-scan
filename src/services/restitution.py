@@ -7,7 +7,7 @@ Tout se lit depuis la base, avec la config FIGÉE de l'inventaire (decisions.md
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from sqlalchemy import select
@@ -85,8 +85,9 @@ def comparer_au_listing(
     auto = [valeurs_modele(session, bouteille.id) for bouteille in _photographiees(inventaire)]
     manuel = load_manual(chemin_manuel, config)
     systematiques = [colonne.cle for colonne in config.colonnes_best_effort]
+    rapport = comparer(auto, manuel, systematiques=systematiques)
     return ResultatComparaison(
-        rapport=comparer(auto, manuel, systematiques=systematiques),
+        rapport=replace(rapport, consignes_modifiees=bool(config.consignes)),
         colonnes_toujours_vides=colonnes_toujours_vides(manuel),
     )
 

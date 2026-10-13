@@ -339,11 +339,16 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
 
 
 def _reperer_exemple_consignes(consignes: Any) -> list[str]:
-    """Des consignes modifiées qui donnent un exemple de réponse : c'est du few-shot."""
+    """Des consignes modifiées qui donnent un exemple de réponse : c'est du few-shot.
+    Une citation déjà présente dans le texte d'origine (« observee »,
+    « inferee »…) n'est pas un ajout de la maison : jamais signalée (T3-R8)."""
     if not isinstance(consignes, str):
         return []
+    # Import local : la config ne dépend du module des consignes que pour ce repère.
+    from src.extract.consignes import CONSIGNES_MODIFIABLES
+
     for motif in MOTIFS_EXEMPLE:
-        trouve = motif.search(consignes)
+        trouve = next((m for m in motif.finditer(consignes) if m.group(0) not in CONSIGNES_MODIFIABLES), None)
         if trouve:
             return [
                 f"Consignes générales : contiennent ce qui ressemble à un exemple de réponse "

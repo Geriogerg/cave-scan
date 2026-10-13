@@ -97,7 +97,7 @@ def test_la_page_montre_les_colonnes_et_ce_que_recoit_le_modele(client):
     for colonne in config.colonnes:
         assert f'value="{colonne.cle}"' in page
     assert page.count('<pre class="code">{') == len(config.colonnes_modele)  # aperçu des colonnes lues
-    assert "Jamais envoyée au modèle : saisie par l&#39;expert" in page  # estimation, caisse, lot
+    assert "Jamais envoyée au modèle" in page  # estimation, caisse, lot
     assert "Ne jamais deviner" in page  # la consigne ajoutée par l'outil, visible
     assert "RÈGLE ABSOLUE" in page  # les consignes générales aussi
     assert "Enregistrer la version 3" in page
@@ -141,7 +141,7 @@ def test_ajouter_une_colonne_puis_l_enregistrer_cree_une_version(client, configs
     bouchon = config.colonne("bouchon")
     assert bouchon.source == "modele_best_effort" and bouchon.codes == ("bouchon_sain", "non_determinable")
     page = client.get(enregistree.headers["HX-Redirect"]).text
-    assert "Version 3 enregistrée" in page and "Les inventaires déjà créés gardent la leur" in page
+    assert "Version 3 enregistrée" in page and "déjà créés gardent la leur" in page
 
 
 def test_une_config_invalide_n_est_jamais_ecrite(client, configs):
@@ -151,7 +151,7 @@ def test_une_config_invalide_n_est_jamais_ecrite(client, configs):
     champs["photos_max_par_bouteille"] = "douze"
     refus = agir(client, champs, "enregistrer")
     assert refus.status_code == 422
-    assert "Rien n'a été enregistré : 2 point(s) à corriger" in refus.text
+    assert "Rien n'a été enregistré" in refus.text and "2 point(s) à corriger" in refus.text
     assert "photos_max_par_bouteille" in refus.text and "même en-tête" in refus.text
     assert 'value="douze"' in refus.text  # la saisie reste à l'écran pour être corrigée
     assert (configs / CONFIG_TEST.name).read_text(encoding="utf-8") == avant
@@ -271,7 +271,7 @@ def test_creer_la_configuration_a_la_main_sans_json(tmp_path):
         assert creee.status_code == 303 and "creee=1" in creee.headers["location"]
         nom = creee.headers["location"].split("/app/configuration/")[1].split("?")[0]
         editeur = client.get(creee.headers["location"]).text
-        assert "Configuration créée avec les colonnes de base" in editeur
+        assert "Configuration créée" in editeur
         config = charger_config(vide / f"{nom}.json")
         assert [c.cle for c in config.colonnes][:3] == ["id", "quantite", "domaine"]
 

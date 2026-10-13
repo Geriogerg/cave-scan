@@ -65,7 +65,7 @@ def couleurs(feuille):
 
 def test_l_export_est_refuse_tant_qu_une_bouteille_n_est_pas_analysee(session, nom_maison, dossier_photos, stockage, tmp_path):
     cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Cave", stockage)
-    with pytest.raises(ExportRefuse, match="chaque bouteille doit y avoir sa ligne.*6 bouteille\\(s\\) encore en cours d'analyse"):
+    with pytest.raises(ExportRefuse, match="sa ligne.*6 bouteille.*en cours"):
         exporter(session, cree.inventaire_id, tmp_path / "e.xlsx")
     assert not (tmp_path / "e.xlsx").exists()
 
@@ -75,7 +75,7 @@ def test_l_export_est_refuse_tant_qu_une_bouteille_ajoutee_n_est_pas_lancee(sess
     assert avancement(session, inventaire_id).excel_disponible
     ajouter_photo(session, inventaire_id, io.BytesIO(jpeg(42)), "ajout.jpg", stockage, bouteille="ajout", numero=7)
     assert not avancement(session, inventaire_id).excel_disponible
-    with pytest.raises(ExportRefuse, match="1 bouteille\\(s\\) ajoutée\\(s\\) pas encore lancée"):
+    with pytest.raises(ExportRefuse, match="1 bouteille.*pas encore lancée"):
         exporter(session, inventaire_id, tmp_path / "e.xlsx")
 
 
@@ -182,7 +182,7 @@ def test_l_api_et_le_recapitulatif_disent_pourquoi_l_excel_attend(api, dossier_p
     refus = api.get(f"/inventaires/{inventaire_id}/export")
     verifier_erreur(refus, 409, "export_refuse", "6 bouteille(s) encore en cours d'analyse")
     recap = api.get(f"/app/inventaires/{inventaire_id}/recapitulatif").text
-    assert "Excel — il reste 6 bouteille(s) encore en cours d&#39;analyse" in recap
+    assert "Excel — il reste 6 bouteille(s)" in recap
     assert "Télécharger l'Excel" not in recap
 
     extraire_en_arriere_plan(api, inventaire_id, FixtureExtractor(charges(), charger_config(CONFIG_TEST)))

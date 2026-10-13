@@ -1178,6 +1178,20 @@ un renvoi d'une ligne à leur place.
   pourraient être retirées) ; consignes figées dans le code (demande de
   l'utilisateur).
 
+- 0174 — Dossier de configuration réglable, tests isolés, score signalé
+  (recommandations R2 et R5, boucle qualité, tour 3). `CAVE_SCAN_CONFIGS`
+  désigne le dossier de la configuration de l'application (défaut
+  `config/maisons/`), comme `CAVE_SCAN_DB` et `CAVE_SCAN_STOCKAGE` ;
+  l'application, `run_v0.py` (configuration par défaut = celle de
+  l'application), `mesurer_reduction.py` et `dev.py` le lisent. Les tests y
+  mettent leur copie figée (`tests/fixtures/maison_test.json`) : la suite passe
+  avec `config/maisons/` vide comme avec une colonne renommée. Le rapport de
+  score (et les signaux sans listing) avertit quand l'inventaire a été lu avec
+  des consignes modifiées : ce score ne se compare pas aux autres. Les tests
+  ne comparent plus de phrase de plus de 40 caractères (R3), vérifié par
+  `tests/test_style_des_tests.py` — écarté : vérifier l'isolement par un simple
+  grep (aveugle aux lectures indirectes, T3-R2).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

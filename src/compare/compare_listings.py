@@ -103,6 +103,15 @@ class RapportComparaison:
     scores: list[ScoreChamp]
     desaccords: list[Desaccord]
     signaux: SignauxModele
+    # Le modèle a-t-il lu avec des consignes générales MODIFIÉES par la maison ?
+    # Un tel score ne se compare pas aux autres (recommandation R5, 0173).
+    consignes_modifiees: bool = False
+
+
+AVERTISSEMENT_CONSIGNES = (
+    "⚠  Consignes générales MODIFIÉES pour cet inventaire : ce score ne se compare pas à "
+    "ceux obtenus avec les consignes d'origine."
+)
 
 
 def _canoniser_nombre(valeur: Any) -> str | None:
@@ -314,6 +323,7 @@ def formater_rapport(rapport: RapportComparaison) -> str:
         # Ce que mesure ce tableau : le modèle, pas le travail de l'expert
         # (decisions.md 0081).
         ENTETE_SCORE_MODELE,
+        *([AVERTISSEMENT_CONSIGNES] if rapport.consignes_modifiees else []),
         "",
         f"{'champ':<{largeur_champ}}  {'accuracy':>8}  {'absten.':>8}  "
         f"{'compar.':>7}  {'exact':>5}  {'desac.':>6}  {'m.vide':>6}",

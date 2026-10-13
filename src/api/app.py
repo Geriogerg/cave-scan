@@ -17,15 +17,15 @@ from fastapi.staticfiles import StaticFiles
 from src.api import erreurs
 from src.api.dependances import acces
 from src.api.routes import bouteilles, depot, inventaires, maisons, photos
-from src.donnees.base import RACINE, creer_moteur, dossier_stockage, migrer, url_de_base
+from src.donnees.base import CONFIGS_DEFAUT, creer_moteur, dossier_configs, dossier_stockage, migrer, url_de_base
 
-DOSSIER_CONFIGS = RACINE / "config" / "maisons"
+DOSSIER_CONFIGS = CONFIGS_DEFAUT  # par défaut ; `CAVE_SCAN_CONFIGS` le remplace
 
 
 def creer_app(
     base: str | Path | None = None,
     stockage: Path | None = None,
-    configs: Path = DOSSIER_CONFIGS,
+    configs: Path | None = None,
 ) -> FastAPI:
     url = url_de_base(base)
     migrer(url)
@@ -50,7 +50,7 @@ def creer_app(
     )
     app.state.moteur = moteur
     app.state.stockage = dossier_stockage(stockage)
-    app.state.configs = Path(configs)
+    app.state.configs = dossier_configs(configs)
     from src.web import configuration, cycle, pages, relecture  # les écrans : mêmes services, même contrôle d'accès
 
     erreurs.installer(app, page_erreur=lambda request, statut, message: pages.page(request, "erreur.html", statut, message=message))

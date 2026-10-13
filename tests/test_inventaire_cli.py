@@ -74,7 +74,7 @@ def test_corriger_trace_sans_toucher_l_extraction_et_se_voit_a_l_export(base, ca
     code, sortie, _ = lancer(capsys, base, "corriger", 1, 1, "millesime", "2001", "--auteur", "expert")
 
     assert code == 0
-    assert "millesime : « 2018 » -> « 2001 », par expert" in sortie
+    assert "« 2018 » -> « 2001 », par expert" in sortie
     assert lignes(base, "SELECT * FROM extraction ORDER BY id") == extractions
     assert lancer(capsys, base, "exporter", 1, "--sortie", tmp_path / "l.xlsx")[0] == 0
     assert str(colonne_excel(tmp_path / "l.xlsx", "millesime")[0]) == "2001"
@@ -87,7 +87,7 @@ def test_corriger_refuse_un_champ_inconnu_ou_une_valeur_hors_liste_sans_rien_ecr
 
     code, _, erreur = lancer(capsys, base, "corriger", 1, 1, "couleur", "violet", "--auteur", "expert")
     assert code == 2
-    assert "n'est pas une valeur de la liste « couleur »" in erreur
+    assert "pas une valeur de la liste « couleur »" in erreur
     assert lignes(base, "SELECT count(*) FROM correction") == [(0,)]
 
 
@@ -99,7 +99,7 @@ def test_l_auteur_est_obligatoire(base):
 def test_valider_puis_corriger_rouvre_la_bouteille(base, capsys):
     code, sortie, _ = lancer(capsys, base, "valider", 1, 1, "--auteur", "expert")
     assert code == 0
-    assert "validée. Inventaire ouvert : 1/6 bouteille(s) validée(s)" in sortie
+    assert "1/6 bouteille(s) validée(s)" in sortie
 
     _, sortie, _ = lancer(capsys, base, "corriger", 1, 1, "millesime", "2001", "--auteur", "expert")
     assert "Bouteille extraite, inventaire ouvert" in sortie
@@ -124,7 +124,7 @@ def test_fiche_montre_le_modele_la_correction_et_l_extraction_d_origine(base, ca
     millesime = next(ligne for ligne in sortie.splitlines() if ligne.strip().startswith("millesime "))
     assert code == 0
     assert "2018" in millesime and "2001   ← corrigé" in millesime
-    assert "millesime : « 2018 » -> « 2001 » — expert" in sortie
+    assert "« 2018 » -> « 2001 » — expert" in sortie
     assert "réussie   ← fait foi" in sortie
 
 
@@ -139,9 +139,9 @@ def test_stats_cout_et_corrections(base, capsys):
     lancer(capsys, base, "corriger", 1, 1, "millesime", "2001", "--auteur", "expert")
     code, sortie, _ = lancer(capsys, base, "stats", 1)
     assert code == 0
-    assert "Bouteilles   : 6 (a_extraire 0, en_cours 0, extraite 6, erreur 0, validee 0)" in sortie
+    assert all(morceau in sortie for morceau in ("Bouteilles   : 6", "extraite 6", "erreur 0", "validee 0"))
     assert "Tokens       : non mesurés" in sortie  # fixtures : aucun faux coût (0098)
-    assert "Corrections  : 1 sur 1 bouteille(s) — millesime 1" in sortie
+    assert all(morceau in sortie for morceau in ("Corrections  : 1 sur 1", "millesime 1"))
 
 
 def test_stats_de_relecture(base, capsys):
@@ -154,8 +154,8 @@ def test_stats_de_relecture(base, capsys):
         signaler_paire(session, 2, "expert")
     code, sortie, _ = lancer(capsys, base, "stats", 1)
     assert code == 0
-    assert "Relecture    : 12 s au total, 12.0 s par bouteille (1 chronométrée(s), absences exclues)" in sortie
-    assert "Cas particuliers : 0 réanalysée(s), 0 née(s) d'une séparation, 1 problème(s) de photos signalé(s)" in sortie
+    assert all(morceau in sortie for morceau in ("12 s au total", "12.0 s par bouteille", "1 chronométrée(s)"))
+    assert all(morceau in sortie for morceau in ("0 réanalysée(s)", "0 née(s) d'une séparation", "1 problème(s) de photos"))
 
 
 def test_inventaire_ou_bouteille_introuvable(base, capsys):

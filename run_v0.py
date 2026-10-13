@@ -30,7 +30,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from src.compare.compare_listings import formater_rapport, formater_signaux
+from src.compare.compare_listings import AVERTISSEMENT_CONSIGNES, formater_rapport, formater_signaux
 from src.config import environnement
 from src.config.maison import ConfigInvalide, ConfigMaison, charger_config
 from src.donnees.base import dossier_stockage, session_de_base
@@ -56,7 +56,17 @@ from src.services.restitution import (
 )
 
 RACINE = Path(__file__).resolve().parent
-CONFIG_DEFAUT = RACINE / "config" / "maisons" / "maison_test.json"
+CONFIG_DEFAUT = RACINE / "config" / "maisons" / "maison_test.json"  # si le dossier n'en désigne aucune
+
+
+def config_par_defaut() -> Path:
+    """La configuration de l'application (une instance = une maison, 0171), dans
+    le dossier de `CAVE_SCAN_CONFIGS` s'il est donné — les tests y mettent la leur."""
+    from src.donnees.base import dossier_configs
+    from src.services.configuration import config_de_l_instance
+
+    active = config_de_l_instance(dossier_configs())
+    return active.fichier if active is not None else CONFIG_DEFAUT
 SORTIE_DEFAUT = RACINE / "out" / "listing_auto.xlsx"
 
 FIXTURES = RACINE / "tests" / "fixtures"
@@ -134,7 +144,7 @@ def _dry_run(arguments: argparse.Namespace) -> int:
     l'utilisateur n'est jamais touchée — sauf `--base`, qui garde l'inventaire
     de démonstration pour essayer `inventaire.py` sans clé."""
     print(f"DRY-RUN — fixtures {FIXTURE_AUTO.name} / {FIXTURE_MANUEL.name}, hors ligne.\n")
-    chemin_config = arguments.maison or CONFIG_DEFAUT
+    chemin_config = arguments.maison or config_par_defaut()
     config = _config(chemin_config)
     extracteur = FixtureExtractor.depuis_json(FIXTURE_AUTO, config)
 
@@ -155,7 +165,7 @@ def _dry_run(arguments: argparse.Namespace) -> int:
 
 
 def _nouvel_inventaire(arguments: argparse.Namespace) -> int:
-    chemin_config = arguments.maison or CONFIG_DEFAUT
+    chemin_config = arguments.maison or config_par_defaut()
     config = _config(chemin_config)
     nom = arguments.nom or f"{arguments.photos.name} — {datetime.now():%Y-%m-%d %H:%M}"
     stockage = dossier_stockage()
@@ -289,6 +299,8 @@ def _restituer(session: Session, inventaire_id: int, chemin_manuel: Path | None,
             "Le livrable de la v0 est la comparaison à l'expert ; sans son "
             "fichier,\nce run montre seulement ce que le modèle produit.\n"
         )
+        if config_figee(charger_inventaire(session, inventaire_id)).consignes:
+            print(AVERTISSEMENT_CONSIGNES)  # R5 : ce que le modèle produit ne se compare pas
         print(formater_signaux(signaux_du_modele(session, inventaire_id)))
         return
 
@@ -406,7 +418,7 @@ def _analyseur() -> argparse.ArgumentParser:
     analyseur.add_argument(
         "--maison",
         type=Path,
-        help=f"Config JSON de la maison (défaut : {CONFIG_DEFAUT.name}). Figée dans "
+        help="Config JSON de la maison (défaut : celle de l'application, config/maisons/). Figée dans "
         "l'inventaire à sa création.",
     )
     analyseur.add_argument(

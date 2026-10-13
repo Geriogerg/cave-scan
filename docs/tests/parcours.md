@@ -71,6 +71,12 @@ vitesse.
 - Exporter le JSON ; réimporter un JSON invalide (refus clair) puis valide.
 - Un inventaire créé AVANT la modification garde son ancienne config (même colonnes dans son Excel).
 
+## P9 — Robustesse
+- URL d'un inventaire ou d'une bouteille qui n'existe pas (`/app/inventaires/9999/suivi`). Attendu : page d'erreur en français, pas de trace.
+- Bouteille d'un autre inventaire dans l'URL de relecture. Attendu : 404 propre.
+- Double clic rapide sur « Lancer l'analyse », sur « Valider ». Attendu : pas de doublon, pas d'erreur.
+- Deux onglets sur la même bouteille, deux corrections différentes. Attendu : avertissement « modifiée ailleurs ».
+
 ## P10 — Créer la configuration à la main, sans JSON (decisions.md 0172)
 - Lancer l'application sur un dossier de configs VIDE (`lancer_appli_isolee.py`, puis vider `<dossier>/configs/` et relancer).
 - `/app/configuration`. Attendu : « Aucune configuration » et « Créer la configuration ».
@@ -93,10 +99,5 @@ Pour chacun, dire s'il aide ou gêne, en débutant et en expert, avec une propos
 - Téléphone, relecture : photo collée en haut (30 % de l'écran) pendant la saisie.
 - Configuration : colonnes repliées ; barre « Annuler / Vérifier / Enregistrer » masquée tant que rien n'est modifié.
 - Ordinateur : le dépôt s'ouvre en mode « Galerie ou ordinateur ».
+- Plusieurs fichiers dans `config/maisons/` sans `CAVE_SCAN_MAISON` : l'application prend le premier par ordre alphabétique (pas visible à l'écran : juger le principe).
 - Textes d'aide très réduits (demande de l'utilisateur) : reste-t-il des écrans où l'on ne comprend plus quoi faire ?
-
-## P9 — Robustesse
-- URL d'un inventaire ou d'une bouteille qui n'existe pas (`/app/inventaires/9999/suivi`). Attendu : page d'erreur en français, pas de trace.
-- Bouteille d'un autre inventaire dans l'URL de relecture. Attendu : 404 propre.
-- Double clic rapide sur « Lancer l'analyse », sur « Valider ». Attendu : pas de doublon, pas d'erreur.
-- Deux onglets sur la même bouteille, deux corrections différentes. Attendu : avertissement « modifiée ailleurs ».

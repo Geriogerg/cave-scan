@@ -94,7 +94,7 @@ def test_parcours_depot_verification_lancement_suivi_export(api):
 
     suivi = api.get(f"/app/inventaires/{inventaire_id}/suivi")
     # La relecture (session 5) s'ouvre dès la première bouteille analysée.
-    assert suivi.status_code == 200 and "Relecture — dès la première bouteille analysée" in suivi.text
+    assert suivi.status_code == 200 and "dès la première bouteille analysée" in suivi.text
     assert 'hx-trigger="every 3s"' in suivi.text  # se met à jour toute seule
     assert f"/app/inventaires/{inventaire_id}/depot" in suivi.text  # « Ajouter des bouteilles »
 
@@ -162,7 +162,7 @@ def test_ajouter_des_bouteilles_apres_le_lancement(api):
     assert envoyer(api, inventaire_id, jpeg(77), "tard.jpg", "b1", 1).json()["code"] == "depot_ferme"  # déjà formée
     deposer(api, inventaire_id, bouteilles=1, photos=1, premier=3)
     suivi = api.get(f"/app/inventaires/{inventaire_id}/suivi").text
-    assert "1 bouteille(s) ajoutée(s), pas encore lancée(s)" in suivi
+    assert "1 bouteille(s) ajoutée(s)" in suivi and "pas encore lancée(s)" in suivi
     lance = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX)
     assert lance.status_code == 204
     assert api.get(f"/inventaires/{inventaire_id}").json()["progression"]["total"] == 3

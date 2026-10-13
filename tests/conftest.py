@@ -46,6 +46,12 @@ def base_et_stockage_isoles(tmp_path, monkeypatch):
     `data/cave_scan.db`."""
     monkeypatch.setenv("CAVE_SCAN_DB", str(tmp_path / "isolee" / "cave_scan.db"))
     monkeypatch.setenv("CAVE_SCAN_STOCKAGE", str(tmp_path / "isolee" / "stockage"))
+    # La configuration aussi (R2) : une copie de CONFIG_TEST, jamais config/maisons/.
+    # Les processus lancés par les tests (dev.py, serveur.py) en héritent.
+    configs = tmp_path / "isolee" / "configs"
+    configs.mkdir(parents=True, exist_ok=True)
+    shutil.copy(CONFIG_TEST, configs / CONFIG_TEST.name)
+    monkeypatch.setenv("CAVE_SCAN_CONFIGS", str(configs))
 
 
 @pytest.fixture(autouse=True)

@@ -30,6 +30,8 @@ VARIABLE_BASE = "CAVE_SCAN_DB"
 VARIABLE_STOCKAGE = "CAVE_SCAN_STOCKAGE"
 BASE_DEFAUT = RACINE / "data" / "cave_scan.db"
 STOCKAGE_DEFAUT = RACINE / "data" / "stockage"
+VARIABLE_CONFIGS = "CAVE_SCAN_CONFIGS"
+CONFIGS_DEFAUT = RACINE / "config" / "maisons"
 ATTENTE_VERROU_MS = 30_000  # SQLite occupé par un autre écrivain : attendre, pas échouer
 
 
@@ -51,6 +53,14 @@ def url_de_base(valeur: str | Path | None = None) -> str:
 def dossier_stockage(valeur: str | Path | None = None) -> Path:
     """Dossier du stockage des photos : argument, sinon `CAVE_SCAN_STOCKAGE`, sinon le défaut."""
     return Path(valeur or os.environ.get(VARIABLE_STOCKAGE) or STOCKAGE_DEFAUT).expanduser().resolve()
+
+
+def dossier_configs(valeur: str | Path | None = None) -> Path:
+    """Dossier de la configuration de l'application : argument, sinon
+    `CAVE_SCAN_CONFIGS`, sinon `config/maisons/`. Les tests y mettent leur
+    propre copie : modifier la configuration de l'application ne les touche pas
+    (recommandation R2)."""
+    return Path(valeur or os.environ.get(VARIABLE_CONFIGS) or CONFIGS_DEFAUT).expanduser().resolve()
 
 
 def migrer(url: str) -> None:

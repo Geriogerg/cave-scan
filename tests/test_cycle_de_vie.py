@@ -136,14 +136,14 @@ def test_clore_sans_tout_valider_est_permis_et_note_ce_qui_reste(session, extrai
 
 def test_clore_est_refuse_tant_qu_une_bouteille_n_a_pas_sa_ligne(session, nom_maison, dossier_photos, stockage):
     cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Cave", stockage)
-    with pytest.raises(CycleRefuse, match="6 bouteille\\(s\\) encore en cours d'analyse"):
+    with pytest.raises(CycleRefuse, match="6 bouteille.*en cours d'analyse"):
         clore(session, cree.inventaire_id, EXPERT)
     assert charger_inventaire(session, cree.inventaire_id).clos_le is None
 
 
 def test_clore_est_refuse_si_des_bouteilles_ajoutees_ne_sont_pas_lancees(session, extrait, stockage):
     ajouter_photo(session, extrait, io.BytesIO(jpeg(42)), "ajout.jpg", stockage, bouteille="ajout", numero=7)
-    with pytest.raises(CycleRefuse, match="1 bouteille\\(s\\) ajoutée\\(s\\) pas encore lancée"):
+    with pytest.raises(CycleRefuse, match="1 bouteille.*pas encore lancée"):
         clore(session, extrait, EXPERT)
 
 

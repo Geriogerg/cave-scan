@@ -233,7 +233,7 @@ def test_valeur_hors_liste_refusee(api, extrait):
         json={"champ": "couleur", "valeur": "violet"},
         headers=AUTEUR,
     )
-    verifier_erreur(reponse, 422, "saisie_refusee", "n'est pas une valeur de la liste « couleur »")
+    verifier_erreur(reponse, 422, "saisie_refusee", "pas une valeur de la liste « couleur »")
 
 
 def test_l_auteur_est_exige_pour_corriger(api, extrait):

@@ -107,3 +107,44 @@ def test_un_texte_trop_long_est_refuse(session, nom_maison, dossier_photos, stoc
     premiere = charger_inventaire(session, cree.inventaire_id).bouteilles[0]
     with pytest.raises(CorrectionRefusee, match="texte trop long"):
         corriger(session, premiere.id, "cuvee", "x" * 5000, "expert")
+
+
+def test_les_consignes_d_origine_legerement_modifiees_ne_declenchent_pas_l_alerte_few_shot(tmp_path):
+    """T3-R8 : les citations du texte d'origine (« observee »…) ne sont pas un exemple ;
+    une citation AJOUTÉE par la maison, si."""
+    import json
+
+    from src.config.maison import charger_config
+    from src.extract.consignes import CONSIGNES_MODIFIABLES
+
+    def avertissements(consignes):
+        brut = json.loads(CONFIG_TEST.read_text(encoding="utf-8"))
+        brut["consignes"] = consignes
+        chemin = tmp_path / "c.json"
+        chemin.write_text(json.dumps(brut, ensure_ascii=False), encoding="utf-8")
+        return [a for a in charger_config(chemin).avertissements if a.startswith("Consignes générales")]
+
+    ajout_sans_exemple = "\nPrécise toujours le climat s'il est écrit."
+    ajout_avec_exemple = "\nPar exemple, réponds « Château Margaux 1990 »."
+    assert avertissements(CONSIGNES_MODIFIABLES + ajout_sans_exemple) == []
+    assert avertissements(CONSIGNES_MODIFIABLES + ajout_avec_exemple) != []
+
+
+def test_le_score_signale_des_consignes_modifiees(tmp_path, capsys):
+    """R5 : avec des consignes modifiées, le rapport de score le dit ; avec celles
+    d'origine, rien."""
+    import json
+
+    import run_v0
+    from src.compare.compare_listings import AVERTISSEMENT_CONSIGNES
+
+    brut = json.loads(CONFIG_TEST.read_text(encoding="utf-8"))
+    brut["consignes"] = "Lis les étiquettes avec soin ; précise toujours le climat s'il est écrit."
+    modifiee = tmp_path / "modifiee.json"
+    modifiee.write_text(json.dumps(brut, ensure_ascii=False), encoding="utf-8")
+
+    assert run_v0.main(["--dry-run", "--maison", str(CONFIG_TEST), "--sortie", str(tmp_path / "a.xlsx")]) == 0
+    assert AVERTISSEMENT_CONSIGNES not in capsys.readouterr().out
+    assert run_v0.main(["--dry-run", "--maison", str(modifiee), "--sortie", str(tmp_path / "b.xlsx")]) == 0
+    sortie = capsys.readouterr().out
+    assert AVERTISSEMENT_CONSIGNES in sortie and "Comparaison auto vs manuel" in sortie

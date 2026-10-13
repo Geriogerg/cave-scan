@@ -34,7 +34,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = _analyseur().parse_args(argv)
     environnement.charger_env()
 
-    config = charger_config(arguments.maison)
+    from run_v0 import config_par_defaut  # la même configuration que run_v0.py (R2)
+
+    config = charger_config(arguments.maison or config_par_defaut())
     photos = sorted(p for p in arguments.photos.iterdir() if p.suffix.lower() in EXTENSIONS_IMAGE)
     tailles = [int(t) for t in arguments.tailles.split(",") if t.strip()]
     if not photos:
@@ -68,7 +70,8 @@ def _analyseur() -> argparse.ArgumentParser:
     analyseur.add_argument("--photos", type=Path, required=True, help="Dossier de VRAIES photos d'étiquettes.")
     analyseur.add_argument("--tailles", default="1600,2000,2500,3000", help="Côtés longs à essayer, en pixels.")
     analyseur.add_argument("--backend", choices=("gemini", "anthropic", "factice"), default="gemini")
-    analyseur.add_argument("--maison", type=Path, default=RACINE / "config" / "maisons" / "maison_test.json")
+    analyseur.add_argument("--maison", type=Path, default=None,
+                           help="Config JSON (défaut : celle de l'application, comme run_v0.py).")
     return analyseur
 
 

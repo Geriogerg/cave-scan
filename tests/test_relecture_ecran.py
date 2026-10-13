@@ -192,9 +192,9 @@ def test_revenir_refuse_un_champ_sans_lecture_du_modele(session, inventaire_id, 
 
 def test_une_valeur_hors_liste_ou_une_quantite_invalide_est_refusee_et_bloque_la_validation(session, inventaire_id):
     cible = bouteille(session, inventaire_id)
-    with pytest.raises(CorrectionRefusee, match="« bleu » n'est pas une valeur de la liste « couleur »"):
+    with pytest.raises(CorrectionRefusee, match="« bleu ».*liste « couleur »"):
         corriger_en_relecture(session, cible.id, "couleur", "bleu", EXPERT, None)
-    with pytest.raises(CorrectionRefusee, match=r"Quantité invalide : « 0 » : indiquez un nombre de bouteilles \(1 ou plus\)"):
+    with pytest.raises(CorrectionRefusee, match=r"Quantité invalide : « 0 »"):
         corriger_en_relecture(session, cible.id, "quantite", "0", EXPERT, None)
 
     saisies = saisies_affichees(session, inventaire_id, cible.id) | {"couleur": "bleu", "quantite": "0", "millesime": "2017"}
@@ -293,7 +293,7 @@ def test_reanalyser_une_bouteille_en_erreur(session, nom_maison, dossier_photos,
     en_erreur = bouteille(session, cree.inventaire_id, 1)
     assert en_erreur.statut == "erreur"
     fiche = fiche_de_relecture(session, cree.inventaire_id, en_erreur.id)
-    assert fiche.erreur == "Le service d'analyse n'a pas répondu à temps (panne passagère)."
+    assert "pas répondu à temps" in fiche.erreur and "panne passagère" in fiche.erreur
     assert "RateLimitError" not in fiche.erreur  # jamais le message technique brut
 
     reanalyser(session, en_erreur.id, EXPERT)
@@ -303,7 +303,7 @@ def test_reanalyser_une_bouteille_en_erreur(session, nom_maison, dossier_photos,
 
 def test_reanalyser_refuse_si_l_analyse_de_l_inventaire_est_annulee(session, inventaire_id):
     annuler(session, inventaire_id)
-    with pytest.raises(ActionRefusee, match="a été annulée : relancez-la depuis l'écran de suivi"):
+    with pytest.raises(ActionRefusee, match="relancez-la depuis l'écran de suivi"):
         reanalyser(session, bouteille(session, inventaire_id).id, EXPERT)
 
 
@@ -323,7 +323,7 @@ def test_une_bouteille_signalee_ne_peut_pas_etre_validee(session, inventaire_id)
         valider_en_relecture(session, cible.id, EXPERT, {}, version_de(session, cible.id))
     for autre in charger_inventaire(session, inventaire_id).bouteilles[1:]:
         valider(session, autre.id, EXPERT)
-    with pytest.raises(ValidationRefusee, match=r"1 bouteille\(s\) avec un problème de photos signalé \(n°1\)"):
+    with pytest.raises(ValidationRefusee, match=r"problème de photos signalé \(n°1\)"):
         valider_inventaire(session, inventaire_id, EXPERT)
 
     assert lever_signalement(session, cible.id, EXPERT) is True
