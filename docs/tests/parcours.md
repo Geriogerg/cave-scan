@@ -17,7 +17,8 @@ vitesse.
 
 ## P1 — Accueil et nouvel inventaire
 - Ouvrir `/app`. Attendu : liste des inventaires (vide au début), bouton « Nouvel inventaire », lien « Configuration ».
-- Créer un inventaire « Vente test » pour « Maison Test ». Attendu : arrivée sur « Photographier les bouteilles ».
+- Créer un inventaire « Vente test ». Attendu : seul le nom est demandé ; arrivée sur « Photographier les bouteilles ».
+- Aucune page ne doit nommer ni faire choisir « la maison » (une instance = une maison, decisions.md 0171).
 - Créer un inventaire sans nom. Attendu : refus avec une raison en français.
 
 ## P2 — Dépôt, mode appareil photo (téléphone)
@@ -64,11 +65,35 @@ vitesse.
 - Rouvrir (confirmation). Attendu : modifiable à nouveau.
 
 ## P8 — Configuration
-- `/app/configuration`, ouvrir « Maison Test ». Attendu : les colonnes, leur source, l'aperçu de ce qui est envoyé au modèle.
+- `/app/configuration`. Attendu : ouvre directement LA configuration (aucune liste, aucun nom de maison) ; les colonnes, leur source, l'aperçu de ce qui est envoyé au modèle.
 - Modifier la description d'une colonne, réordonner, ajouter une colonne expert, enregistrer. Attendu : nouvelle version annoncée.
 - Erreur volontaire (colonne sans nom, valeur de liste en double). Attendu : refus clair, rien d'enregistré.
 - Exporter le JSON ; réimporter un JSON invalide (refus clair) puis valide.
 - Un inventaire créé AVANT la modification garde son ancienne config (même colonnes dans son Excel).
+
+## P10 — Créer la configuration à la main, sans JSON (decisions.md 0172)
+- Lancer l'application sur un dossier de configs VIDE (`lancer_appli_isolee.py`, puis vider `<dossier>/configs/` et relancer).
+- `/app/configuration`. Attendu : « Aucune configuration » et « Créer la configuration ».
+- « Nouvel inventaire » sans configuration. Attendu : message clair qui renvoie vers la configuration.
+- « Créer la configuration ». Attendu : colonnes de base (N°, Quantité, Domaine, Appellation, Millésime, Format, À vérifier), message qui dit quoi faire.
+- Ajouter une colonne liste saisie par l'expert (« Caisse », valeurs CBO / Carton / Sans), une colonne texte lue par le modèle, enregistrer. Attendu : nouvelle version ; un inventaire créé ensuite a ces colonnes dans son Excel.
+- Juger : un débutant trouve-t-il comment modifier une colonne (« ✎ Modifier ») ?
+
+## P11 — Consignes générales envoyées au modèle (decisions.md 0173)
+- Configuration, bas de page : « Consignes générales envoyées au modèle ». Attendu : texte verrouillé ; règles fixes visibles à part (ne jamais deviner, millésime, format, aucun prix).
+- « Modifier les consignes » → fenêtre « êtes-vous sûr ? ». Annuler : rien ne change. Accepter : le texte devient modifiable, la case « Je confirme… » apparaît.
+- Modifier puis « Enregistrer » SANS cocher. Attendu : refus clair, rien d'enregistré.
+- Cocher puis enregistrer. Attendu : nouvelle version, consignes marquées « (modifiées) ».
+- Remettre le texte d'origine, cocher, enregistrer. Attendu : retour aux consignes d'origine.
+- Écrire un exemple de réponse dans les consignes. Attendu : avertissement « few-shot ».
+
+## P12 — Choix faits sans validation de l'utilisateur : juger s'ils sont bons
+Pour chacun, dire s'il aide ou gêne, en débutant et en expert, avec une proposition.
+- Quantité plafonnée à 100 000 ; texte libre à 1 000 caractères.
+- Téléphone, relecture : photo collée en haut (30 % de l'écran) pendant la saisie.
+- Configuration : colonnes repliées ; barre « Annuler / Vérifier / Enregistrer » masquée tant que rien n'est modifié.
+- Ordinateur : le dépôt s'ouvre en mode « Galerie ou ordinateur ».
+- Textes d'aide très réduits (demande de l'utilisateur) : reste-t-il des écrans où l'on ne comprend plus quoi faire ?
 
 ## P9 — Robustesse
 - URL d'un inventaire ou d'une bouteille qui n'existe pas (`/app/inventaires/9999/suivi`). Attendu : page d'erreur en français, pas de trace.
