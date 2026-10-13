@@ -430,6 +430,9 @@
     document.querySelectorAll("[data-panneau]").forEach(function (panneau) {
       panneau.hidden = panneau.dataset.panneau !== mode;
     });
+    // « Photographier » au téléphone, « Ajouter les photos » en galerie (T3-D18).
+    var titre = document.getElementById("titre-depot");
+    if (titre) titre.textContent = mode === "galerie" ? titre.dataset.galerie : titre.dataset.appareil;
     afficherGalerie();
   }
 

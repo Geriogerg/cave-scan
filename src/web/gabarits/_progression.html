@@ -16,7 +16,7 @@
     <p class="message attention">Analyse en pause : les bouteilles commencées se terminent, les autres attendent.
       Pour continuer : le bouton « Reprendre l'analyse », ci-dessous.</p>
   {% elif etat.terminee and etat.ecoule_s is not none %}
-    <p class="message ok">Analyse terminée en {{ etat.ecoule_s | duree }}.</p>
+    <p class="message ok">Analyse terminée{% if etat.ecoule_s %} (dernier lancement : {{ etat.ecoule_s | duree }}){% endif %}.</p>
   {% else %}
     <p class="aide">Temps écoulé : {{ etat.ecoule_s | duree }} · temps restant estimé : {{ etat.restant_estime_s | duree }}</p>
   {% endif %}

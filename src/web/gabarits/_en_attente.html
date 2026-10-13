@@ -27,11 +27,12 @@
           <figcaption>Photo {{ loop.index }}</figcaption>
           <div class="vignette-actions">
             {% if not loop.first %}
-            <button class="bouton petit" hx-post="/app/inventaires/{{ id }}/verifier/couper/{{ p.id }}" {{ cible | safe }}
-                    title="Cette photo et les suivantes forment une autre bouteille">Nouvelle bouteille à partir d'ici</button>
+            <button class="bouton petit icone" hx-post="/app/inventaires/{{ id }}/verifier/couper/{{ p.id }}" {{ cible | safe }}
+                    title="Nouvelle bouteille à partir d'ici : cette photo et les suivantes forment une autre bouteille"
+                    aria-label="Nouvelle bouteille à partir d'ici">✂ Couper</button>
             {% endif %}
-            <button class="bouton petit danger" hx-post="/app/inventaires/{{ id }}/verifier/retirer-photo/{{ p.id }}" {{ cible | safe }}
-                    hx-confirm="Retirer cette photo ?">Retirer</button>
+            <button class="bouton petit danger icone" hx-post="/app/inventaires/{{ id }}/verifier/retirer-photo/{{ p.id }}" {{ cible | safe }}
+                    hx-confirm="Retirer cette photo ?" title="Retirer cette photo" aria-label="Retirer cette photo">✕</button>
           </div>
         </figure>
         {% endfor %}
@@ -52,6 +53,7 @@
     <a class="bouton" href="/app/inventaires/{{ id }}/depot">Ajouter des photos</a>
     <button class="bouton principal" id="lancer" {% if not vue.peut_lancer %}disabled{% endif %}
             hx-post="/app/inventaires/{{ id }}/lancer" hx-include=".quantite-attente" {{ cible | safe }}
+            hx-trigger="click throttle:1s" hx-disabled-elt="this"
             hx-confirm="Lancer l'analyse de {{ vue.bouteilles | length }} bouteille(s) ? Leurs photos ne pourront plus être modifiées.">Lancer l'analyse</button>
   </nav>
 </section>

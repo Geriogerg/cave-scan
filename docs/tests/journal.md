@@ -86,3 +86,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 3 | T3-D14 (T2-D12) | mineur | Récapitulatif : deux comptages ; aide de « Séparer » périmée | Corrigé : une seule règle (champ lu qui diffère du modèle, ou champ de l'expert saisi) ; aide sans quantité | lot 12 |
 | 3 | T3-D15 | mineur | Archiver : message en double | Corrigé : le bandeau seul | lot 12 |
 | 3 | T3-D17 | mineur | Textes | Corrigé : « Action impossible » ; « vente » partout ; un seul deux-points ; guillemets insécables ; « Les valider n'est pas obligatoire » | lot 12 |
+| 3 | T3-D18 | mineur | Dépôt à l'ordinateur : vocabulaire de téléphone | Corrigé : « Ajouter les photos » en galerie, « Retirer cette bouteille » (lot 10), option « 4G » masquée à la souris | lot 13 |
+| 3 | T3-D20 | mineur | Cibles tactiles < 40 px | Corrigé : 44 px au toucher (navigation, Original, Autres actions, Historique, ↑/↓), cases de 28 px | lot 13 |
+| 3 | T3-D21 | mineur | « Vérifier » à l'ordinateur : barre non alignée, 8 boutons | Corrigé : barre alignée sur les cartes ; « ✂ Couper » et « ✕ », noms complets en infobulle et pour les lecteurs d'écran | lot 13 |
+| 3 | T3-D22 | mineur | Durée : seul le dernier lancement | Corrigé : « (dernier lancement : X) » | lot 13 |
+| 3 | T3-D23 | mineur | Double clic « Lancer » : deux confirmations | Corrigé : un clic par seconde, bouton désactivé pendant l'envoi | lot 13 |
+| 3 | T3-D24 | mineur | Configuration peu explicite | Corrigé : « Les colonnes de votre Excel, dans l'ordre » ; « toujours lue » au lieu de « noyau » ; « Identifiant » discret ; pas de description « pour le modèle » sur une liste de l'expert ; « Non déterminable est toujours proposé » | lot 13 |

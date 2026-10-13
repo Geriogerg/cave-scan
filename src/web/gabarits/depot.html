@@ -11,7 +11,8 @@
          data-max="{{ vue.photos_max }}"
          data-attente="{{ attente }}"
          data-taille="{{ taille_reduction }}">
-  <h1>{% if brouillon %}Photographier les bouteilles{% else %}Ajouter des bouteilles{% endif %}</h1>
+  <h1 id="titre-depot" data-galerie="{% if brouillon %}Ajouter les photos{% else %}Ajouter des bouteilles{% endif %}"
+      data-appareil="{% if brouillon %}Photographier les bouteilles{% else %}Ajouter des bouteilles{% endif %}">{% if brouillon %}Photographier les bouteilles{% else %}Ajouter des bouteilles{% endif %}</h1>
   <p class="aide">{{ vue.photos_max }} photos au plus par bouteille{% if not brouillon %} · ajoutées à la fin de l'inventaire{% endif %}.</p>
 
   <div class="modes" role="tablist" aria-label="Façon de prendre les photos">
@@ -47,7 +48,7 @@
     <button type="button" class="bouton grand" id="ajouter-bouteille">Ajouter une bouteille</button>
   </div>
 
-  <label class="case">
+  <label class="case case-reduire">
     <input type="checkbox" id="reduire" {% if reduction %}checked{% endif %}>
     Réduire les photos avant l'envoi (plus rapide en 4G)
   </label>

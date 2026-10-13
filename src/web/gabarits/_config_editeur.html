@@ -39,7 +39,7 @@
         <div class="colonne-tete">
           <strong>{{ i + 1 }}. {{ d.nom or "Nouvelle colonne" }}</strong>
           {% if c.nouvelle %}<span class="etiquette encours">nouvelle</span>{% endif %}
-          {% if d.cle in noyau %}<span class="etiquette neutre" title="Toujours lue par le modèle, même retirée de l'Excel">noyau</span>{% endif %}
+          {% if d.cle in noyau %}<span class="etiquette neutre" title="Lue par le modèle même si elle est retirée de l'Excel">toujours lue</span>{% endif %}
           <span class="colonne-boutons">
             <button class="bouton petit" type="submit" name="action" value="monter-{{ i }}" {% if loop.first %}disabled{% endif %} aria-label="Monter la colonne {{ d.nom }}">↑</button>
             <button class="bouton petit" type="submit" name="action" value="descendre-{{ i }}" {% if loop.last %}disabled{% endif %} aria-label="Descendre la colonne {{ d.nom }}">↓</button>
@@ -106,7 +106,7 @@
         {% set valeurs = d.valeurs or [] %}
         <input type="hidden" name="c{{ i }}_nb_valeurs" value="{{ valeurs | length }}">
         <table class="valeurs-config">
-          <thead><tr><th>Code</th><th>Libellé (Excel)</th><th>Description (pour le modèle)</th><th></th></tr></thead>
+          <thead><tr><th class="code-valeur">Identifiant</th><th>Libellé (Excel)</th>{% if c.envoyee %}<th>Description (pour le modèle)</th>{% endif %}<th></th></tr></thead>
           <tbody>
           {% for v in valeurs %}{% set j = loop.index0 %}
             <tr>
@@ -118,13 +118,15 @@
                 {% endif %}
               </td>
               <td><input type="text" name="c{{ i }}_v{{ j }}_libelle" value="{{ v.libelle or '' }}"></td>
-              <td><input type="text" name="c{{ i }}_v{{ j }}_description" value="{{ v.description or '' }}"></td>
+              {#- Une liste saisie par l'expert n'est jamais envoyée au modèle : pas de description à lui donner (T3-D24). #}
+              {% if c.envoyee %}<td><input type="text" name="c{{ i }}_v{{ j }}_description" value="{{ v.description or '' }}"></td>
+              {% else %}<input type="hidden" name="c{{ i }}_v{{ j }}_description" value="{{ v.description or '' }}">{% endif %}
               <td><button class="lien" type="submit" name="action" value="supprimer_valeur-{{ i }}-{{ j }}">Retirer</button></td>
             </tr>
           {% endfor %}
           </tbody>
         </table>
-        <p class="aide">+ « Non déterminable », d'office.
+        <p class="aide">« Non déterminable » est toujours proposé.
           <button class="lien" type="submit" name="action" value="ajouter_valeur-{{ i }}">Ajouter une valeur</button></p>
         {% else %}
         <input type="hidden" name="c{{ i }}_nb_valeurs" value="0">

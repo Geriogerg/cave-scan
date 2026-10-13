@@ -69,6 +69,7 @@ input[type="text"], select {
   border: 1px solid var(--bordure); border-radius: var(--rayon); background: var(--surface); color: var(--texte);
 }
 .case { display: flex; gap: 10px; align-items: flex-start; font-weight: 400 !important; margin: 14px 0; }
+@media (pointer: fine) { .case-reduire { display: none; } }  /* réduire « pour la 4G » : sans objet au bureau (T3-D18) */
 .case input { width: 24px; height: 24px; flex: none; margin-top: 1px; }
 
 /* Messages : chaque état est visible, avec sa raison. */
@@ -168,7 +169,9 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
   .liste-attente { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .liste-attente .attente-photos { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
   .liste-attente > .vide { grid-column: 1 / -1; }
+  body:has(.liste-attente) .barre-actions { padding-left: max(16px, calc((100% - 1240px) / 2 + 16px)); padding-right: max(16px, calc((100% - 1240px) / 2 + 16px)); }
 }
+.vignette-actions .bouton.icone { min-width: 44px; padding: 6px 10px; }
 .attente-titre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .quantite-attente { display: flex; align-items: center; gap: 6px; }
 .quantite-attente input { width: 4em; text-align: center; min-height: 44px; }
@@ -326,6 +329,13 @@ input.saisie::placeholder { color: var(--texte-doux); }
   .champ-pied .lien { padding: 10px 0; }  /* « Revenir à la valeur du modèle » : 44 px à toucher (T2-7) */
 }
 input[type="file"] { min-height: 44px; font: inherit; }
+@media (pointer: coarse) {
+  /* Liens et petits boutons : 44 px à toucher (T3-D20). */
+  .navigation-relecture a, .navigation-relecture .lien, #lien-original, .restes a,
+  .autres-actions summary, .historique summary { display: inline-flex; align-items: center; min-height: 44px; }
+  .colonne-boutons .bouton { min-width: 44px; }
+  .case input, .colonne-champs .case input { width: 28px; height: 28px; }
+}
 
 /* Configuration d'une maison (session 6) */
 textarea {
@@ -354,6 +364,7 @@ textarea {
 .detail-avance > summary { cursor: pointer; color: var(--texte-doux); font-weight: 400; padding: 8px 0; }
 .valeurs-config { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
 .valeurs-config th { text-align: left; font-weight: 600; padding: 4px; color: var(--texte-doux); }
+.valeurs-config th.code-valeur { font-weight: 400; font-size: 0.85rem; }
 .valeurs-config td { padding: 3px 4px; }
 .valeurs-config input { width: 100%; min-height: 40px; }
 .apercu-modele { margin-top: 10px; }
