@@ -39,3 +39,12 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 1 | T1-S3b | suggestion | Aperçu modèle en phrases | Écarté : l'aperçu montre EXACTEMENT ce qui part au modèle (demande de la session 6) ; une paraphrase pourrait s'en écarter | — |
 | 1 | T1-S4 | suggestion | Liste des envois qui s'allonge | Corrigé : les envois réussis ne s'affichent plus (ils sont sur les vignettes) | lot 6 |
 | 1 | T1-S6 | suggestion | Clé interne visible | Corrigé : identifiant dans un « réglage avancé » pour une nouvelle colonne, caché ensuite | lot 6 |
+| 2 | T2-B1 | bloquant | Quantité démesurée : 500 ; « Lancer » muet ; faux « connexion interrompue » | Corrigé : plafond 100 000 partout, refus en clair ; toute réponse 500 se dit en français | lot 7 |
+| 2 | T2-B2 / T2-D2 | majeur | Configuration : colonnes qui se replient, colonne déplacée perdue | Corrigé : les colonnes ouvertes le restent, la colonne qui a agi est mise en vue | lot 7 |
+| 2 | T2-B3 / T2-D3 | mineur | Aide des photos à trous au téléphone | Corrigé : masquée sans clavier | lot 7 |
+| 2 | T2-B4 / T2-D4 | mineur | Durée allongée par une réanalyse | Corrigé : seule la première lecture de chaque bouteille compte | lot 7 |
+| 2 | T2-B5 | mineur | Texte sans plafond | Corrigé : 1 000 caractères au plus | lot 7 |
+| 2 | T2-B5b | mineur | Estimation « abc » acceptée | Écarté : la colonne est un texte libre dans la config, pour saisir une fourchette (« 800-1000 ») ; la maison peut la passer en « nombre » | — |
+| 2 | T2-B6 | mineur | Bouteille vide « Bouteille 1 » en double | Corrigé : la bouteille vide prend le numéro qui suit | lot 7 |
+| 2 | T2-B7 | suggestion | Cibles tactiles de 19–21 px | Corrigé : 44 px | lot 7 |
+| 2 | T2-B8 | suggestion | Texte cité pris pour un bouton | Corrigé : « le bouton … ci-dessous / en bas de l'écran » | lot 7 |

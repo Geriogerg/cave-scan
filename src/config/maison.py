@@ -38,6 +38,7 @@ NOYAU_CANONIQUE = ("domaine", "appellation", "millesime", "format")
 # colonne système inconnue serait une colonne vide sans explication.
 COLONNE_ID = "id"
 COLONNE_A_VERIFIER = "a_verifier"
+QUANTITE_MAX = 100_000  # au-delà, une faute de frappe (et SQLite refuserait) — T2-1
 COLONNE_RELUE = "relue"  # « oui » si l'expert a validé la bouteille (option, decisions.md 0170)
 COLONNES_SYSTEME = (COLONNE_ID, COLONNE_A_VERIFIER, COLONNE_RELUE)
 

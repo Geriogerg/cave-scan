@@ -18,5 +18,22 @@
   </main>
   {% block actions %}{% endblock %}
   {% block scripts %}{% endblock %}
+  <script>
+    /* Toute réponse 500 à une action HTMX se dit, en français, au lieu d'un
+       écran qui ne bouge pas (rapport du testeur, T2-1). */
+    document.addEventListener("htmx:responseError", function (e) {
+      if (e.detail.xhr.status < 500 || document.getElementById("indicateur")) return;  // la relecture a son propre message
+      var zone = document.getElementById("erreur-serveur");
+      if (!zone) {
+        zone = document.createElement("p");
+        zone.id = "erreur-serveur";
+        zone.className = "message alerte";
+        zone.setAttribute("role", "alert");
+        document.querySelector("main").prepend(zone);
+      }
+      zone.textContent = "L'opération n'a pas abouti : erreur inattendue du serveur. Vérifiez votre saisie et réessayez.";
+      zone.scrollIntoView({ block: "center" });
+    });
+  </script>
 </body>
 </html>

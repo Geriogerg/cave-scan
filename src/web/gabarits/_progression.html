@@ -13,8 +13,8 @@
   {% if etat.extraction == "arretee" and not etat.terminee %}
     <p class="message alerte">L'analyse s'est arrêtée : {{ etat.motif_arret }}</p>
   {% elif etat.extraction == "annulee" and not etat.terminee %}
-    <p class="message attention">Analyse en pause : les bouteilles commencées se terminent, les autres attendent
-      « Reprendre l'analyse ».</p>
+    <p class="message attention">Analyse en pause : les bouteilles commencées se terminent, les autres attendent.
+      Pour continuer : le bouton « Reprendre l'analyse », ci-dessous.</p>
   {% elif etat.terminee and etat.ecoule_s is not none %}
     <p class="message ok">Analyse terminée en {{ etat.ecoule_s | duree }}.</p>
   {% else %}

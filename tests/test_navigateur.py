@@ -210,3 +210,21 @@ def test_en_mode_galerie_la_premiere_carte_est_la_bouteille_1(application, telep
     page.wait_for_url("**/verifier")
     titres = page.locator(".carte-attente .attente-titre strong").all_inner_texts()
     assert titres == ["Bouteille 1", "Bouteille 2"]
+
+
+def test_configuration_la_colonne_modifiee_reste_ouverte(application, telephone):
+    """Rapport du testeur, T2-B2 / T2-D2 : après « Ajouter une valeur » ou ↑, la
+    colonne en cours d'édition reste ouverte (et la colonne déplacée aussi)."""
+    page = telephone.new_page()
+    page.goto(f"{application}/app/configuration/maison_test")
+    bouton = page.locator('button[value^="ajouter_valeur-"]').first
+    index = int(bouton.get_attribute("value").split("-")[1])
+    colonne = page.locator(f"#colonne-{index}")
+    colonne.locator("details.colonne-detail > summary").click()
+    colonne.locator(f'button[value="ajouter_valeur-{index}"]').click()
+    page.wait_for_function(f"document.querySelector('#colonne-{index} details.colonne-detail').open === true", timeout=10_000)
+    lignes = page.locator(f"#colonne-{index} .valeurs-config tbody tr")
+    assert lignes.last.is_visible()
+
+    page.locator(f'#colonne-{index} button[value="monter-{index}"]').click()
+    page.wait_for_function(f"document.querySelector('#colonne-{index - 1} details.colonne-detail').open === true", timeout=10_000)

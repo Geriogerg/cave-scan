@@ -95,8 +95,9 @@
   // bouteille encore vide (celle de l'appareil photo, en mode galerie) ne
   // prend pas de numéro aux autres (rapport du testeur, T1-m4).
   function rang(bouteille) {
+    var vide = nombrePhotos(bouteille) === 0;  // vide : elle viendra après toutes les autres (T2-6)
     var avant = toutes().filter(function (b) {
-      return b !== bouteille && b.numero < bouteille.numero && nombrePhotos(b) > 0;
+      return b !== bouteille && nombrePhotos(b) > 0 && (vide || b.numero < bouteille.numero);
     }).length;
     return dejaFormees + avant + 1;
   }

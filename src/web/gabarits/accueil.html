@@ -4,7 +4,7 @@
 <h1>Inventaires</h1>
 {% if fait %}<p class="message ok" role="status">{{ fait }}</p>{% endif %}
 {% if not inventaires %}
-  <p class="vide">Aucun inventaire pour l'instant. Commencez par « Nouvel inventaire ».</p>
+  <p class="vide">Aucun inventaire pour l'instant. Commencez avec le bouton « Nouvel inventaire », en bas de l'écran.</p>
 {% else %}
   <ul class="cartes">
   {% for inventaire, etat in inventaires %}

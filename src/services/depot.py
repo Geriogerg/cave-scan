@@ -38,7 +38,7 @@ from typing import BinaryIO
 from sqlalchemy import exists, func, select, update
 from sqlalchemy.orm import Session
 
-from src.config.maison import lire_config, plier
+from src.config.maison import QUANTITE_MAX, lire_config, plier
 from src.donnees.modeles import FicheBouteille, GroupePhotos, Inventaire, Photo, maintenant
 from src.donnees.stockage import empreinte_fichier, stocker
 from src.io.photos import date_de_prise_de_vue
@@ -433,6 +433,8 @@ def _quantite(valeur: int | None) -> int | None:
         return None
     if isinstance(valeur, bool) or not isinstance(valeur, int) or valeur < 1:
         raise EnvoiRefuse(f"Quantité invalide : « {valeur} » (entier ≥ 1 attendu).")
+    if valeur > QUANTITE_MAX:
+        raise EnvoiRefuse(f"Quantité trop grande : « {valeur} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
     return valeur
 
 

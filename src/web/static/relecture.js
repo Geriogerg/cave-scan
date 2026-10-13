@@ -137,7 +137,13 @@
     if (/\/valider$/.test(chemin)) return apresValidation(statut);
     var cle = (evenement.detail.xhr && evenement.detail.xhr.cleDuChamp) || cleDe(elt);
     if (!cle) return;
-    if (statut === 0 || statut >= 500) {
+    if (statut >= 500) {  // le serveur a répondu : ce n'est pas la connexion (T2-1)
+      poser(cle, "refuse");
+      annoncer("« " + nomDe(cle) + " » n'a pas pu être enregistré : erreur inattendue du serveur. "
+        + "Vérifiez la saisie et réessayez ; le reste de la bouteille est enregistré.");
+      return;
+    }
+    if (statut === 0) {
       poser(cle, "erreur");
       reessayer(cle);
       return;
@@ -151,8 +157,12 @@
   });
 
   function apresValidation(statut) {
-    if (statut === 0 || statut >= 500) {
+    if (statut === 0) {
       annoncer("La validation n'a pas pu être envoyée (connexion interrompue ?). Rien n'est perdu : réessayez avec Ctrl+Entrée.");
+      return;
+    }
+    if (statut >= 500) {
+      annoncer("La validation n'a pas abouti : erreur inattendue du serveur. Vérifiez les saisies et réessayez.");
       return;
     }
     if (statut === 204) return;

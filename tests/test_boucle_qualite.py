@@ -64,3 +64,46 @@ def test_une_adresse_mal_formee_ou_inconnue_donne_une_page_en_francais(api):
     inconnue = api.get("/nimportequoi", headers={"Accept": "text/html"})
     assert inconnue.status_code == 404 and inconnue.text.lstrip().startswith("<!doctype html>")
     assert api.get("/nimportequoi").json()["code"] == "introuvable"  # l'API garde son JSON
+
+
+def test_une_quantite_demesuree_est_refusee_en_clair_partout(api, dossier_photos):
+    """T2-B1 : 99999999999999999999 faisait une erreur 500 (SQLite)."""
+    from src.services.relecture import CorrectionRefusee, quantite_valide
+
+    enorme = "99999999999999999999"
+    try:
+        quantite_valide(enorme)
+    except CorrectionRefusee as refus:
+        assert "Quantité trop grande" in str(refus)
+    else:
+        raise AssertionError("quantité démesurée acceptée")
+
+    from src.services.depot import _quantite
+    from src.services.envoi import EnvoiRefuse
+
+    try:
+        _quantite(int(enorme))
+    except EnvoiRefuse as refus:
+        assert "Quantité trop grande" in str(refus)
+    else:
+        raise AssertionError("quantité démesurée acceptée au dépôt")
+
+    inventaire_id = envoyer(api, dossier_photos).json()["id"]
+    extraire_en_arriere_plan(api, inventaire_id, FixtureExtractor(charges(), charger_config(CONFIG_TEST)))
+    premiere = api.get(f"/inventaires/{inventaire_id}/bouteilles").json()["bouteilles"][0]["id"]
+    reponse = api.post(f"/app/inventaires/{inventaire_id}/relecture/{premiere}/champ/quantite",
+                       data={"quantite": enorme}, headers={"HX-Request": "true", **AUTEUR})
+    assert reponse.status_code == 422 and "Quantité trop grande" in reponse.text
+
+
+def test_un_texte_trop_long_est_refuse(session, nom_maison, dossier_photos, stockage):
+    """T2-B5 : un collage accidentel de 5 000 caractères."""
+    import pytest
+
+    from src.services.relecture import CorrectionRefusee, corriger
+
+    cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Cave", stockage)
+    extraire_inventaire(session, cree.inventaire_id, ExtracteurScenario(), stockage)
+    premiere = charger_inventaire(session, cree.inventaire_id).bouteilles[0]
+    with pytest.raises(CorrectionRefusee, match="texte trop long"):
+        corriger(session, premiere.id, "cuvee", "x" * 5000, "expert")

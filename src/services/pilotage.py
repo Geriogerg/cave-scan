@@ -112,11 +112,15 @@ def avancement(session: Session, inventaire_id: int) -> Avancement:
     if inventaire.extraction_lancee_le is not None:
         fin = maintenant()
         if not restantes:  # terminée : la durée s'arrête à la dernière lecture (T1-m1)
-            derniere = session.scalar(
-                select(func.max(Extraction.cree_le)).where(
-                    Extraction.bouteille_id.in_(ids), Extraction.cree_le >= inventaire.extraction_lancee_le
-                )
+            # La PREMIÈRE lecture de chaque bouteille : une réanalyse demandée des
+            # minutes plus tard n'allonge pas la durée de l'analyse (T2-4).
+            premieres = (
+                select(func.min(Extraction.cree_le).label("lue_le"))
+                .where(Extraction.bouteille_id.in_(ids), Extraction.cree_le >= inventaire.extraction_lancee_le)
+                .group_by(Extraction.bouteille_id)
+                .subquery()
             )
+            derniere = session.scalar(select(func.max(premieres.c.lue_le)))
             fin = derniere or inventaire.extraction_lancee_le
         ecoule = (fin - inventaire.extraction_lancee_le).total_seconds()
         faites = session.scalar(

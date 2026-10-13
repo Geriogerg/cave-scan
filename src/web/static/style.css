@@ -302,8 +302,10 @@ input.saisie::placeholder { color: var(--texte-doux); }
 }
 /* Sans clavier (téléphone, tablette), les touches ne veulent rien dire (T1-m7). */
 @media (hover: none) and (pointer: coarse) {
-  kbd, [data-aide] { display: none; }
+  kbd, [data-aide], .aide-photo { display: none; }
+  .champ-pied .lien { padding: 10px 0; }  /* « Revenir à la valeur du modèle » : 44 px à toucher (T2-7) */
 }
+input[type="file"] { min-height: 44px; font: inherit; }
 
 /* Configuration d'une maison (session 6) */
 textarea {

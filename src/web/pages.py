@@ -33,6 +33,7 @@ from src.services.depot import (
     supprimer_groupe,
     supprimer_photo,
 )
+from src.config.maison import QUANTITE_MAX
 from src.services.depot import ModificationRefusee
 from src.services.envoi import TAILLE_MAX_OCTETS, config_de_la_maison, configs_disponibles
 from src.services.inventaires import charger_inventaire, lister_inventaires
@@ -210,6 +211,8 @@ def quantite(request: Request, inventaire_id: int, groupe_id: int, base: Session
     def changer():
         if not quantite.strip().isdigit() or int(quantite) < 1:
             raise ModificationRefusee(f"Quantité invalide : « {quantite} » (entier ≥ 1 attendu).")
+        if int(quantite) > QUANTITE_MAX:
+            raise ModificationRefusee(f"Quantité trop grande : « {quantite} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
         quantite_du_groupe(base, inventaire_id, groupe_id, int(quantite))
 
     return _en_attente(request, base, inventaire_id, changer)
@@ -224,6 +227,10 @@ async def lancer_l_analyse(request: Request, inventaire_id: int, base: SessionBa
         for groupe, quantite in zip(saisies.getlist("groupe"), saisies.getlist("quantite"), strict=False):
             if not str(quantite).strip().isdigit() or int(quantite) < 1:
                 raise ModificationRefusee(f"Quantité invalide : « {quantite} » (entier ≥ 1 attendu). Rien n'a été lancé.")
+            if int(quantite) > QUANTITE_MAX:
+                raise ModificationRefusee(
+                    f"Quantité trop grande : « {quantite} » ({QUANTITE_MAX:,} au plus). Rien n'a été lancé.".replace(",", " ")
+                )
             quantite_du_groupe(base, inventaire_id, int(groupe), int(quantite))
         finaliser(base, inventaire_id, stockage)
     except ERREURS_DE_SERVICE as refus:

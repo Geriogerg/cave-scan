@@ -27,7 +27,13 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, object_session
 
-from src.config.maison import COLONNE_QUANTITE, CLES_RESERVEES_AU_PIPELINE, NOYAU_CANONIQUE, ConfigMaison
+from src.config.maison import (
+    COLONNE_QUANTITE,
+    CLES_RESERVEES_AU_PIPELINE,
+    NOYAU_CANONIQUE,
+    QUANTITE_MAX,
+    ConfigMaison,
+)
 from src.donnees.modeles import Correction, EvenementBouteille, Extraction, FicheBouteille
 from src.extract.base import interpreter
 from src.extract.schema import (
@@ -487,13 +493,21 @@ def _saisie_valide(config: ConfigMaison, champ: str, valeur: Any) -> Any:
         return _code(champ, codes, valeur)
     if type_ == "nombre":
         return _nombre(champ, valeur)
-    return "" if valeur is None else str(valeur).strip()  # texte libre
+    texte = "" if valeur is None else str(valeur).strip()  # texte libre
+    if len(texte) > TEXTE_MAX:
+        raise CorrectionRefusee(f"« {champ} » : texte trop long ({len(texte)} caractères, {TEXTE_MAX} au plus).")
+    return texte
+
+
+TEXTE_MAX = 1000  # une description d'état tient largement ; au-delà, un collage par erreur (T2-5)
 
 
 def quantite_valide(valeur: Any) -> int:
     texte = str(valeur).strip()
     if isinstance(valeur, bool) or not texte.isdigit() or int(texte) < 1:
         raise CorrectionRefusee(f"Quantité invalide : « {valeur} » (entier ≥ 1 attendu).")
+    if int(texte) > QUANTITE_MAX:
+        raise CorrectionRefusee(f"Quantité trop grande : « {texte} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
     return int(texte)
 
 
