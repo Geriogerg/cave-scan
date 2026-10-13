@@ -1,18 +1,11 @@
 # Parcours de test de l'application web (agent testeur-web)
 
 Chaque parcours : ce qu'on fait, ce qu'on doit obtenir. Tout écart est un
-problème, classé selon la grille ci-dessous. Format téléphone = 390×844
-(tactile), ordinateur = 1440×900. Sauf mention, faire le parcours aux deux
-formats.
-
-## Grille de gravité
-
-| Gravité    | Définition |
-|------------|------------|
-| BLOQUANT   | Perte ou corruption de données ; erreur 500 ; parcours impossible à terminer ; Excel faux ou manquant une bouteille ; action qui viole une contrainte dure de CLAUDE.md |
-| MAJEUR     | Message technique, en anglais ou trace Python montré à l'utilisateur ; bouton ou lien sans effet ; erreur JavaScript dans la console ; écran inutilisable sur téléphone (débordement horizontal, bouton inaccessible) ; refus sans raison claire ; état affiché faux |
-| MINEUR     | Texte maladroit ou ambigu ; alignement ; incohérence de libellé entre deux écrans ; lenteur perceptible (> 2 s) sans indicateur |
-| SUGGESTION | Amélioration d'ergonomie pour un expert de maison de vente |
+problème, classé selon la grille de `.claude/agents/testeur-web.md`. Format
+téléphone = 390×844 (tactile), ordinateur = 1440×900. Sauf mention, faire le
+parcours aux deux formats, en débutant puis en expert. Au-delà du « ça
+marche », juger à chaque étape la clarté, le nombre de gestes, le design et la
+vitesse.
 
 ## Vérifications à faire sur CHAQUE écran
 
