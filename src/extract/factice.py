@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from src.extract.base import PhotosDUneBouteille, SortieModele, bouteille_depuis_sortie, liste_de_photos
-from src.extract.consignes import version_prompt
+from src.extract.consignes import consignes_systeme, version_prompt
 from src.extract.schema import Bouteille, schema_extraction
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ class ExtracteurFactice:
         self.latence_s = latence_s
         self.variation_s = variation_s
         self.journal = Path(journal) if journal else None
-        self.version_prompt = version_prompt(schema_extraction(config))
+        self.version_prompt = version_prompt(schema_extraction(config), consignes_systeme(config))
         self.limiteur = None
         self._verrou = threading.Lock()
         self.en_cours = 0

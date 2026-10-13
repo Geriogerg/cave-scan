@@ -69,7 +69,13 @@ def test_les_deux_backends_partagent_les_memes_consignes():
     """Si les prompts divergeaient, les scores ne seraient plus comparables."""
     from src.extract import vision_extract
 
-    assert vision_extract.SYSTEM_PROMPT is consignes.SYSTEM_PROMPT
+    from src.extract import gemini_extract
+
+    # Les consignes viennent d'UNE fonction partagée (celles de la config si la
+    # maison les a modifiées, decisions.md 0173), pour les deux fournisseurs.
+    assert vision_extract.consignes_systeme is consignes.consignes_systeme
+    assert gemini_extract.consignes_systeme is consignes.consignes_systeme
+    assert consignes.consignes_systeme(None) is consignes.SYSTEM_PROMPT
     assert vision_extract.LIBELLE_PHOTO is consignes.LIBELLE_PHOTO
 
 

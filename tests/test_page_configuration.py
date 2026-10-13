@@ -292,3 +292,41 @@ def test_creer_la_configuration_a_la_main_sans_json(tmp_path):
 
         assert client.post("/app/configuration/creer").status_code == 409  # une seule configuration
         assert client.post("/app/nouveau", data={"nom": "Vente"}, follow_redirects=False).status_code == 303
+
+
+def test_les_consignes_generales_se_modifient_avec_confirmation(client, configs):
+    """decisions.md 0173 : modifiables depuis la page, mais seulement avec la case
+    « Je confirme » (vérifiée par le serveur) ; elles partent alors au modèle et
+    changent la version du prompt."""
+    from src.extract.consignes import (
+        CONSIGNES_MODIFIABLES,
+        REGLES_FIXES_DEBUT,
+        REGLES_FIXES_FIN,
+        consignes_systeme,
+        version_prompt,
+    )
+    from src.extract.schema import schema_extraction
+
+    page = ouvrir(client)
+    assert 'name="consignes"' in page and "Modifier les consignes" in page
+    champs = formulaire(page)
+    nouvelles = CONSIGNES_MODIFIABLES + "\nPrécise toujours le climat s'il est écrit."
+    refus = agir(client, dict(champs, consignes=nouvelles), "enregistrer")
+    assert refus.status_code == 422 and "Je confirme modifier les consignes" in refus.text
+    assert charger_config(configs / CONFIG_TEST.name).consignes is None  # rien d'écrit
+
+    accepte = agir(client, dict(champs, consignes=nouvelles, confirmer_consignes="1"), "enregistrer")
+    assert accepte.status_code == 204
+    config = charger_config(configs / CONFIG_TEST.name)
+    assert config.consignes == nouvelles.strip()
+    envoye = consignes_systeme(config)
+    # Les contraintes dures restent envoyées, quoi que la maison écrive.
+    assert envoye.startswith(REGLES_FIXES_DEBUT) and envoye.endswith(REGLES_FIXES_FIN)
+    assert "tu ne devines jamais" in envoye.casefold() and "aucun prix" in envoye and nouvelles.strip() in envoye
+    schema = schema_extraction(config)
+    assert version_prompt(schema, consignes_systeme(config)) != version_prompt(schema)
+
+    # Revenir au texte d'origine retire la clé : la config redevient « d'origine ».
+    champs = formulaire(ouvrir(client))
+    agir(client, dict(champs, consignes=CONSIGNES_MODIFIABLES, confirmer_consignes="1"), "enregistrer")
+    assert charger_config(configs / CONFIG_TEST.name).consignes is None

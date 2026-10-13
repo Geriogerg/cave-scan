@@ -320,6 +320,11 @@ fichier et devient une nouvelle version ; un inventaire garde la version de sa
 création. Colonnes système facultatives : `a_verifier` (doutes du modèle, et
 « Erreur d'analyse ») et `relue` (« oui » si l'expert a validé la bouteille).
 
+Les **consignes générales** envoyées au modèle se modifient en bas de la même
+page, avec deux confirmations (« êtes-vous sûr ? », puis une case à cocher).
+Seule la partie du milieu change : les règles fixes (ne jamais deviner,
+millésime et format jamais devinés, aucun prix) sont toujours envoyées.
+
 ## Anciennes options
 
 | Avant                   | Maintenant                                                          |

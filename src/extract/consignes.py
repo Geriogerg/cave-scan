@@ -33,7 +33,11 @@ TYPES_MEDIA = {
 # La discipline d'abstention est la consigne centrale, pas une précaution de fin
 # de prompt : c'est elle qu'on mesure (decisions.md 0002, 0003, 0005).
 # Zero-shot assumé : aucun exemple de vin, aucun cas résolu (decisions.md 0006).
-SYSTEM_PROMPT = """Tu catalogues des bouteilles de vin pour une maison de vente aux enchères, à partir de photos.
+# Les consignes en trois parties (decisions.md 0173). Les deux parties FIXES portent
+# les contraintes dures de CLAUDE.md (ne jamais deviner ; millésime et format jamais
+# devinés ; aucun prix) : toujours envoyées, jamais modifiables. Celle du milieu, la
+# maison peut la réécrire depuis la page Configuration.
+REGLES_FIXES_DEBUT = """Tu catalogues des bouteilles de vin pour une maison de vente aux enchères, à partir de photos.
 
 RÈGLE ABSOLUE : tu ne devines jamais. Tu ne rapportes que ce qui est effectivement lisible ou visible sur les photos fournies.
 
@@ -45,15 +49,18 @@ Ces valeurs d'abstention sont des réponses CORRECTES et attendues. S'abstenir n
 
 MILLÉSIME : uniquement s'il est écrit et lisible sur l'étiquette, la contre-étiquette ou la capsule. Ne le déduis jamais du style du vin, de la gamme, de la mise en page, de l'usure de l'étiquette ni d'aucun contexte. Au moindre doute sur un seul chiffre : « non_lisible ».
 
-FORMAT : ne le déduis jamais d'une impression de taille sur la photo — un gros plan d'étiquette ne permet pas de conclure. Sans élément qui l'établisse réellement, réponds « non_determinable ».
+FORMAT : ne le déduis jamais d'une impression de taille sur la photo — un gros plan d'étiquette ne permet pas de conclure. Sans élément qui l'établisse réellement, réponds « non_determinable »."""
 
-COULEUR : renseigne couleur_source pour dire d'où vient l'information. « observee » si tu vois la couleur du vin ou qu'elle est écrite, « inferee » si tu la déduis de l'appellation ou du producteur, « non_lisible » si tu ne peux pas conclure.
+CONSIGNES_MODIFIABLES = """COULEUR : renseigne couleur_source pour dire d'où vient l'information. « observee » si tu vois la couleur du vin ou qu'elle est écrite, « inferee » si tu la déduis de l'appellation ou du producteur, « non_lisible » si tu ne peux pas conclure.
 
 EFFERVESCENCE : un champ distinct de la couleur, à renseigner séparément. Pour la couleur, applique le vocabulaire et les définitions propres à ce champ, même s'il mêle couleur et type de vin. Ne conclus « effervescent » que sur un signe réel : bouchon large maintenu par un muselet métallique, mention d'effervescence écrite, ou appellation qui ne produit que de l'effervescent. Sinon « non_determinable ».
 
-CHAMPS_A_VERIFIER : liste-y le nom de chaque champ sur lequel un doute subsiste, même léger. C'est une file de relecture humaine, pas un aveu d'échec.
+CHAMPS_A_VERIFIER : liste-y le nom de chaque champ sur lequel un doute subsiste, même léger. C'est une file de relecture humaine, pas un aveu d'échec."""
 
-INTERDIT : tu ne produis aucune estimation, aucun prix, aucune cote, aucune valeur marchande, sous aucune forme, y compris dans les notes."""
+REGLES_FIXES_FIN = """INTERDIT : tu ne produis aucune estimation, aucun prix, aucune cote, aucune valeur marchande, sous aucune forme, y compris dans les notes."""
+
+# Le texte d'origine, au caractère près : les trois parties dans l'ordre.
+SYSTEM_PROMPT = f"{REGLES_FIXES_DEBUT}\n\n{CONSIGNES_MODIFIABLES}\n\n{REGLES_FIXES_FIN}"
 
 # Un repère de position, SANS rôle imposé : l'expert photographie librement
 # chaque bouteille (étiquette, contre-étiquette s'il y en a une, capsule,
@@ -71,7 +78,17 @@ INSTRUCTION_FINALE = (
 )
 
 
-def version_prompt(schema: dict) -> str:
+def consignes_systeme(config) -> str:
+    """Les consignes générales envoyées au modèle (decisions.md 0173) : la partie
+    modifiable est celle de la config si la maison l'a réécrite ; les règles
+    fixes (contraintes dures) l'encadrent TOUJOURS."""
+    propres = getattr(config, "consignes", None)
+    if not propres:
+        return SYSTEM_PROMPT
+    return f"{REGLES_FIXES_DEBUT}\n\n{propres}\n\n{REGLES_FIXES_FIN}"
+
+
+def version_prompt(schema: dict, systeme: str = SYSTEM_PROMPT) -> str:
     """Empreinte de TOUT ce qui part au modèle : consignes, libellés, schéma.
 
     Deux extractions de même version ont reçu exactement la même demande ; dès
@@ -81,7 +98,7 @@ def version_prompt(schema: dict) -> str:
     """
     contenu = json.dumps(
         {
-            "systeme": SYSTEM_PROMPT,
+            "systeme": systeme,
             "libelles": [LIBELLE_PHOTO],
             "instruction": INSTRUCTION_FINALE,
             "schema": schema,

@@ -81,6 +81,35 @@
       evenement.detail.isError = false;
     }
   });
+  // Consignes générales : verrouillées par le script (sans JavaScript, la case
+  // à cocher suffit) ; première confirmation pour les déverrouiller, seconde :
+  // la case, exigée par le serveur à l'enregistrement.
+  var consignesDeverrouillees = false;  // le reste après une action (ajouter une colonne…)
+  function verrouillerLesConsignes() {
+    var zone = document.getElementById("consignes");
+    if (!zone) return;
+    if (consignesDeverrouillees) {
+      var bouton = document.getElementById("deverrouiller-consignes");
+      if (bouton) bouton.hidden = true;
+      return;
+    }
+    zone.readOnly = true;
+    document.getElementById("confirmer-consignes").hidden = true;
+  }
+  verrouillerLesConsignes();
+  document.body.addEventListener("htmx:afterSwap", verrouillerLesConsignes);
+  document.addEventListener("click", function (evenement) {
+    var bouton = evenement.target.closest && evenement.target.closest("#deverrouiller-consignes");
+    if (!bouton) return;
+    if (!window.confirm(bouton.dataset.question)) return;
+    var zone = document.getElementById("consignes");
+    zone.readOnly = false;
+    consignesDeverrouillees = true;
+    zone.focus();
+    document.getElementById("confirmer-consignes").hidden = false;
+    bouton.hidden = true;
+  });
+
   window.addEventListener("beforeunload", function (evenement) {
     if (modifiee) { evenement.preventDefault(); evenement.returnValue = ""; }
   });

@@ -70,7 +70,10 @@ DESCRIPTION_NON_DETERMINABLE = (
 PHOTOS_MAX_DEFAUT = 4
 PHOTOS_MAX_BORNES = (1, 10)
 
-CLES_RACINE = ("maison", "version", "langue", "photos_max_par_bouteille", "regroupement_export", "colonnes")
+CLES_RACINE = (
+    "maison", "version", "langue", "photos_max_par_bouteille", "regroupement_export", "colonnes", "consignes",
+)
+CONSIGNES_MAX = 20_000  # caractères : les consignes d'origine en font ~3 000
 CLES_COLONNE = (
     "cle", "nom", "type", "source", "description", "regle", "canonique", "valeurs",
 )
@@ -167,6 +170,9 @@ class ConfigMaison:
     regroupement_export: tuple[str, ...] = ()
     avertissements: tuple[str, ...] = ()
     photos_max_par_bouteille: int = PHOTOS_MAX_DEFAUT
+    # Consignes générales envoyées au modèle, si la maison les a modifiées ;
+    # None : celles d'origine (src/extract/consignes.py, decisions.md 0173).
+    consignes: str | None = None
 
     def colonne(self, cle: str) -> Colonne | None:
         return next((c for c in self.colonnes if c.cle == cle), None)
@@ -285,6 +291,12 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
             f"{photos_max!r}). Chaque photo envoyée au modèle se paie."
         )
 
+    consignes = brut.get("consignes")
+    if consignes is not None and (not isinstance(consignes, str) or not consignes.strip()):
+        erreurs.append("« consignes » : texte non vide attendu (ou retirer la clé pour garder celles d'origine).")
+    elif isinstance(consignes, str) and len(consignes) > CONSIGNES_MAX:
+        erreurs.append(f"« consignes » : {len(consignes)} caractères, {CONSIGNES_MAX} au plus.")
+
     colonnes_brutes = brut.get("colonnes")
     colonnes: list[Colonne] = []
     if not isinstance(colonnes_brutes, list) or not colonnes_brutes:
@@ -318,9 +330,26 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
         langue=langue,
         colonnes=tuple(colonnes),
         regroupement_export=regroupement,
-        avertissements=(*_reperer_exemples(colonnes), *_reperer_manques(colonnes)),
+        avertissements=(
+            *_reperer_exemples(colonnes), *_reperer_manques(colonnes), *_reperer_exemple_consignes(consignes)
+        ),
         photos_max_par_bouteille=photos_max,
+        consignes=consignes.strip() if isinstance(consignes, str) else None,
     )
+
+
+def _reperer_exemple_consignes(consignes: Any) -> list[str]:
+    """Des consignes modifiées qui donnent un exemple de réponse : c'est du few-shot."""
+    if not isinstance(consignes, str):
+        return []
+    for motif in MOTIFS_EXEMPLE:
+        trouve = motif.search(consignes)
+        if trouve:
+            return [
+                f"Consignes générales : contiennent ce qui ressemble à un exemple de réponse "
+                f"({trouve.group(0)}). C'est du few-shot (CLAUDE.md : on mesure le zero-shot)."
+            ]
+    return []
 
 
 def _cles_inconnues(objet: dict[str, Any], connues: tuple[str, ...], ou: str, erreurs: list[str]) -> None:

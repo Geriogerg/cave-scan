@@ -28,6 +28,9 @@ paths:
 ## Lecture
 - Extraction par modèle vision-langage en tool-use, sortie contrainte. Pas d'OCR
   classique.
+- Consignes générales : la maison peut réécrire la partie du milieu (page
+  Configuration, double confirmation) ; les règles fixes (ne jamais deviner,
+  millésime, format, aucun prix) sont toujours envoyées (decisions.md 0173).
 - Une bouteille = un groupe de photos : toutes envoyées en UN appel, numérotées
   dans l'ordre, sous la limite d'envoi du fournisseur. HEIC converti en JPEG
   pour le modèle seulement ; le fichier reçu est gardé tel quel.

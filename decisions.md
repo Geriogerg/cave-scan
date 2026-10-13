@@ -1161,6 +1161,23 @@ un renvoi d'une ligne à leur place.
   façon. L'import d'un JSON reste possible — écarté : un assistant pas à pas
   (l'éditeur fait déjà tout, sur la même page).
 
+- 0173 — Consignes générales modifiables par la maison, avec garde-fous
+  (demande de l'utilisateur, 2026-10-13). Le texte envoyé au modèle a trois
+  parties : deux FIXES, qui portent les contraintes dures de CLAUDE.md (ne
+  jamais deviner, valeurs d'abstention, millésime et format jamais devinés ;
+  aucun prix), toujours envoyées, jamais modifiables ; et une partie du milieu
+  (couleur, effervescence, champs à vérifier…), que la maison réécrit sur la
+  page Configuration. Elle vit dans la config (clé facultative `consignes`,
+  versionnée et figée par inventaire comme le reste) ; absente, c'est le texte
+  d'origine, envoyé au caractère près. Double confirmation : « Modifier les
+  consignes » demande « êtes-vous sûr ? » avant de déverrouiller, puis
+  l'enregistrement exige la case « Je confirme modifier les consignes »,
+  vérifiée par le serveur. La version du prompt suit le texte réellement
+  envoyé ; un exemple de réponse dans les consignes déclenche l'avertissement
+  few-shot — écarté : tout le texte modifiable (les contraintes dures
+  pourraient être retirées) ; consignes figées dans le code (demande de
+  l'utilisateur).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

@@ -27,6 +27,7 @@ from src.extract.consignes import (
     INSTRUCTION_FINALE,
     LIBELLE_PHOTO,
     SYSTEM_PROMPT,
+    consignes_systeme,
     LimitesEnvoi,
     preparer_photos,
     version_prompt,
@@ -151,7 +152,7 @@ class VisionExtractor:
         # expert et système jamais envoyées.
         self.config = config
         self._outil = schema_extraction(config)
-        self.version_prompt = version_prompt(self._outil)
+        self.version_prompt = version_prompt(self._outil, consignes_systeme(config))
 
     def extraire_brut(self, photos: PhotosDUneBouteille) -> SortieModele:
         """Une bouteille, un appel ; toutes ses photos dans le même message.
@@ -184,7 +185,7 @@ class VisionExtractor:
             return self.client.messages.create(
                 model=self.modele,
                 max_tokens=self.max_tokens,
-                system=SYSTEM_PROMPT,
+                system=consignes_systeme(self.config),
                 # Lire une étiquette abîmée et savoir renoncer demande de la
                 # réflexion : c'est précisément ce qu'on mesure, on laisse le
                 # thinking adaptatif.

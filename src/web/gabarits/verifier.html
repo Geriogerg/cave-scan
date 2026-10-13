@@ -3,9 +3,5 @@
 {% block fil %}{% if vue.inventaire.statut == "brouillon" %}<span class="fil">{{ vue.inventaire.nom }}</span>{% else %}<a class="fil" href="/app/inventaires/{{ vue.inventaire.id }}/suivi">{{ vue.inventaire.nom }}</a>{% endif %}{% endblock %}
 {% block contenu %}
 <h1>Vérifier les bouteilles</h1>
-<ul class="aide puces">
-  <li>Photo d'une autre bouteille → «&nbsp;Nouvelle bouteille à partir d'ici&nbsp;»</li>
-  <li>Bouteille coupée en deux → «&nbsp;Rattacher à la précédente&nbsp;»</li>
-</ul>
 {% include "_en_attente.html" %}
 {% endblock %}

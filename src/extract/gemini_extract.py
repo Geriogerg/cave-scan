@@ -36,6 +36,7 @@ from src.extract.consignes import (
     INSTRUCTION_FINALE,
     LIBELLE_PHOTO,
     SYSTEM_PROMPT,
+    consignes_systeme,
     LimitesEnvoi,
     preparer_photos,
     version_prompt,
@@ -96,7 +97,7 @@ class GeminiExtractor:
         self.limiteur = limiteur
         self.config = config  # la maison : vocabulaire et colonnes envoyées au modèle
         self._config = types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
+            system_instruction=consignes_systeme(config),
             # Sortie contrainte par LE schéma du projet, pas par un schéma
             # recopié : `schema.py` reste la source unique (decisions.md 0001),
             # et il suit la config de la maison (guide, étape 4.2).
@@ -107,7 +108,7 @@ class GeminiExtractor:
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
         self._dernier_appel = 0.0
-        self.version_prompt = version_prompt(schema_extraction(config))
+        self.version_prompt = version_prompt(schema_extraction(config), consignes_systeme(config))
 
     def extraire_brut(self, photos: PhotosDUneBouteille) -> SortieModele:
         """Une bouteille, un appel. Même politique d'erreur que le backend payant.

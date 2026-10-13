@@ -147,6 +147,29 @@
 
     <p><button class="bouton" type="submit" name="action" value="ajouter_colonne">Ajouter une colonne</button></p>
 
+    {#- Consignes générales : modifiables, avec deux confirmations (decisions.md 0173) :
+        une pour déverrouiller (navigateur), une case à cocher pour enregistrer
+        (vérifiée par le serveur). #}
+    <details class="bloc-repli consignes" {% if not consignes_d_origine %}open{% endif %}>
+      <summary>Consignes générales envoyées au modèle{% if not consignes_d_origine %} (modifiées){% endif %}</summary>
+      <details class="regles-fixes">
+        <summary>Règles toujours envoyées, non modifiables (ne jamais deviner, millésime, format, aucun prix)</summary>
+        <pre class="code">{{ regles_fixes[0] }}
+
+[… vos consignes …]
+
+{{ regles_fixes[1] }}</pre>
+      </details>
+      <textarea name="consignes" id="consignes" rows="10">{{ consignes }}</textarea>
+      <p class="consignes-actions">
+        <button class="bouton petit" type="button" id="deverrouiller-consignes"
+                data-question="Modifier les consignes envoyées au modèle ? Elles changent la lecture de toutes les prochaines bouteilles.">Modifier les consignes</button>
+        <label class="case" id="confirmer-consignes">
+          <input type="checkbox" name="confirmer_consignes" value="1"> Je confirme modifier les consignes
+        </label>
+      </p>
+    </details>
+
     <nav class="barre-actions barre-config">
       <a class="bouton" href="{{ adresse }}" data-abandon>Annuler</a>
       <button class="bouton" type="submit" name="action" value="verifier">Vérifier</button>

@@ -17,10 +17,10 @@ from fastapi.responses import RedirectResponse, Response
 
 from src.api.dependances import Formulaire, SessionBase
 from src.config.maison import NOYAU_CANONIQUE, ConfigInvalide
-from src.extract.consignes import SYSTEM_PROMPT
-from src.extract.schema import CHAMPS_MODELE
+from src.extract.consignes import CONSIGNES_MODIFIABLES, REGLES_FIXES_DEBUT, REGLES_FIXES_FIN
 from src.services.configuration import (
     config_de_l_instance,
+    consignes_modifiees,
     creer_configuration,
     SOURCES_EDITABLES,
     TYPES_EDITABLES,
@@ -58,8 +58,9 @@ def _contexte_edition(request: Request, base, nom: str, vue, **messages) -> dict
         types=[(t, LIBELLES_TYPES[t]) for t in TYPES_EDITABLES],
         noyau=NOYAU_CANONIQUE,
         commentaires_de_colonne=commentaires_de_colonne,
-        consignes=SYSTEM_PROMPT,
-        champs_toujours_lus=[c for c in CHAMPS_MODELE if c not in ("champs_a_verifier", "notes")],
+        consignes=vue.brut.get("consignes") or CONSIGNES_MODIFIABLES,
+        regles_fixes=(REGLES_FIXES_DEBUT, REGLES_FIXES_FIN),
+        consignes_d_origine=not vue.brut.get("consignes"),
         **messages,
     )
 
@@ -156,6 +157,14 @@ def agir(request: Request, nom: str, base: SessionBase, champs: Formulaire):
         fait = "Configuration valide : vous pouvez l'enregistrer." if verifier and not vue.erreurs else None
         return _afficher(request, base, nom, vue, statut, fait=fait)
 
+    # Garde-fou des consignes générales (decisions.md 0173) : les modifier
+    # demande une confirmation explicite, vérifiée ici, côté serveur.
+    if consignes_modifiees(active, brut) and champs.get("confirmer_consignes") != "1":
+        return _afficher(
+            request, base, nom, edition(active, brut), 422,
+            erreur="Les consignes envoyées au modèle ont changé : cochez « Je confirme modifier les consignes » "
+                   "pour enregistrer.",
+        )
     version_vue = champs.get("version_vue", "")
     try:
         enregistree = enregistrer_version(

@@ -45,7 +45,7 @@
 
   <h2>Chiffres</h2>
   <dl class="chiffres-recap">
-    <dt>Bouteilles</dt><dd>{{ c.total }} (dont {{ s.nb_separees }} née(s) d'une séparation)</dd>
+    <dt>Bouteilles</dt><dd>{{ c.total }}</dd>
     <dt>Corrections</dt><dd>{{ s.nb_corrections }} sur {{ s.nb_bouteilles_corrigees }} bouteille(s)</dd>
     <dt>Champs les plus corrigés</dt>
     <dd>{% for nom, nombre in r.champs_corriges[:6] %}{{ nom }} ({{ nombre }}){% if not loop.last %}, {% endif %}{% else %}aucun{% endfor %}</dd>

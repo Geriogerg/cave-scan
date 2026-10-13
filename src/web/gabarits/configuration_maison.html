@@ -5,20 +5,10 @@
 {% block fil %}<span class="fil">Configuration</span>{% endblock %}
 {% block contenu %}
 <h1>Configuration</h1>
-<ul class="aide puces">
-  <li>Version active : {{ config.version }}</li>
-  <li>« ✎ Modifier » : nom, description, type, valeurs d'une colonne</li>
-  <li>« noyau » : toujours lue par le modèle</li>
-  <li>« Enregistrer » crée la version {{ config.version + 1 }} ; les inventaires existants gardent la leur</li>
-</ul>
 
 {% include "_config_editeur.html" %}
 
-<details class="bloc-repli">
-  <summary>Consignes générales envoyées au modèle</summary>
-  <p class="aide">Toujours lus : {{ champs_toujours_lus | join(", ") }}.</p>
-  <pre class="code">{{ consignes }}</pre>
-</details>
+
 
 <h2>Versions enregistrées</h2>
 <p class="aide"><a href="/app/configuration/{{ nom }}/export">Télécharger la version active (JSON)</a></p>

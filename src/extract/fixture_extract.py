@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from src.extract.base import PhotosDUneBouteille, SortieModele, bouteille_depuis_sortie
-from src.extract.consignes import version_prompt
+from src.extract.consignes import consignes_systeme, version_prompt
 from src.extract.schema import Bouteille, schema_extraction
 
 if TYPE_CHECKING:
@@ -66,7 +66,7 @@ class FixtureExtractor:
         self._index = 0
         # La demande qui AURAIT été envoyée : même version qu'un vrai modèle pour
         # la même maison.
-        self.version_prompt = version_prompt(schema_extraction(config))
+        self.version_prompt = version_prompt(schema_extraction(config), consignes_systeme(config))
 
     @classmethod
     def depuis_json(cls, chemin: str | Path, config: ConfigMaison | None = None) -> FixtureExtractor:

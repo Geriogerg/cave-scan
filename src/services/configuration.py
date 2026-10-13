@@ -28,6 +28,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from src.extract.consignes import CONSIGNES_MODIFIABLES
 from src.config.maison import (
     NOYAU_CANONIQUE,
     SOURCES_MODELE,
@@ -401,7 +402,18 @@ def brut_depuis_formulaire(champs: dict[str, str]) -> dict[str, Any]:
         colonnes.append(colonne)
     brut["regroupement_export"] = regroupement
     brut["colonnes"] = colonnes
+    # Les consignes : gardées seulement si elles diffèrent de celles d'origine.
+    consignes = (champs.get("consignes") or "").replace("\r\n", "\n").strip()
+    if consignes and consignes != CONSIGNES_MODIFIABLES.strip():
+        brut["consignes"] = consignes
     return brut
+
+
+def consignes_modifiees(active: ConfigActive, brut: dict[str, Any]) -> bool:
+    """Les consignes envoyées au modèle changeraient-elles en enregistrant `brut` ?"""
+    avant = active.config.consignes or CONSIGNES_MODIFIABLES.strip()
+    apres = brut.get("consignes") or CONSIGNES_MODIFIABLES.strip()
+    return avant.strip() != apres.strip()
 
 
 def appliquer(brut: dict[str, Any], action: str) -> dict[str, Any]:
