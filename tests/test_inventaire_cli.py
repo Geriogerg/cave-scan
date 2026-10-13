@@ -87,7 +87,7 @@ def test_corriger_refuse_un_champ_inconnu_ou_une_valeur_hors_liste_sans_rien_ecr
 
     code, _, erreur = lancer(capsys, base, "corriger", 1, 1, "couleur", "violet", "--auteur", "expert")
     assert code == 2
-    assert "pas une valeur de la liste « couleur »" in erreur
+    assert "pas une valeur de la liste « Couleur »" in erreur
     assert lignes(base, "SELECT count(*) FROM correction") == [(0,)]
 
 

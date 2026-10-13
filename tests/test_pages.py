@@ -100,7 +100,7 @@ def test_parcours_depot_verification_lancement_suivi_export(api):
 
     extraire_en_arriere_plan_deja_lance(api, inventaire_id, ExtracteurFactice(charger_config(CONFIG_TEST)))
     fin = api.get(f"/app/inventaires/{inventaire_id}/progression").text
-    assert "Analyse terminée" in fin and f"/inventaires/{inventaire_id}/export" in fin
+    assert "Analyse terminée" in fin and f"/app/inventaires/{inventaire_id}/excel" in fin
     assert "Relire les bouteilles" in fin and f"/app/inventaires/{inventaire_id}/relecture" in fin
     assert 'hx-trigger="every 3s"' not in fin  # plus de rafraîchissement une fois terminée
     export = api.get(f"/inventaires/{inventaire_id}/export")

@@ -314,7 +314,7 @@ input.saisie::placeholder { color: var(--texte-doux); }
   .champs { grid-template-columns: 1fr; }
   .auteur-ecran { display: none; }
   /* La photo reste en haut, plus petite, pendant la saisie (T2-DS3). */
-  .photos { position: sticky; top: 0; z-index: 4; background: var(--fond); padding-bottom: 6px; }
+  .photos { position: sticky; top: 0; z-index: 6; background: var(--fond); padding-bottom: 6px; }  /* au-dessus de « Valider » (T3-D13) */
   .visionneuse { height: 30vh; min-height: 180px; }
   .champs { gap: 2px; }
   .champ { padding: 4px 6px; }

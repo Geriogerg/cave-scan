@@ -337,7 +337,7 @@ def _changements_depuis(session: Session, bouteille_id: int, version_vue: str) -
             changements.append(f"bouteille {action} ({quand})")
         else:
             changements.append(
-                f"« {_nom_de_colonne(config, correction.champ)} » : {_lisible(correction.ancienne_valeur)} → "
+                f"«\u00a0{_nom_de_colonne(config, correction.champ)}\u00a0» : {_lisible(correction.ancienne_valeur)} → "
                 f"{_lisible(correction.nouvelle_valeur)} ({quand})"
             )
     nouvelles = session.scalar(
@@ -376,7 +376,7 @@ def heure_locale(instant: datetime) -> str:
 def _lisible(valeur: Any) -> str:
     if valeur is None or est_abstention(valeur):
         return "vide"
-    return f"« {valeur} »"
+    return f"«\u00a0{valeur}\u00a0»"
 
 
 # --- corriger ----------------------------------------------------------------------------
@@ -470,9 +470,10 @@ def _saisie_valide(config: ConfigMaison, champ: str, valeur: Any) -> Any:
         raise CorrectionRefusee("Le statut ne se corrige pas : utiliser « valider ».")
 
     colonne = config.colonne(champ)
+    nom = colonne.nom if colonne is not None else champ  # l'en-tête de l'écran, jamais la clé (T3-D3)
     if colonne is not None and colonne.source == "systeme":
         raise CorrectionRefusee(
-            f"« {champ} » est calculée par l'outil (colonne système) : elle ne se corrige pas."
+            f"« {nom} » est calculée par l'outil (colonne système) : elle ne se corrige pas."
         )
     if champ == COLONNE_QUANTITE:
         return quantite_valide(valeur)
@@ -490,12 +491,12 @@ def _saisie_valide(config: ConfigMaison, champ: str, valeur: Any) -> Any:
         )
 
     if type_ == "liste":
-        return _code(champ, codes, valeur)
+        return _code(nom, codes, valeur)
     if type_ == "nombre":
-        return _nombre(champ, valeur)
+        return _nombre(nom, valeur)
     texte = "" if valeur is None else str(valeur).strip()  # texte libre
     if len(texte) > TEXTE_MAX:
-        raise CorrectionRefusee(f"« {champ} » : texte trop long ({len(texte)} caractères, {TEXTE_MAX} au plus).")
+        raise CorrectionRefusee(f"« {nom} » : {len(texte)} caractères, {TEXTE_MAX} au plus.")
     return texte
 
 
@@ -505,7 +506,7 @@ TEXTE_MAX = 1000  # une description d'état tient largement ; au-delà, un colla
 def quantite_valide(valeur: Any) -> int:
     texte = str(valeur).strip()
     if isinstance(valeur, bool) or not texte.isdigit() or int(texte) < 1:
-        raise CorrectionRefusee(f"Quantité invalide : « {valeur} » : indiquez un nombre de bouteilles (1 ou plus).")
+        raise CorrectionRefusee(f"Quantité invalide (« {valeur} ») : indiquez un nombre de bouteilles (1 ou plus).")
     if int(texte) > QUANTITE_MAX:
         raise CorrectionRefusee(f"Quantité trop grande : « {texte} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
     return int(texte)

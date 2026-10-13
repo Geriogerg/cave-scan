@@ -115,7 +115,7 @@ def renommer(session: Session, inventaire_id: int, nom: str, auteur: str) -> Non
     verifier_modifiable(inventaire)
     nom = (nom or "").strip()
     if not nom:
-        raise CycleRefuse("Donnez un nom à l'inventaire : il ne peut pas rester vide.")
+        raise CycleRefuse("Donnez un nom à la vente : il ne peut pas rester vide.")
     if len(nom) > 200:
         raise CycleRefuse("Nom trop long : 200 caractères au plus.")
     if nom == inventaire.nom:

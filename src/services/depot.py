@@ -432,7 +432,7 @@ def _quantite(valeur: int | None) -> int | None:
     if valeur is None:
         return None
     if isinstance(valeur, bool) or not isinstance(valeur, int) or valeur < 1:
-        raise EnvoiRefuse(f"Quantité invalide : « {valeur} » : indiquez un nombre de bouteilles (1 ou plus).")
+        raise EnvoiRefuse(f"Quantité invalide (« {valeur} ») : indiquez un nombre de bouteilles (1 ou plus).")
     if valeur > QUANTITE_MAX:
         raise EnvoiRefuse(f"Quantité trop grande : « {valeur} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
     return valeur

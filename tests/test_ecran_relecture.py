@@ -227,7 +227,7 @@ def test_la_derniere_bouteille_validee_mene_au_recapitulatif(api, inventaire, ba
     assert reponse.headers["HX-Redirect"] == f"/app/inventaires/{inventaire}/recapitulatif"
     recap = api.get(f"/app/inventaires/{inventaire}/recapitulatif").text
     assert "l'inventaire est validé" in recap
-    assert f"/inventaires/{inventaire}/export" in recap
+    assert f"/app/inventaires/{inventaire}/excel" in recap  # route d'écran : un refus se dit (T3-D4)
     assert api.get(f"/inventaires/{inventaire}").json()["statut"] == "valide"
 
 

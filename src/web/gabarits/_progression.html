@@ -39,7 +39,7 @@
     {% endif %}
     {% endif %}
     {% if etat.excel_disponible %}
-      <a class="bouton" href="/inventaires/{{ inventaire.id }}/export" download>Télécharger l'Excel</a>
+      <a class="bouton" href="/app/inventaires/{{ inventaire.id }}/excel">Télécharger l'Excel</a>
     {% elif etat.terminee %}
       <span class="bouton inactif" aria-disabled="true">Excel — après l'analyse des bouteilles ajoutées</span>
     {% endif %}

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block titre %}Oups{% endblock %}
 {% block contenu %}
-<h1>Impossible d'afficher cette page</h1>
+<h1>{% if titre %}{{ titre }}{% else %}Impossible d'afficher cette page{% endif %}</h1>
 <p class="message alerte" role="alert">{{ message }}</p>
 {% endblock %}
 {% block actions %}

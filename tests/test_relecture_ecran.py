@@ -192,9 +192,9 @@ def test_revenir_refuse_un_champ_sans_lecture_du_modele(session, inventaire_id, 
 
 def test_une_valeur_hors_liste_ou_une_quantite_invalide_est_refusee_et_bloque_la_validation(session, inventaire_id):
     cible = bouteille(session, inventaire_id)
-    with pytest.raises(CorrectionRefusee, match="« bleu ».*liste « couleur »"):
+    with pytest.raises(CorrectionRefusee, match="« bleu ».*liste « Couleur »"):
         corriger_en_relecture(session, cible.id, "couleur", "bleu", EXPERT, None)
-    with pytest.raises(CorrectionRefusee, match=r"Quantité invalide : « 0 »"):
+    with pytest.raises(CorrectionRefusee, match=r"Quantité invalide \(« 0 »\)"):
         corriger_en_relecture(session, cible.id, "quantite", "0", EXPERT, None)
 
     saisies = saisies_affichees(session, inventaire_id, cible.id) | {"couleur": "bleu", "quantite": "0", "millesime": "2017"}

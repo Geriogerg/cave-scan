@@ -80,3 +80,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 3 | T3-D9 | mineur | Erreur d'import : on quitte l'éditeur | Corrigé : on reste sur la configuration, le refus en haut | lot 11 |
 | 3 | T3-D10 | mineur | Sans configuration : « importez-la » | Corrigé : bouton « Créer la configuration », création d'inventaire désactivée ; page vide sans titre redondant ni bouton qui ramène sur place | lot 11 |
 | 3 | T3-D11 | mineur | Pas de retour aux inventaires depuis la configuration | Corrigé : « Inventaires › Configuration » dans l'en-tête (la barre du bas reste un choix à trancher, n°5) | lot 11 |
+| 3 | T3-D3 | majeur | Texte trop long : clé interne ; pas de limite à la saisie | Corrigé : chaque refus nomme la colonne de l'écran (texte, liste, nombre) ; `maxlength` 1000 | lot 12 |
+| 3 | T3-D4 | majeur | Excel refusé : téléchargement annulé en silence, JSON brut | Corrigé : route d'écran `/app/…/excel` ; refusé, retour au suivi avec la raison ; test | lot 12 |
+| 3 | T3-D13 | mineur | Téléphone : « Valider » sur la photo | Corrigé : la photo collée passe au-dessus | lot 12 |
+| 3 | T3-D14 (T2-D12) | mineur | Récapitulatif : deux comptages ; aide de « Séparer » périmée | Corrigé : une seule règle (champ lu qui diffère du modèle, ou champ de l'expert saisi) ; aide sans quantité | lot 12 |
+| 3 | T3-D15 | mineur | Archiver : message en double | Corrigé : le bandeau seul | lot 12 |
+| 3 | T3-D17 | mineur | Textes | Corrigé : « Action impossible » ; « vente » partout ; un seul deux-points ; guillemets insécables ; « Les valider n'est pas obligatoire » | lot 12 |

@@ -18,7 +18,7 @@
   {% elif c.cle == "quantite" %}
     <input type="number" id="saisie-{{ c.cle }}" name="{{ c.cle }}" class="saisie" value="{{ c.saisie }}" min="1" step="1" inputmode="numeric" {{ enregistrement }}>
   {% else %}
-    <input type="text" id="saisie-{{ c.cle }}" name="{{ c.cle }}" class="saisie" value="{{ c.saisie }}" autocomplete="off" spellcheck="false"
+    <input type="text" id="saisie-{{ c.cle }}" name="{{ c.cle }}" class="saisie" value="{{ c.saisie }}" autocomplete="off" spellcheck="false" maxlength="1000"
            placeholder="{% if c.a_remplir %}à remplir{% elif c.origine == 'vide' %}à saisir{% endif %}" {{ enregistrement }}{{ lue }}>
   {% endif %}
   {% include "_champ_pied.html" %}

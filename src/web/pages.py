@@ -218,7 +218,7 @@ def quantite(request: Request, inventaire_id: int, groupe_id: int, base: Session
     def changer():
         if not quantite.strip().isdigit() or int(quantite) < 1:
             raise ModificationRefusee(
-                f"Bouteille {_numero(base, inventaire_id, groupe_id)} — quantité invalide : « {quantite} » : "
+                f"Bouteille {_numero(base, inventaire_id, groupe_id)} — quantité invalide (« {quantite} ») : "
                 f"indiquez un nombre de bouteilles (1 ou plus)."
             )
         if int(quantite) > QUANTITE_MAX:
@@ -240,7 +240,7 @@ async def lancer_l_analyse(request: Request, inventaire_id: int, base: SessionBa
         for groupe, quantite in zip(saisies.getlist("groupe"), saisies.getlist("quantite"), strict=False):
             if not str(quantite).strip().isdigit() or int(quantite) < 1:
                 raise ModificationRefusee(
-                    f"Bouteille {_numero(base, inventaire_id, int(groupe))} — quantité invalide : « {quantite} » : "
+                    f"Bouteille {_numero(base, inventaire_id, int(groupe))} — quantité invalide (« {quantite} ») : "
                     f"indiquez un nombre de bouteilles (1 ou plus). Rien n'a été lancé."
                 )
             if int(quantite) > QUANTITE_MAX:
@@ -271,6 +271,22 @@ def suivi(request: Request, inventaire_id: int, base: SessionBase, fait: str | N
         request, "suivi.html", inventaire=inventaire, etat=avancement(base, inventaire_id),
         en_attente=apercu(base, inventaire_id).bouteilles, fait=MESSAGES.get(fait or ""),
     )
+
+
+@routeur.get("/app/inventaires/{inventaire_id}/excel")
+def excel(inventaire_id: int, base: SessionBase):
+    """L'Excel, depuis un écran : refusé (une bouteille n'a pas encore sa ligne),
+    on revient au suivi avec la raison, au lieu d'un téléchargement annulé en
+    silence ou de JSON brut (T3-D4)."""
+    from src.api.routes.inventaires import EXCEL
+    from src.services.consultation import exporter_en_octets
+    from src.services.restitution import ExportRefuse
+
+    try:
+        nom, contenu = exporter_en_octets(base, inventaire_id)
+    except ExportRefuse:
+        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=excel_refuse", status_code=303)
+    return Response(contenu, media_type=EXCEL, headers={"Content-Disposition": f'attachment; filename="{nom}"'})
 
 
 @routeur.get("/app/inventaires/{inventaire_id}/progression")

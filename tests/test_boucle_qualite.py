@@ -105,7 +105,7 @@ def test_un_texte_trop_long_est_refuse(session, nom_maison, dossier_photos, stoc
     cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Cave", stockage)
     extraire_inventaire(session, cree.inventaire_id, ExtracteurScenario(), stockage)
     premiere = charger_inventaire(session, cree.inventaire_id).bouteilles[0]
-    with pytest.raises(CorrectionRefusee, match="texte trop long"):
+    with pytest.raises(CorrectionRefusee, match="1000 au plus"):
         corriger(session, premiere.id, "cuvee", "x" * 5000, "expert")
 
 
@@ -148,3 +148,15 @@ def test_le_score_signale_des_consignes_modifiees(tmp_path, capsys):
     assert run_v0.main(["--dry-run", "--maison", str(modifiee), "--sortie", str(tmp_path / "b.xlsx")]) == 0
     sortie = capsys.readouterr().out
     assert AVERTISSEMENT_CONSIGNES in sortie and "Comparaison auto vs manuel" in sortie
+
+
+def test_l_excel_refuse_depuis_un_ecran_revient_au_suivi_avec_la_raison(api, dossier_photos):
+    """T3-D4 : un Excel refusé (bouteille sans ligne) ne laisse ni téléchargement
+    annulé en silence, ni JSON brut : retour au suivi, avec la raison."""
+    inventaire_id = envoyer(api, dossier_photos).json()["id"]  # pas encore analysé
+    refus = api.get(f"/app/inventaires/{inventaire_id}/excel", follow_redirects=False)
+    assert refus.status_code == 303 and refus.headers["location"].endswith("/suivi?fait=excel_refuse")
+    assert "pas encore disponible" in api.get(refus.headers["location"]).text
+    extraire_en_arriere_plan(api, inventaire_id, FixtureExtractor(charges(), charger_config(CONFIG_TEST)))
+    fichier = api.get(f"/app/inventaires/{inventaire_id}/excel")
+    assert fichier.status_code == 200 and "attachment" in fichier.headers["content-disposition"]

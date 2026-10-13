@@ -34,11 +34,11 @@ routeur = APIRouter(include_in_schema=False)
 # Après un geste, un message court (jamais un texte arbitraire dans l'adresse).
 MESSAGES = {
     "renomme": "Inventaire renommé.",
-    "archive": "Inventaire archivé.",
     "desarchive": "Inventaire sorti des archives.",
     "rouvert": "Inventaire rouvert : il est de nouveau modifiable.",
     "reprise": "Analyse reprise.",
     "restaure": "Inventaire restauré.",
+    "excel_refuse": "L'Excel n'est pas encore disponible : chaque bouteille doit d'abord avoir sa ligne (voir ci-dessous).",
     "corbeille": "Inventaire mis à la corbeille.",
 }
 
@@ -53,7 +53,7 @@ def _geste(request: Request, base, inventaire_id: int, faire, fait: str, retour:
     try:
         faire()
     except ERREURS_DE_SERVICE as refus:
-        return page(request, "erreur.html", 409, message=str(refus),
+        return page(request, "erreur.html", 409, message=str(refus), titre="Action impossible",
                     retour=f"/app/inventaires/{inventaire_id}/suivi", libelle_retour="Revenir à l'inventaire")
     return RedirectResponse(retour or suivi(inventaire_id, fait), status_code=303)
 
@@ -125,7 +125,7 @@ def confirmer_la_cloture(request: Request, inventaire_id: int, base: SessionBase
         "Ensuite : lecture seule. L'Excel reste téléchargeable ; l'inventaire peut être rouvert.",
     ]
     if etat.ce_qui_n_est_pas_valide():
-        explications.insert(1, f"Attention : {etat.ce_qui_n_est_pas_valide()} (facultatif).")
+        explications.insert(1, f"Attention : {etat.ce_qui_n_est_pas_valide()}. Les valider n'est pas obligatoire.")
     return page(
         request, "confirmation.html", inventaire=inventaire, action="clore",
         titre=f"Clore « {inventaire.nom} » ?", explications=explications,

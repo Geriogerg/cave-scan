@@ -13,6 +13,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from src.config.maison import COLONNE_QUANTITE
 from src.compare.compare_listings import (
     RapportComparaison,
     SignauxModele,
@@ -101,20 +102,24 @@ def signaux_du_modele(session: Session, inventaire_id: int) -> SignauxModele:
     return relever_signaux(auto, [colonne.cle for colonne in config.colonnes_best_effort])
 
 
-def _champs_vraiment_corriges(session: Session, corrections: list[Correction]) -> list[tuple[str, int]]:
-    """Par champ, le nombre de bouteilles dont la valeur DIFFÈRE de la lecture du
-    modèle : une correction suivie d'un « Revenir à la valeur du modèle » n'en est
-    plus une (T2-D12). Les colonnes de l'expert comptent dès qu'elles sont saisies."""
+def _vraies_corrections(session: Session, corrections: list[Correction], config) -> dict[int, set[str]]:
+    """Par bouteille, les champs vraiment corrigés : ceux lus par le modèle dont la
+    valeur DIFFÈRE de sa lecture (une correction suivie d'un « Revenir à la valeur
+    du modèle » n'en est plus une, T2-D12) ; ceux de l'expert (quantité…) dès
+    qu'ils ont été saisis, puisque le modèle ne les lit pas. Une seule règle pour
+    les deux lignes du récapitulatif (T3-D14)."""
     par_bouteille: dict[int, set[str]] = {}
     for correction in corrections:
         par_bouteille.setdefault(correction.bouteille_id, set()).add(correction.champ)
-    compte: Counter[str] = Counter()
+    vraies: dict[int, set[str]] = {}
     for bouteille_id, champs in par_bouteille.items():
         courantes, modele = valeurs_courantes(session, bouteille_id), valeurs_modele(session, bouteille_id)
         for champ in champs:
-            if valeur_courante(courantes, champ) != valeur_courante(modele, champ):
-                compte[champ] += 1
-    return compte.most_common()
+            colonne = config.colonne(champ)
+            saisi_par_l_expert = champ == COLONNE_QUANTITE or (colonne is not None and not colonne.envoyee_au_modele)
+            if saisi_par_l_expert or valeur_courante(courantes, champ) != valeur_courante(modele, champ):
+                vraies.setdefault(bouteille_id, set()).add(champ)
+    return vraies
 
 
 def _photographiees(inventaire) -> list[FicheBouteille]:
@@ -205,6 +210,8 @@ def stats_inventaire(session: Session, inventaire_id: int) -> StatsInventaire:
     identifiants = {bouteille.id: bouteille.identifiant for bouteille in inventaire.bouteilles}
     chronometrees = [b.temps_relecture_ms for b in inventaire.bouteilles if b.temps_relecture_ms]
 
+    vraies = _vraies_corrections(session, corrections, config_figee(inventaire))
+    par_champ = Counter(champ for champs in vraies.values() for champ in champs).most_common()
     return StatsInventaire(
         inventaire_id=inventaire.id,
         nom=inventaire.nom,
@@ -217,9 +224,11 @@ def stats_inventaire(session: Session, inventaire_id: int) -> StatsInventaire:
         tokens_sortie=sum(e.tokens_sortie or 0 for e in mesurees),
         extractions_mesurees=len(mesurees),
         duree_totale_ms=sum(e.duree_ms for e in extractions),
-        nb_corrections=len(corrections),
-        nb_bouteilles_corrigees=len({c.bouteille_id for c in corrections}),
-        champs_les_plus_corriges=_champs_vraiment_corriges(session, corrections),
+        # Une seule règle pour les deux lignes du récapitulatif (T3-D14) : un champ
+        # compte s'il DIFFÈRE de la lecture du modèle (un retour au modèle n'en est pas).
+        nb_corrections=sum(nombre for _champ, nombre in par_champ),
+        nb_bouteilles_corrigees=len(vraies),
+        champs_les_plus_corriges=par_champ,
         bouteilles_mesurees=len({e.bouteille_id for e in mesurees}),
         corrections_par_bouteille={
             identifiants[bouteille_id]: nombre
