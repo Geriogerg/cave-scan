@@ -51,8 +51,7 @@ FILTRE = "a_verifier"
 
 # Après une action, un message court (jamais un texte arbitraire dans l'adresse).
 MESSAGES_FAIT = {
-    "reanalyse": "Réanalyse demandée : la bouteille repasse par le modèle. Vos corrections restent prioritaires.",
-    "signalee": "Problème de photos signalé : cette bouteille ne peut plus être validée, elle attend au récapitulatif.",
+    "remise": "Bouteille remise dans l'inventaire : elle revient dans la relecture et dans l'Excel.",
     "levee": "Signalement levé : la bouteille peut de nouveau être validée.",
     "separee": "Bouteille séparée. Ajustez l'état et la description de cet exemplaire.",
     "retiree": "Bouteille retirée de l'inventaire. Elle se remet depuis le récapitulatif.",
@@ -138,7 +137,7 @@ def remettre(request: Request, inventaire_id: int, bouteille_id: int, base: Sess
         remettre_bouteille(base, bouteille_id, auteur)
     except ERREURS_DE_SERVICE as refus:
         return page(request, "erreur.html", 409, message=str(refus))
-    return RedirectResponse(adresse(inventaire_id, bouteille_id), status_code=303)
+    return RedirectResponse(adresse(inventaire_id, bouteille_id, fait="remise"), status_code=303)
 
 
 # --- enregistrer un champ, revenir à la valeur du modèle --------------------------------------

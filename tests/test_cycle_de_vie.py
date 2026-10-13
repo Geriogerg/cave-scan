@@ -78,7 +78,7 @@ def test_renommer_est_trace(session, extrait):
     assert charger_inventaire(session, extrait).nom == "Vente du 12 décembre"
     (evenement,) = evenements_d_inventaire(session, extrait)
     assert (evenement.type, evenement.auteur, evenement.detail["avant"]) == ("renommage", EXPERT, "Cave Dupont")
-    with pytest.raises(CycleRefuse, match="Donner un nom"):
+    with pytest.raises(CycleRefuse, match="Donnez un nom"):
         renommer(session, extrait, "   ", EXPERT)
 
 

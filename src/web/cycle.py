@@ -36,9 +36,7 @@ MESSAGES = {
     "renomme": "Inventaire renommé.",
     "archive": "Inventaire archivé : il est rangé dans « Archives », sur l'accueil.",
     "desarchive": "Inventaire sorti des archives.",
-    "clos": "Inventaire clos : il est maintenant en lecture seule. L'Excel reste téléchargeable.",
     "rouvert": "Inventaire rouvert : il est de nouveau modifiable.",
-    "pause": "Analyse en pause : les bouteilles commencées se terminent, les autres attendent.",
     "reprise": "Analyse reprise.",
     "restaure": "Inventaire restauré.",
     "corbeille": "Inventaire mis à la corbeille. Il se restaure depuis la corbeille, en bas de cette page.",
@@ -55,7 +53,8 @@ def _geste(request: Request, base, inventaire_id: int, faire, fait: str, retour:
     try:
         faire()
     except ERREURS_DE_SERVICE as refus:
-        return page(request, "erreur.html", 409, message=str(refus))
+        return page(request, "erreur.html", 409, message=str(refus),
+                    retour=f"/app/inventaires/{inventaire_id}/suivi", libelle_retour="Revenir à l'inventaire")
     return RedirectResponse(retour or suivi(inventaire_id, fait), status_code=303)
 
 

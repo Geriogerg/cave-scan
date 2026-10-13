@@ -6,6 +6,8 @@
 {% endblock %}
 {% block actions %}
 <nav class="barre-actions">
-  <a class="bouton principal" href="/app">Retour aux inventaires</a>
+  {% if retour %}<a class="bouton" href="/app">Inventaires</a>
+  <a class="bouton principal" href="{{ retour }}">{{ libelle_retour }}</a>
+  {% else %}<a class="bouton principal" href="/app">Retour aux inventaires</a>{% endif %}
 </nav>
 {% endblock %}

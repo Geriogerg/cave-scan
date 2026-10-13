@@ -43,7 +43,7 @@ def test_renommer_et_archiver_depuis_le_suivi(api, extrait):
     accueil = api.get("/app").text
     assert "Archives (1)" in accueil and "Vente de Noël" in accueil
     refus = api.post(f"/app/inventaires/{extrait}/renommer", data={"nom": "  "})
-    assert refus.status_code == 409 and "Donner un nom" in refus.text
+    assert refus.status_code == 409 and "Donnez un nom" in refus.text and "Revenir à l&#39;inventaire" in refus.text
 
 
 def test_la_corbeille_demande_confirmation_et_se_restaure(api, extrait):
@@ -92,7 +92,7 @@ def test_pause_et_reprise_de_l_analyse(api, dossier_photos):
     assert "Mettre l'analyse en pause" in api.get(f"/app/inventaires/{inventaire_id}/progression").text
     api.post(f"/app/inventaires/{inventaire_id}/pause")
     progression = api.get(f"/app/inventaires/{inventaire_id}/progression").text
-    assert "L'analyse est en pause." in progression and "Reprendre l'analyse" in progression
+    assert "Analyse en pause" in progression and "Reprendre l'analyse" in progression
     api.post(f"/app/inventaires/{inventaire_id}/reprendre-analyse")
     assert api.get(f"/inventaires/{inventaire_id}").json()["extraction"] == "lancee"
 

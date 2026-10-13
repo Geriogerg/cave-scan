@@ -248,6 +248,8 @@
   function valider() {
     if (aide && aide.open) return;
     compterLeTemps();
+    var suivante = document.querySelector("#valider[data-lecture-seule]");
+    if (suivante) { location.href = suivante.href; return; }  // inventaire clos : on passe, simplement
     fiche.requestSubmit();  // tout le formulaire part : rien de ce qui est affiché n'est perdu
   }
 

@@ -110,7 +110,15 @@ def avancement(session: Session, inventaire_id: int) -> Avancement:
 
     ecoule = estime = None
     if inventaire.extraction_lancee_le is not None:
-        ecoule = (maintenant() - inventaire.extraction_lancee_le).total_seconds()
+        fin = maintenant()
+        if not restantes:  # terminée : la durée s'arrête à la dernière lecture (T1-m1)
+            derniere = session.scalar(
+                select(func.max(Extraction.cree_le)).where(
+                    Extraction.bouteille_id.in_(ids), Extraction.cree_le >= inventaire.extraction_lancee_le
+                )
+            )
+            fin = derniere or inventaire.extraction_lancee_le
+        ecoule = (fin - inventaire.extraction_lancee_le).total_seconds()
         faites = session.scalar(
             select(func.count(func.distinct(Extraction.bouteille_id))).where(
                 Extraction.bouteille_id.in_(ids), Extraction.cree_le >= inventaire.extraction_lancee_le

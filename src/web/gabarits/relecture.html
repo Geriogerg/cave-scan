@@ -77,7 +77,8 @@
     {#- novalidate : le serveur juge chaque saisie et dit pourquoi il la refuse ; le
         navigateur ne bloque rien en silence. #}
     <form id="fiche" class="fiche" method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/valider" novalidate
-          hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/valider" hx-sync="this:queue all"
+          hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/valider" hx-sync="this:drop"
+          hx-disabled-elt="#valider"
           hx-target="#messages" hx-swap="innerHTML">
       {% include "_version.html" %}
       {% include "_filtre_cache.html" %}
@@ -87,10 +88,16 @@
         {% for c in f.champs %}{% include "_champ.html" %}{% endfor %}
       </fieldset>
       <div class="actions-fiche">
+        {#- Clos : lecture seule, valider n'a pas de sens ; on passe simplement à la suivante (T1-m9). #}
+        {% if f.inventaire.clos_le %}
+          {% if adresse_suivante %}<a class="bouton principal" id="valider" data-navigation data-lecture-seule
+             href="{{ adresse_suivante }}">Bouteille suivante <kbd>Ctrl+Entrée</kbd></a>{% endif %}
+        {% else %}
         <button type="submit" class="bouton principal" id="valider">
           {% if b.statut == "validee" %}Déjà validée — passer à la suivante{% else %}Valider et passer à la suivante{% endif %}
           <kbd>Ctrl+Entrée</kbd>
         </button>
+        {% endif %}
       </div>
     </form>
 
