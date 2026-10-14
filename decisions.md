@@ -1264,10 +1264,13 @@ un renvoi d'une ligne à leur place.
   l'expert : sa ligne n'est plus surlignée et sa colonne « À vérifier » est
   vide, même si une case est restée vide pour abstention (la case reste VIDE :
   jamais devinée, contrainte 1). En échange, valider une bouteille dont le
-  format ou le millésime est vide demande une seconde validation, avec la
-  raison (« ils resteront vides dans l'Excel »). Modifie 0055 pour les
-  bouteilles validées ; inchangé pour les autres — écarté : garder le jaune
-  après validation (l'expert ne pouvait pas dire « rien à lire ici »).
+  format ou le millésime est vide le dit aussitôt, sur la bouteille suivante
+  (« Bouteille n°X validée — Format vide : il restera vide dans l'Excel »),
+  sans bloquer. Modifie 0055 pour les bouteilles validées ; inchangé pour les
+  autres — écarté : garder le jaune après validation (l'expert ne pouvait pas
+  dire « rien à lire ici ») ; exiger une seconde validation (un format
+  illisible est normal sur un gros plan d'étiquette : presque chaque
+  validation serait doublée).
 
 - 0184 — Fusion de la branche de la boucle qualité autorisée (décision de
   l'utilisateur, 2026-10-14, R6) : `boucle-qualite` avance `main` en avance
