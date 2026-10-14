@@ -33,16 +33,19 @@
   // Ajouter, déplacer, retirer : la config affichée diffère de la version active.
   // Les colonnes ouvertes le restent après une action (ajouter une valeur,
   // monter, changer le type…) ; celle qui a agi est mise en vue (T2-2).
-  var ouvertes = null, active = null;
+  var ouvertes = null, active = null, apercus = null, ajout = false;
   function indexDe(element) {
     var li = element && element.closest ? element.closest("li.colonne-config") : null;
     return li ? parseInt(li.id.replace("colonne-", ""), 10) : null;
   }
   document.body.addEventListener("htmx:beforeRequest", function (evenement) {
     ouvertes = Array.prototype.map.call(document.querySelectorAll("details.colonne-detail[open]"), indexDe);
+    // Les aperçus ouverts le restent après « Vérifier » (T5-D5).
+    apercus = Array.prototype.map.call(document.querySelectorAll("details.apercu-modele[open]"), indexDe);
     var config = evenement.detail.requestConfig || {};
     var bouton = config.triggeringEvent && config.triggeringEvent.submitter;
     var action = bouton ? bouton.value : "";
+    ajout = action === "ajouter_colonne";
     active = indexDe(bouton || evenement.detail.elt);
     var m = /^(monter|descendre|supprimer)-(\d+)$/.exec(action);
     if (m) {
@@ -65,11 +68,30 @@
       var d = k === null ? null : document.querySelector("#colonne-" + k + " details.colonne-detail");
       if (d) d.open = true;
     });
+    (apercus || []).forEach(function (k) {
+      var d = k === null ? null : document.querySelector("#colonne-" + k + " details.apercu-modele");
+      if (d) d.open = true;
+    });
     var message = document.getElementById("refus-consignes") || document.querySelector("#editeur > .message");
     var cible = active === null ? null : document.getElementById("colonne-" + active);
-    if (message) message.scrollIntoView({ block: "start", behavior: "smooth" });
+    // « Ajouter une colonne » : la nouvelle, encore sans nom, est mise en vue, son nom prêt à
+    // taper (T5-D5). Cherchée après le « settle » d'HTMX : jusque-là, un élément de même id
+    // garde les attributs (la classe) de l'ancien.
+    if (ajout) {
+      setTimeout(function () {
+        var nom = Array.prototype.map.call(document.querySelectorAll("li.colonne-config.nouvelle"), function (li) {
+          return li.querySelector('input[name$="_nom"]');
+        }).filter(function (champ) { return champ && !champ.value; })[0];
+        if (!nom) return;
+        var detail = nom.closest("details.colonne-detail");
+        if (detail) detail.open = true;
+        nom.closest("li").scrollIntoView({ block: "center", behavior: "smooth" });
+        nom.focus({ preventScroll: true });
+      }, 60);
+    } else if (message) message.scrollIntoView({ block: "start", behavior: "smooth" });
     else if (cible) cible.scrollIntoView({ block: "nearest" });
-    ouvertes = active = null;
+    ouvertes = active = apercus = null;
+    ajout = false;
   });
   // Enregistrer (redirection) ou annuler volontairement : on peut partir.
   document.body.addEventListener("htmx:beforeRequest", function (evenement) {
@@ -79,6 +101,13 @@
   });
   document.addEventListener("click", function (evenement) {
     if (evenement.target.closest && evenement.target.closest("[data-abandon]")) modifiee = false;
+    // Un refus qui cite une colonne : le lien l'ouvre (T5-D5).
+    var lien = evenement.target.closest ? evenement.target.closest("[data-vers-colonne]") : null;
+    if (lien) {
+      var colonne = document.querySelector(lien.getAttribute("href"));
+      var detail = colonne ? colonne.querySelector("details.colonne-detail") : null;
+      if (detail) detail.open = true;
+    }
   });
   // Une config refusée (422) ou modifiée ailleurs (409) est une page à afficher,
   // avec ses raisons : HTMX l'insère comme les autres.

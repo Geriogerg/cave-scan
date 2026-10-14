@@ -174,3 +174,6 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 5 | T5-D4 | mineur | Récapitulatif mal aligné, cases bleues, libellés sur 2 lignes, nom coupé, versions avec « · » orphelin | Corrigé : récapitulatif aligné à gauche, `accent-color`, libellés de barre sur une ligne, nom en « … », versions en ligne souple | lot 27 |
 | 5 | T4-D14 (reste) | mineur | « Corrections : 0 sur 0 » ; « Son analyse s'arrête » même finie | Corrigé : « aucune » ; la corbeille ne le dit que si l'analyse tourne ; test | lot 27 |
 | 5 | T5-DS2 | suggestion | Inventaire clos : l'Excel pas en action principale | Corrigé ; test | lot 27 |
+| 5 | T5-D5 | mineur | Configuration : nouvelle colonne hors de vue ; aperçus refermés ; refus sans lien | Corrigé : le nom de la colonne ajoutée a le focus ; aperçus gardés ouverts ; chaque refus mène à sa colonne ; tests | lot 28 |
+| 5 | T3-D2 (reste) | mineur | Alerte d'exemple loin des consignes | Corrigé : aussi sous les consignes ; test | lot 28 |
+| 5 | T5-DS3 | suggestion | Version reprise sans origine | Corrigé : « (reprise de la version N) » ; test | lot 28 |

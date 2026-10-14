@@ -471,3 +471,38 @@ def test_une_configuration_sans_a_verifier_avertit_en_clair(client):
     assert "Sans la colonne « À vérifier »" in page and "Sans colonne de quantité" in page
     assert "a_verifier »" not in page and "decisions.md" not in page
 
+
+def test_un_refus_qui_cite_une_colonne_y_mene(client):
+    """T5-D5 : le refus d'une colonne est un lien vers elle."""
+    champs = formulaire(ouvrir(client))
+    k = _colonne(champs, "millesime")
+    champs[f"c{k}_type"] = "nombre"
+    refus = agir(client, champs, "verifier").text
+    assert f'<a href="#colonne-{k}" data-vers-colonne>' in refus and "Colonne « Millésime »" in refus
+
+
+def test_l_alerte_d_exemple_se_voit_aussi_pres_des_consignes(client):
+    """T3-D2 : un exemple de réponse ajouté aux consignes : l'alerte est aussi sous
+    les consignes, pas seulement en haut de la page."""
+    from src.extract.consignes import CONSIGNES_MODIFIABLES
+
+    champs = formulaire(ouvrir(client))
+    champs["consignes"] = CONSIGNES_MODIFIABLES + "\nPar exemple, réponds « Château Margaux 1990 »."
+    page = agir(client, champs, "verifier").text
+    bloc = page.split('id="consignes"')[1].split("</details>")[0]
+    assert "Consignes générales" in bloc and "message attention" in bloc
+
+
+def test_une_version_reprise_dit_de_laquelle(client, configs):
+    """T5-DS3 : « revenir à cette version » crée une version qui dit d'où elle vient."""
+    champs = formulaire(ouvrir(client))
+    champs[f"c{_colonne(champs, 'domaine')}_description"] = "Le domaine, tel qu'écrit."
+    assert agir(client, champs, "enregistrer").status_code == 204
+    champs = formulaire(ouvrir(client))
+    champs[f"c{_colonne(champs, 'domaine')}_description"] = "Le domaine, en toutes lettres."
+    assert agir(client, champs, "enregistrer").status_code == 204  # la précédente n'est plus active
+    page = ouvrir(client)
+    numero = re.findall(r'/revenir/(\d+)"', page)[0]
+    client.post(f"/app/configuration/{NOM}/revenir/{numero}")
+    assert "(reprise de la version" in ouvrir(client)
+

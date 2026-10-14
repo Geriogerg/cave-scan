@@ -35,6 +35,7 @@ from src.services.configuration import (
     enregistrer_version,
     exporter_version,
     importer,
+    reprises,
     versions_de,
 )
 from src.web.pages import page
@@ -47,6 +48,7 @@ def _contexte_edition(request: Request, base, nom: str, vue, **messages) -> dict
         vue=vue,
         nom=nom,
         versions=versions_de(base, vue.active.config.maison),
+        reprises=reprises(versions_de(base, vue.active.config.maison)),
         sources=[(s, LIBELLES_SOURCES[s]) for s in SOURCES_EDITABLES],
         types=[(t, LIBELLES_TYPES[t]) for t in TYPES_EDITABLES],
         noyau=NOYAU_CANONIQUE,

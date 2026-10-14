@@ -187,6 +187,27 @@ def versions_de(session: Session, maison: str) -> list[ConfigVersion]:
     )
 
 
+def reprises(versions: list[ConfigVersion]) -> dict[int, int]:
+    """Numéro d'une version -> version déclarée de la plus ancienne qui lui est
+    identique, au numéro de version près : « revenir à cette version » la recopie
+    (T5-DS3)."""
+    premieres: dict[str, int] = {}
+    identiques: dict[int, int] = {}
+    for version in sorted(versions, key=lambda v: v.numero):
+        try:
+            brut = json.loads(version.contenu)
+        except ValueError:
+            continue
+        if isinstance(brut, dict):
+            brut.pop("version", None)
+        empreinte = json.dumps(brut, sort_keys=True, ensure_ascii=False)
+        if empreinte in premieres:
+            identiques[version.numero] = premieres[empreinte]
+        else:
+            premieres[empreinte] = version.version_declaree
+    return identiques
+
+
 def apercu_modele(colonne: Colonne) -> str | None:
     """Ce que le modèle reçoit pour cette colonne, tel quel (le morceau du schéma
     qui la décrit) ; None si elle ne lui est jamais envoyée (expert, système)."""
@@ -489,6 +510,7 @@ class Edition:
     erreurs: list[str] = field(default_factory=list)
     avertissements: list[str] = field(default_factory=list)
     verifiee: bool = False  # la validation complète a été faite
+    colonnes_des_erreurs: list[int | None] = field(default_factory=list)  # la colonne de chaque refus
 
 
 def edition(active: ConfigActive, brut: dict[str, Any] | None = None, verifier: bool = False) -> Edition:
@@ -515,6 +537,7 @@ def edition(active: ConfigActive, brut: dict[str, Any] | None = None, verifier: 
             )
         )
     erreurs: list[str] = []
+    colonnes_des_erreurs: list[int | None] = []
     avertissements: list[str] = []
     if verifier:
         candidat = dict(brut, version=active.config.version + 1)
@@ -523,7 +546,7 @@ def edition(active: ConfigActive, brut: dict[str, Any] | None = None, verifier: 
         except ConfigInvalide as refus:
             erreurs = refus.erreurs
     if erreurs:
-        erreurs, fautives = _en_clair(erreurs, brut.get("colonnes") or [])
+        erreurs, fautives, colonnes_des_erreurs = _en_clair(erreurs, brut.get("colonnes") or [])
         colonnes = [replace(c, en_erreur=c.index in fautives) for c in colonnes]
     commentaires = {cle: valeur for cle, valeur in brut.items() if cle.startswith("_")}
     return Edition(
@@ -532,18 +555,21 @@ def edition(active: ConfigActive, brut: dict[str, Any] | None = None, verifier: 
         colonnes=colonnes,
         commentaires=json.dumps(commentaires, ensure_ascii=False),
         erreurs=erreurs,
+        colonnes_des_erreurs=colonnes_des_erreurs,
         avertissements=avertissements,
         verifiee=verifier,
     )
 
 
-def _en_clair(erreurs: list[str], colonnes: list[dict[str, Any]]) -> tuple[list[str], set[int]]:
+def _en_clair(erreurs: list[str], colonnes: list[dict[str, Any]]) -> tuple[list[str], set[int], list[int | None]]:
     """Les refus de la validation, dits pour la page (rapport du testeur, T1-M4) :
     chaque colonne par son nom d'en-tête, pas par sa clé ; une colonne sans nom
     n'a qu'un message (sa clé découle du nom). Renvoie aussi les index des
-    colonnes citées, pour les encadrer."""
+    colonnes citées, pour les encadrer, et la colonne de chaque message (un lien
+    y mène, T5-D5)."""
     fautives: set[int] = set()
     en_clair: list[str] = []
+    colonne_du_message: list[int | None] = []
     for erreur in erreurs:
         index = None
         for i, donnees in enumerate(colonnes):
@@ -567,7 +593,8 @@ def _en_clair(erreurs: list[str], colonnes: list[dict[str, Any]]) -> tuple[list[
             erreur = erreur.replace("« cle »", "« clé »").replace("« libelle »", "« libellé »")
             erreur = erreur.replace("« photos_max_par_bouteille » :", "Photos au plus par bouteille :")
             en_clair.append(erreur)
-    return en_clair, fautives
+            colonne_du_message.append(index)
+    return en_clair, fautives, colonne_du_message
 
 
 def commentaires_de_colonne(donnees: dict[str, Any]) -> str:

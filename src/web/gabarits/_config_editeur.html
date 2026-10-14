@@ -10,7 +10,8 @@
   {% if vue.erreurs %}
     <div class="message alerte" role="alert">
       <p>Rien n'a été enregistré : {{ vue.erreurs | length | accord("point", "points") }} à corriger.</p>
-      <ul class="liste-erreurs">{% for e in vue.erreurs %}<li>{{ e }}</li>{% endfor %}</ul>
+      <ul class="liste-erreurs">{% for e in vue.erreurs %}{% set k = vue.colonnes_des_erreurs[loop.index0] if loop.index0 < vue.colonnes_des_erreurs | length else none %}
+        <li>{% if k is not none %}<a href="#colonne-{{ k }}" data-vers-colonne>{{ e }}</a>{% else %}{{ e }}{% endif %}</li>{% endfor %}</ul>
     </div>
   {% endif %}
   {% set avertissements = vue.avertissements if vue.verifiee else config.avertissements %}
@@ -172,6 +173,7 @@
       </details>
       <textarea name="consignes" id="consignes" rows="10">{{ consignes }}</textarea>
       <p class="aide">Gardez tels quels les mots entre « » et en MAJUSCULES : l'outil les attend.</p>
+      {% for a in avertissements if a.startswith("Consignes générales") %}<p class="message attention">{{ a }}</p>{% endfor %}
       {% if erreur_consignes %}<p class="message alerte" role="alert" id="refus-consignes">{{ erreur_consignes }}</p>{% endif %}
       <p class="consignes-actions">
         <button class="bouton petit" type="button" id="deverrouiller-consignes"

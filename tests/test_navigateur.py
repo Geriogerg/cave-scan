@@ -419,3 +419,12 @@ def test_galerie_une_carte_vide_les_doublons_dans_la_carte_et_un_seul_onglet(app
     finally:
         ordinateur.close()
 
+
+def test_configuration_la_colonne_ajoutee_est_prete_a_nommer(application, telephone):
+    """T5-D5 : après « Ajouter une colonne », son nom a le focus et se voit."""
+    page = telephone.new_page()
+    page.goto(f"{application}/app/configuration/maison_test")
+    page.get_by_role("button", name="Ajouter une colonne").click()
+    page.wait_for_function("/^c[0-9]+_nom$/.test(document.activeElement.name || '')", timeout=10_000)
+    assert page.evaluate("document.activeElement.value") == ""
+
