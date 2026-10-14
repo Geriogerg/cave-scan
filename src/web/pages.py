@@ -276,7 +276,7 @@ def suivi(request: Request, inventaire_id: int, base: SessionBase, fait: str | N
     return page(
         request, "suivi.html", inventaire=inventaire, etat=avancement(base, inventaire_id),
         en_attente=apercu(base, inventaire_id).bouteilles, fait=MESSAGES.get(fait or ""),
-        fait_attention=fait in ("excel_refuse",),  # un refus, pas un succès (T4-D6)
+        fait_attention=fait in ("excel_refuse", "nom_vide"),  # un refus, pas un succès (T4-D6)
     )
 
 

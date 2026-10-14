@@ -23,7 +23,7 @@
   <div class="actions-suivi">
     {#- La relecture commence dès la première bouteille analysée (guide de session 5, §1). #}
     {% if faites + etat.par_statut.erreur %}
-      <a class="bouton principal" href="/app/inventaires/{{ inventaire.id }}/relecture">Relire les bouteilles</a>
+      <a class="bouton principal" href="/app/inventaires/{{ inventaire.id }}/relecture">{{ "Consulter les bouteilles" if inventaire.clos_le else "Relire les bouteilles" }}</a>
     {% else %}
       <span class="bouton inactif" aria-disabled="true">Relecture — dès la première bouteille analysée</span>
     {% endif %}

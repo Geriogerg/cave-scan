@@ -34,6 +34,7 @@ routeur = APIRouter(include_in_schema=False)
 # Après un geste, un message court (jamais un texte arbitraire dans l'adresse).
 MESSAGES = {
     "renomme": "Inventaire renommé.",
+    "nom_vide": "Donnez un nom à la vente : il ne peut pas rester vide. Rien n'a été renommé.",
     "desarchive": "Inventaire sorti des archives.",
     "rouvert": "Inventaire rouvert : il est de nouveau modifiable.",
     "reprise": "Analyse reprise.",
@@ -61,6 +62,8 @@ def _geste(request: Request, base, inventaire_id: int, faire, fait: str, retour:
 @routeur.post("/app/inventaires/{inventaire_id}/renommer")
 def renommer_l_inventaire(request: Request, inventaire_id: int, base: SessionBase, auteur: AuteurEcran,
                           nom: Annotated[str, Form()] = ""):
+    if not (nom or "").strip():  # rester sur l'inventaire, le refus en clair (T4-B20)
+        return RedirectResponse(suivi(inventaire_id, "nom_vide"), status_code=303)
     return _geste(request, base, inventaire_id, lambda: renommer(base, inventaire_id, nom, auteur), "renomme")
 
 

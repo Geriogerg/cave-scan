@@ -130,3 +130,11 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 4 | T4-B22 / T4-DS5 (1re partie) | suggestion | Nouvelle colonne après « À vérifier » | Corrigé : insérée avant les colonnes calculées de fin ; test | lot 19 |
 | 4 | T4-B25 | suggestion | « Importer » loin du choix du fichier | Corrigé : juste à côté. « Choose File » : texte du navigateur, en français dans un navigateur français | lot 19 |
 | 4 | T4-D14 (import) | mineur | Nom de fichier répété ; deux deux-points | Corrigé | lot 19 |
+| 4 | T4-B13 | mineur | Mot long : page élargie | Corrigé : coupé (titres, cartes, en-tête, messages, historique, tableaux) | lot 20 |
+| 4 | T4-B14 | mineur | Numéro démesuré dans l'adresse : 500 | Corrigé : 404 en français ; test | lot 20 |
+| 4 | T4-D16 / T4-B19 | mineur | Cibles de 22–25 px (en-tête, liens) ; bouton « − » | Corrigé : 44 px au toucher | lot 20 |
+| 4 | T4-D15 | mineur | Mise en page : récapitulatif sans barre ; « Inventaires » deux fois ; clos : « Relire » | Corrigé : barre du bas au récapitulatif ; « Inventaires » dans l'en-tête seul ; « Consulter les bouteilles » si clos | lot 20 |
+| 4 | T4-B20 | suggestion | Refus servis sur l'adresse du POST | Corrigé pour le renommage (retour au suivi, message) ; « Séparer » et l'import gardent leur page de refus (leurs messages dépendent de la saisie) | lot 20 |
+| 4 | T4-D14 (signalements) | mineur | « Signalées : 1 » après levée | Corrigé : « Photos signalées : 1 (signalements levés compris) » | lot 20 |
+| 4 | T4-B21 | suggestion | Une ligne d'aide sur « Vérifier » | Écarté : l'utilisateur a demandé de retirer ces lignes (0b54815) | — |
+| 4 | T4-B18 | mineur | Excel : bouteille validée encore jaune / « À vérifier » | À trancher par l'utilisateur (choix n°8 de choix_a_trancher.md) : touche la règle d'export 0055 | — |

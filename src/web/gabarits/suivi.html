@@ -49,7 +49,7 @@
 {% endblock %}
 {% block actions %}
 <nav class="barre-actions">
-  <a class="bouton" href="/app">Inventaires</a>
+  {#- « Inventaires » est dans l'en-tête : pas deux fois (T4-D15). #}
   {% if not inventaire.clos_le %}<a class="bouton" href="/app/inventaires/{{ inventaire.id }}/depot">Ajouter des bouteilles</a>{% endif %}
   <a class="bouton" href="/app/inventaires/{{ inventaire.id }}/recapitulatif">Récapitulatif</a>
 </nav>

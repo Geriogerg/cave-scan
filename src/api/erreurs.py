@@ -107,6 +107,15 @@ def installer(app: FastAPI, page_erreur: PageErreur | None = None) -> None:
             return repondre(request, 404, "introuvable", "Cette adresse n'existe pas.")
         return repondre(request, 422, "requete_invalide", f"Saisie incomplète ou invalide : {noms}.", champs)
 
+    @app.exception_handler(OverflowError)
+    def nombre_demesure(request: Request, exception: OverflowError):
+        # /app/inventaires/99999999999999999999/… : SQLite ne sait pas chercher un
+        # tel numéro ; aucune bouteille ne le porte (T4-B14).
+        if any(len(morceau) > 18 and morceau.isdigit() for morceau in request.url.path.split("/")):
+            return repondre(request, 404, "introuvable", "Cette adresse n'existe pas.")
+        journal.exception("Erreur imprévue")
+        return repondre(request, 500, "erreur_interne", "Erreur inattendue du serveur : l'opération n'a pas abouti.")
+
     @app.exception_handler(HTTPException)
     def http(request: Request, exception: HTTPException):
         code, message = MESSAGES_HTTP.get(exception.status_code, ("erreur", str(exception.detail)))

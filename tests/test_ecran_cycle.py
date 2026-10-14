@@ -42,8 +42,11 @@ def test_renommer_et_archiver_depuis_le_suivi(api, extrait):
     api.post(f"/app/inventaires/{extrait}/archiver")
     accueil = api.get("/app").text
     assert "Archives (1)" in accueil and "Vente de Noël" in accueil
-    refus = api.post(f"/app/inventaires/{extrait}/renommer", data={"nom": "  "})
-    assert refus.status_code == 409 and "Donnez un nom" in refus.text and "Revenir à l&#39;inventaire" in refus.text
+    # Un nom vide : on reste sur l'inventaire, le refus en clair, rien de renommé (T4-B20).
+    refus = api.post(f"/app/inventaires/{extrait}/renommer", data={"nom": "  "}, follow_redirects=False)
+    assert refus.status_code == 303 and refus.headers["location"].endswith("?fait=nom_vide")
+    suivi = api.get(refus.headers["location"]).text
+    assert "Donnez un nom" in suivi and "message attention" in suivi and "Vente de Noël" in suivi
 
 
 def test_la_corbeille_demande_confirmation_et_se_restaure(api, extrait):

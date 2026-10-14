@@ -259,3 +259,9 @@ def test_relecture_position_et_bouton_apres_remise_a_relire(api, dossier_photos)
     reponse = api.post(f"/app/inventaires/{inventaire_id}/relecture/{ids[0]}/champ/millesime",
                        data={"millesime": "1999"}, headers={"HX-Request": "true", **AUTEUR})
     assert 'id="valider" hx-swap-oob="true"' in reponse.text and "Valider et passer à la suivante" in reponse.text
+
+
+def test_un_numero_demesure_dans_l_adresse_est_une_page_introuvable(api):
+    """T4-B14 : plus de 19 chiffres : 404 en français, pas une erreur 500."""
+    reponse = api.get("/app/inventaires/99999999999999999999/suivi")
+    assert reponse.status_code == 404 and "n&#39;existe pas" in reponse.text

@@ -54,10 +54,14 @@
         {{ (s.temps_relecture_moyen_ms / 1000) | duree }} par bouteille en moyenne ({{ s.bouteilles_chronometrees }} chronométrée(s), absences exclues)
         {% else %}pas encore mesuré{% endif %}</dd>
     <dt>Réanalysées</dt><dd>{{ s.nb_reanalysees }}</dd>
-    <dt>Signalées</dt><dd>{{ s.nb_signalees }}</dd>
+    <dt>Photos signalées</dt><dd>{{ s.nb_signalees }} (signalements levés compris)</dd>
   </dl>
 
-  <nav class="actions-recap">
+
+</div>
+{% endblock %}
+{% block actions %}
+<nav class="barre-actions">
     {% if r.excel_attend %}
       <span class="bouton inactif" aria-disabled="true" title="Chaque bouteille doit avoir sa ligne">Excel — il reste {{ r.excel_attend }}</span>
     {% else %}
@@ -65,7 +69,5 @@
     {% endif %}
     {% if not r.termine %}<a class="bouton" href="/app/inventaires/{{ i }}/relecture">Reprendre la relecture</a>{% endif %}
     {% if r.termine and not r.inventaire.clos_le %}<a class="bouton" href="/app/inventaires/{{ i }}/clore">Clore l'inventaire</a>{% endif %}
-    <a class="bouton" href="/app/inventaires/{{ i }}/suivi">Suivi de l'analyse</a>
   </nav>
-</div>
 {% endblock %}
