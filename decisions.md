@@ -1192,6 +1192,56 @@ un renvoi d'une ligne à leur place.
   `tests/test_style_des_tests.py` — écarté : vérifier l'isolement par un simple
   grep (aveugle aux lectures indirectes, T3-R2).
 
+- 0175 — Corbeille et analyse (boucle qualité, tour 4, lot 15). Mettre une
+  bouteille à la corbeille ne met l'analyse en pause que s'il reste des
+  bouteilles à analyser ; une analyse finie le reste. La restauration remet
+  « lancée » une analyse qu'une corbeille avait arrêtée sans rien laisser à
+  lire. En pause sans rien à analyser, « Réanalyser » relance seul ; en pause
+  AVEC des bouteilles à analyser, le refus de 0147 tient, et son message dit
+  « Reprendre l'analyse » — écarté : autoriser la réanalyse pendant une pause
+  (deux lectures concurrentes).
+
+- 0176 — Relecture protégée des doubles appuis et des pages périmées (tour 4,
+  lot 16). Une validation acceptée ferme la page aux suivantes ; un appui AU
+  BOUTON dans les 500 ms qui suivent l'affichage d'une bouteille est ignoré,
+  le clavier non (l'expert enchaîne Entrée) ; une touche Entrée maintenue
+  (répétition) est ignorée. Les écrans sont servis en `Cache-Control:
+  no-store`, et une page restituée par le retour arrière du navigateur se
+  recharge : jamais de valeur périmée prise pour la bonne. Un formulaire
+  classique ne part qu'une fois — écarté : un délai pour toute validation
+  (ralentit l'expert au clavier) ; des en-têtes de revalidation (le retour
+  arrière les ignore).
+
+- 0177 — Photo indécodable refusée à la réception (tour 4, lot 16). La photo
+  est décodée à son arrivée : tronquée, « abîmée » ; au-delà de la limite de
+  pixels de Pillow, « trop de pixels » ; refus en clair, dans sa carte
+  (contrainte 5). Côté écran, une erreur serveur qui n'est pas un passage
+  (502, 503, 504) n'est réessayée que deux fois : au troisième échec, la photo
+  est dite refusée et n'est plus renvoyée — écarté : réessayer sans fin
+  (dépôt bloqué en « Coupure »).
+
+- 0178 — Limites de saisie et d'adresse (tour 4, lots 16 à 20). Quantité au
+  plus 100 000, texte au plus 1 000 caractères (compteur au-delà de 900,
+  collage coupé annoncé). Un numéro de plus de 18 chiffres dans une adresse
+  donne « page introuvable » (404), pas une erreur serveur. Une erreur 404
+  pendant la relecture dit « n'est plus disponible : rechargez la page » et la
+  saisie n'est pas comptée comme enregistrée (contrainte 5).
+
+- 0179 — Configuration : versions et colonnes (tour 4, lots 19 et 21).
+  « Revenir à cette version » enregistre l'ancienne version comme une NOUVELLE
+  version (l'historique ne se réécrit jamais ; les inventaires passés gardent
+  la leur) ; la version active est marquée. Une colonne ajoutée s'insère avant
+  les colonnes calculées de fin (« À vérifier »…). L'identifiant d'une valeur
+  tiré de son libellé suit le libellé tant que l'expert ne l'a pas écrit —
+  écarté : restaurer en réécrivant le fichier sans nouvelle version (perte de
+  trace).
+
+- 0180 — Millésime inhabituel signalé, jamais refusé (tour 4, lot 21). Une
+  saisie qui n'est ni 4 chiffres (1600–2099) ni « NM » est enregistrée telle
+  que tapée, avec « Inhabituel : 4 chiffres (ex. 2015) ou NM attendus. » sous
+  le champ — écarté : la refuser ou la corriger (l'expert peut avoir raison,
+  et l'outil ne devine jamais à sa place).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
