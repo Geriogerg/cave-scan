@@ -63,8 +63,15 @@ def config_par_defaut() -> Path:
     """La configuration de l'application (une instance = une maison, 0171), dans
     le dossier de `CAVE_SCAN_CONFIGS` s'il est donné — les tests y mettent la leur."""
     from src.donnees.base import dossier_configs
-    from src.services.configuration import config_de_l_instance
+    from src.services.configuration import (
+        config_de_l_instance,
+        configurations_en_concurrence,
+        message_plusieurs_configurations,
+    )
 
+    concurrentes = configurations_en_concurrence(dossier_configs())
+    if concurrentes:  # l'outil ne choisit pas (0182) : --maison, ou une seule configuration
+        raise Arret(message_plusieurs_configurations(concurrentes) + " Ou indiquez-la avec --maison.")
     active = config_de_l_instance(dossier_configs())
     return active.fichier if active is not None else CONFIG_DEFAUT
 SORTIE_DEFAUT = RACINE / "out" / "listing_auto.xlsx"

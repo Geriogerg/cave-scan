@@ -5,26 +5,30 @@
 <h1>Configuration</h1>
 <p class="aide">Les colonnes de votre Excel, et ce que le modèle doit lire.</p>
 
+{% if plusieurs %}<p class="message alerte" role="alert">{{ plusieurs }}</p>{% endif %}
 {% if info %}<p class="message info" role="status">{{ info }}</p>{% endif %}
 {% if erreurs %}
   <div class="message alerte" role="alert">
-    <p>« {{ importe }} » n'a pas été importé : {{ erreurs | length | accord("erreur", "erreurs") }} à corriger dans le fichier.</p>
+    {% if importe %}<p>« {{ importe }} » n'a pas été importé : {{ erreurs | length | accord("erreur", "erreurs") }} à corriger dans le fichier.</p>
+    {% else %}<p>La configuration n'a pas été créée :</p>{% endif %}
     <ul class="liste-erreurs">{% for e in erreurs %}<li>{{ e }}</li>{% endfor %}</ul>
   </div>
 {% endif %}
 
-{% if not erreurs and not info %}
+{% if not erreurs and not info and not plusieurs %}
 <p class="vide">Aucune configuration pour l'instant.</p>
 <p class="aide">À partir des colonnes de base ; vous ajoutez ensuite les vôtres.</p>
 <form method="post" action="/app/configuration/creer"><button class="bouton principal" type="submit">Créer la configuration</button></form>
 {% endif %}
 
+{% if not plusieurs %}
 <h2>Ou importer un fichier</h2>
 <p class="aide">Un fichier JSON, vérifié avant d'être pris en compte.</p>
 <form method="post" action="/app/configuration/importer" enctype="multipart/form-data" class="formulaire-en-ligne">
   <input type="file" name="fichier" accept=".json,application/json" required>
   <button class="bouton petit" type="submit">Importer</button>
 </form>
+{% endif %}
 {% endblock %}
 {% block actions %}
 <nav class="barre-actions">

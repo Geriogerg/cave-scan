@@ -34,7 +34,11 @@ from src.services.depot import (
     supprimer_photo,
 )
 from src.services.depot import ModificationRefusee
-from src.services.configuration import maison_de_l_instance
+from src.services.configuration import (
+    configurations_en_concurrence,
+    maison_de_l_instance,
+    message_plusieurs_configurations,
+)
 from src.services.envoi import TAILLE_MAX_OCTETS, EnvoiRefuse, config_de_la_maison
 from src.services.inventaires import charger_inventaire, lister_inventaires
 from src.services.pilotage import avancement, reprendre
@@ -119,7 +123,13 @@ def accueil(request: Request, base: SessionBase, fait: str | None = None):
 
 @routeur.get("/app/nouveau")
 def nouveau(request: Request, base: SessionBase):
-    return page(request, "nouveau.html", configuree=maison_de_l_instance(request.app.state.configs) is not None)
+    return page(request, "nouveau.html", configuree=maison_de_l_instance(request.app.state.configs) is not None,
+                plusieurs=_plusieurs_configurations(request))
+
+
+def _plusieurs_configurations(request: Request) -> str | None:
+    concurrentes = configurations_en_concurrence(request.app.state.configs)
+    return message_plusieurs_configurations(concurrentes) if concurrentes else None
 
 
 @routeur.post("/app/nouveau")
@@ -128,10 +138,12 @@ def creer(request: Request, base: SessionBase, nom: Annotated[str, Form()] = "")
     maison = maison_de_l_instance(request.app.state.configs)
     try:
         if maison is None:
-            raise EnvoiRefuse("Aucune configuration : créez-la d'abord (page « Configuration »).")
+            raise EnvoiRefuse(_plusieurs_configurations(request)
+                              or "Aucune configuration : créez-la d'abord (page « Configuration »).")
         cree = creer_brouillon(base, maison, config_de_la_maison(request.app.state.configs, maison), nom)
     except ERREURS_DE_SERVICE as erreur:
-        return page(request, "nouveau.html", 422, configuree=maison is not None, erreur=str(erreur), nom=nom)
+        return page(request, "nouveau.html", 422, configuree=maison is not None, erreur=str(erreur), nom=nom,
+                    plusieurs=_plusieurs_configurations(request))
     return RedirectResponse(f"/app/inventaires/{cree.inventaire_id}/depot", status_code=303)
 
 

@@ -506,3 +506,28 @@ def test_une_version_reprise_dit_de_laquelle(client, configs):
     client.post(f"/app/configuration/{NOM}/revenir/{numero}")
     assert "(reprise de la version" in ouvrir(client)
 
+
+def test_plusieurs_configurations_sans_designation_l_outil_n_en_choisit_aucune(client, configs, monkeypatch, tmp_path):
+    """Décision n° 7 (0182) : un second fichier valide déposé à côté, sans
+    CAVE_SCAN_MAISON : aucune configuration n'est prise en silence ; Configuration
+    et Nouvel inventaire le disent, rien ne se crée ; CAVE_SCAN_MAISON tranche."""
+    import run_v0
+
+    monkeypatch.delenv("CAVE_SCAN_MAISON", raising=False)
+    brut = json.loads(CONFIG_TEST.read_text(encoding="utf-8"))
+    brut["maison"] = "Ancienne maison"
+    (configs / "ancienne.json").write_text(json.dumps(brut, ensure_ascii=False), encoding="utf-8")
+
+    page = client.get("/app/configuration").text
+    assert "Plusieurs configurations trouvées" in page and "ancienne.json" in page
+    assert "Créer la configuration" not in page
+    assert "Plusieurs configurations trouvées" in client.get("/app/nouveau").text
+    refus = client.post("/app/nouveau", data={"nom": "Vente"}, follow_redirects=False)
+    assert refus.status_code == 422 and "Plusieurs configurations" in refus.text
+    assert client.post("/app/configuration/creer", follow_redirects=False).status_code == 409
+    monkeypatch.setenv("CAVE_SCAN_CONFIGS", str(configs))
+    assert run_v0.main(["--dry-run", "--sortie", str(tmp_path / "x.xlsx")]) == 2
+
+    monkeypatch.setenv("CAVE_SCAN_MAISON", charger_config(CONFIG_TEST).maison)
+    assert client.get("/app/configuration", follow_redirects=False).status_code == 303
+

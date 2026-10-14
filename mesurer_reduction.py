@@ -34,9 +34,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = _analyseur().parse_args(argv)
     environnement.charger_env()
 
-    from run_v0 import config_par_defaut  # la même configuration que run_v0.py (R2)
+    from run_v0 import Arret, config_par_defaut  # la même configuration que run_v0.py (R2)
 
-    config = charger_config(arguments.maison or config_par_defaut())
+    try:
+        config = charger_config(arguments.maison or config_par_defaut())
+    except Arret as arret:  # plusieurs configurations, aucune désignée (0182)
+        print(arret, file=sys.stderr)
+        return 2
     photos = sorted(p for p in arguments.photos.iterdir() if p.suffix.lower() in EXTENSIONS_IMAGE)
     tailles = [int(t) for t in arguments.tailles.split(",") if t.strip()]
     if not photos:

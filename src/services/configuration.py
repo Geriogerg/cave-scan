@@ -103,23 +103,49 @@ def config_active(dossier_configs: Path, maison: str) -> ConfigActive:
     raise ConfigIntrouvable(f"Aucune config pour la maison « {maison} » dans {Path(dossier_configs).name}/.")
 
 
-def maison_de_l_instance(dossier_configs: Path) -> str | None:
-    """Une instance de l'application = une maison (decisions.md 0171) : sa
-    configuration est la seule de `config/maisons/`. Si le dossier en contient
-    plusieurs, la variable `CAVE_SCAN_MAISON` désigne celle de l'instance ; à
-    défaut, la première par nom de fichier. None : aucune configuration valide."""
+def _configurations_valides(dossier_configs: Path) -> list[tuple[str, Path]]:
     valides = []
     for fichier in sorted(Path(dossier_configs).glob("*.json")):
         try:
-            valides.append(lire_config(fichier)[0].maison)
+            valides.append((lire_config(fichier)[0].maison, fichier))
         except ConfigInvalide:
             continue
+    return valides
+
+
+def _designee(valides: list[tuple[str, Path]]) -> str | None:
     choisie = os.environ.get("CAVE_SCAN_MAISON", "").strip()
-    if choisie:
-        for maison in valides:
-            if plier(maison) == plier(choisie):
-                return maison
-    return valides[0] if valides else None
+    return next((maison for maison, _fichier in valides if choisie and plier(maison) == plier(choisie)), None)
+
+
+def maison_de_l_instance(dossier_configs: Path) -> str | None:
+    """Une instance de l'application = une maison (decisions.md 0171) : sa
+    configuration est la seule de `config/maisons/`. Si le dossier en contient
+    plusieurs, la variable `CAVE_SCAN_MAISON` désigne celle de l'instance ; sans
+    elle, l'outil n'en choisit AUCUNE (decisions.md 0182). None : aucune
+    configuration valide, ou plusieurs sans désignation."""
+    valides = _configurations_valides(dossier_configs)
+    designee = _designee(valides)
+    if designee is not None:
+        return designee
+    return valides[0][0] if len(valides) == 1 else None
+
+
+def configurations_en_concurrence(dossier_configs: Path) -> list[str]:
+    """Les fichiers entre lesquels l'outil refuse de choisir : plusieurs
+    configurations valides, aucune désignée (decisions.md 0182). Vide sinon."""
+    valides = _configurations_valides(dossier_configs)
+    if len(valides) < 2 or _designee(valides) is not None:
+        return []
+    return [fichier.name for _maison, fichier in valides]
+
+
+def message_plusieurs_configurations(fichiers: list[str]) -> str:
+    return (
+        f"Plusieurs configurations trouvées ({', '.join(fichiers)}) : l'outil n'en choisit aucune. "
+        f"Laissez-en une seule dans le dossier des configurations, ou désignez celle de l'application "
+        f"(réglage CAVE_SCAN_MAISON)."
+    )
 
 
 # Le point de départ d'une configuration créée à la main (decisions.md 0172) :
@@ -161,6 +187,9 @@ def creer_configuration(session: Session, dossier_configs: Path) -> VersionEnreg
     si l'application en a déjà une : on la modifie, on n'en crée pas une autre."""
     if maison_de_l_instance(dossier_configs) is not None:
         raise ConfigInvalide("L'application a déjà sa configuration : modifiez-la plutôt.")
+    concurrentes = configurations_en_concurrence(dossier_configs)
+    if concurrentes:  # une de plus ne lèverait pas l'ambiguïté (0182)
+        raise ConfigInvalide(message_plusieurs_configurations(concurrentes))
     brut = copy.deepcopy(CONFIGURATION_DE_DEPART)
     for colonne in brut["colonnes"]:
         if colonne["cle"] in NOYAU_CANONIQUE:

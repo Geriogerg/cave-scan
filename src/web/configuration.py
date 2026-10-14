@@ -21,7 +21,9 @@ from src.extract.consignes import CONSIGNES_MODIFIABLES, REGLES_FIXES_DEBUT, REG
 from src.services.configuration import (
     _identifiant,
     config_de_l_instance,
+    configurations_en_concurrence,
     consignes_modifiees,
+    message_plusieurs_configurations,
     creer_configuration,
     SOURCES_EDITABLES,
     TYPES_EDITABLES,
@@ -76,7 +78,13 @@ def liste(request: Request, base: SessionBase):
     active = config_de_l_instance(request.app.state.configs)
     if active is not None:
         return RedirectResponse(f"/app/configuration/{active.fichier.stem}", status_code=303)
-    return page(request, "configuration.html")
+    return page(request, "configuration.html", plusieurs=_plusieurs(request))
+
+
+def _plusieurs(request: Request) -> str | None:
+    """Plusieurs configurations, aucune désignée : la raison, en rouge (0182)."""
+    concurrentes = configurations_en_concurrence(request.app.state.configs)
+    return message_plusieurs_configurations(concurrentes) if concurrentes else None
 
 
 @routeur.post("/app/configuration/creer")
@@ -97,6 +105,8 @@ async def importer_un_fichier(
     # Le fichier importé devient la nouvelle version de LA configuration de
     # l'application, quel que soit le nom de maison qu'il porte (0171).
     active = config_de_l_instance(request.app.state.configs)
+    if active is None and _plusieurs(request):  # un fichier de plus ne lèverait pas l'ambiguïté (0182)
+        return page(request, "configuration.html", 409, plusieurs=_plusieurs(request))
     try:
         texte = contenu.decode("utf-8-sig")
         if active is not None:
