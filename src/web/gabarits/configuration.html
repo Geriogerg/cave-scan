@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block titre %}Configuration{% endblock %}
-{% block fil %}<span class="fil">Configuration</span>{% endblock %}
+{% block fil %}<a class="fil" href="/app">Inventaires</a><span class="fil">› Configuration</span>{% endblock %}
 {% block contenu %}
 <h1>Configuration</h1>
-<p class="aide">Les colonnes de votre Excel, et ce que le modèle doit lire.</p>
+<p class="aide">Les colonnes de votre Excel, dans l'ordre.</p>
 
 {% if plusieurs %}<p class="message alerte" role="alert">{{ plusieurs }}</p>{% endif %}
 {% if info %}<p class="message info" role="status">{{ info }}</p>{% endif %}

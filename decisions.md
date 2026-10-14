@@ -1344,7 +1344,14 @@ un renvoi d'une ligne à leur place.
   atteignent l'expert ; la ligne de commande garde ses « (s) » (outil de
   développeur). Les guillemets « » qui se séparaient de leur mot en fin de
   ligne prennent des espaces insécables. La clôture n'affiche plus un message
-  en double : le bandeau « Inventaire clos le … » suffit. Une bouteille que le modèle
+  en double : le bandeau « Inventaire clos le … » suffit.
+
+- 0193 — Finitions d'écrans (tour 6, lot 34). Une photo déjà reçue, rechoisie
+  après un rechargement, est dite dans sa carte, sans vignette ; la page
+  Configuration a le même fil d'Ariane et le même sous-titre dans tous ses
+  états ; le motif d'un signalement ou d'un retrait se saisit avant son bouton ;
+  « Exemplaires à séparer » au lieu de « ex. » ; au téléphone, le récapitulatif
+  met chaque libellé au-dessus de sa valeur. Une bouteille que le modèle
   n'a pas lue n'affiche aucun « doute du modèle ». Au dépôt, une quantité
   refusée reste dans son champ, comme sur Vérifier.
 

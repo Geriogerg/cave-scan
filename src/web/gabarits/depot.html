@@ -31,11 +31,10 @@
       <label class="bouton principal grand" for="camera" id="bouton-photo">Prendre une photo</label>
       <input id="camera" class="cache" type="file" accept="image/*" capture="environment">
       <div class="quantite-depot">
-        <span>Quantité</span>
+        <span>Quantité <span class="aide">(bouteilles identiques)</span></span>
         <button type="button" class="bouton petit" data-quantite="-1" aria-label="Une bouteille de moins">−</button>
         <input id="quantite" type="text" inputmode="numeric" value="1" aria-label="Quantité de bouteilles identiques">
         <button type="button" class="bouton petit" data-quantite="1" aria-label="Une bouteille de plus">+</button>
-        <span class="aide">bouteilles identiques</span>
       </div>
       <button type="button" class="bouton grand" id="suivante">Bouteille suivante</button>
     </div>

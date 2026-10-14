@@ -421,6 +421,12 @@
     if (refus) refus.remove();
     var refusees = file.filter(function (envoi) { return envoi.bouteille.cle === bouteille.cle && envoi.etat === "refusee"; });
     var messages = refusees.map(function (envoi) { return envoi.message; });
+    // Déjà reçue (rechoisie après un rechargement) : dite, sans vignette fantôme (T6-D11).
+    file.forEach(function (envoi) {
+      if (envoi.bouteille.cle === bouteille.cle && envoi.etat === "deja") {
+        messages.push("« " + envoi.nom + " » était déjà reçue : elle n'est pas ajoutée une seconde fois.");
+      }
+    });
     if (avisDeLaPage[bouteille.cle]) messages.push(avisDeLaPage[bouteille.cle]);
     if (carte && messages.length) {
       refus = document.createElement("ul");
@@ -449,7 +455,7 @@
       conteneur.appendChild(recue);
     });
     file.forEach(function (envoi) {
-      if (envoi.bouteille.cle !== bouteille.cle || envoi.etat === "refusee") return;
+      if (envoi.bouteille.cle !== bouteille.cle || envoi.etat === "refusee" || envoi.etat === "deja") return;
       var element = document.createElement("li");
       element.className = "vignette-depot " + envoi.etat;
       element.title = envoi.nom + " — " + envoi.message;

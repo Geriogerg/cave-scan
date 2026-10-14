@@ -417,3 +417,19 @@ def test_lancer_une_seule_bouteille_dit_ses_photos(api):
     page = api.get(f"/app/inventaires/{inventaire_id}/verifier").text
     assert "Ses photos ne pourront plus" in page and "Leurs photos" not in page
 
+
+def test_finitions_du_tour_6(api, dossier_photos):
+    """T6-S1, T6-S2, T6-S4, T6-D12 : libellés et ordre des champs."""
+    from tests.test_api import charges, extraire_en_arriere_plan
+    from tests.test_extraction import ExtracteurScenario  # noqa: F401
+    from src.extract.fixture_extract import FixtureExtractor
+    from src.config.maison import charger_config
+
+    inventaire_id = envoyer(api, dossier_photos).json()["id"]
+    extraire_en_arriere_plan(api, inventaire_id, FixtureExtractor(charges(), charger_config(CONFIG_TEST)))
+    page = api.get(f"/app/inventaires/{inventaire_id}/relecture").text
+    assert "Exemplaires à séparer" in page and "> ex.<" not in page
+    signaler = page.split('/signaler"')[1].split("</form>")[0]
+    assert signaler.index('name="motif"') < signaler.index("<button")
+    assert "(bouteilles identiques)" in api.get(f"/app/inventaires/{inventaire_id}/depot").text
+

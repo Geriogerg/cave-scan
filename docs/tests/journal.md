@@ -197,3 +197,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 6 | T6-D9 | mineur | Guillemets séparés de leur mot | Corrigé : espaces insécables (suivi en pause, configuration) | lot 33 |
 | 6 | T6-R4 | réserve | Choix n° 7 : import et mesurer_reduction.py sans test ; phrase maladroite | Corrigé : tests ; « En ligne de commande, --maison la désigne aussi. » Le nom du réglage reste dans le bandeau : seul l'installateur peut agir | lot 33 |
 | 6 | T6-R5 | réserve | Choix n° 8 : pas de test de l'avis à l'écran ; test qui se saute en silence | Corrigé : le test tactile vérifie l'avis ; plus de saut silencieux | lot 33 |
+| 6 | T6-D11 | mineur | Photo déjà reçue rechoisie après rechargement : vignette grise muette | Corrigé : dite dans sa carte, sans vignette | lot 34 |
+| 6 | T6-D12 | mineur | Configuration : en-tête qui change selon l'état | Corrigé : même fil d'Ariane et sous-titre ; test | lot 34 |
+| 6 | T6-S1 | suggestion | « ex. » | Corrigé : « Exemplaires à séparer » ; test | lot 34 |
+| 6 | T6-S2 | suggestion | Motif après son bouton | Corrigé : avant ; test | lot 34 |
+| 6 | T6-S3 | suggestion | Récapitulatif au téléphone sur deux colonnes étroites | Corrigé : libellé au-dessus de sa valeur | lot 34 |
+| 6 | T6-S4 | suggestion | « bouteilles identiques » seul sur sa ligne | Corrigé : dans le libellé « Quantité (bouteilles identiques) » ; test | lot 34 |
