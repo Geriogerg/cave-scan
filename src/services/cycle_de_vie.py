@@ -65,6 +65,7 @@ class Bilan:
     pas_analysees: list[int]  # positions : à extraire ou en cours
     en_attente: int  # bouteilles ajoutées (groupes de photos) pas encore lancées
     retirees: int
+    positions_non_validees: tuple[int, ...] = ()  # pour les nommer avant la clôture (T6-B10)
 
     @property
     def chaque_bouteille_a_sa_ligne(self) -> bool:
@@ -106,6 +107,7 @@ def bilan(session: Session, inventaire_id: int) -> Bilan:
         pas_analysees=[b.position for b in bouteilles if b.statut in ("a_extraire", "en_cours")],
         en_attente=len(groupes_en_attente(session, inventaire_id)),
         retirees=sum(1 for b in inventaire.toutes_les_bouteilles if b.retiree),
+        positions_non_validees=tuple(sorted(b.position for b in bouteilles if b.statut == "extraite")),
     )
 
 

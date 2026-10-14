@@ -1351,7 +1351,11 @@ un renvoi d'une ligne à leur place.
   Configuration a le même fil d'Ariane et le même sous-titre dans tous ses
   états ; le motif d'un signalement ou d'un retrait se saisit avant son bouton ;
   « Exemplaires à séparer » au lieu de « ex. » ; au téléphone, le récapitulatif
-  met chaque libellé au-dessus de sa valeur. Une bouteille que le modèle
+  met chaque libellé au-dessus de sa valeur.
+
+- 0194 — Clôture et valeurs de liste (tour 6, lot 35). La confirmation de
+  clôture nomme les bouteilles non validées (12 au plus, puis « et N autres ») ;
+  « Ajouter une valeur » met le curseur dans la nouvelle ligne. Une bouteille que le modèle
   n'a pas lue n'affiche aucun « doute du modèle ». Au dépôt, une quantité
   refusée reste dans son champ, comme sur Vérifier.
 

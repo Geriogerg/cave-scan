@@ -203,3 +203,5 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 6 | T6-S2 | suggestion | Motif après son bouton | Corrigé : avant ; test | lot 34 |
 | 6 | T6-S3 | suggestion | Récapitulatif au téléphone sur deux colonnes étroites | Corrigé : libellé au-dessus de sa valeur | lot 34 |
 | 6 | T6-S4 | suggestion | « bouteilles identiques » seul sur sa ligne | Corrigé : dans le libellé « Quantité (bouteilles identiques) » ; test | lot 34 |
+| 6 | T6-B10 (2e partie) | suggestion | Clôture sans la liste des non validées | Corrigé : numéros listés (12 au plus) ; test | lot 35 |
+| 6 | T6-B9 | suggestion | « Ajouter une valeur » sans focus | Corrigé : curseur dans le libellé de la nouvelle ligne ; test navigateur | lot 35 |

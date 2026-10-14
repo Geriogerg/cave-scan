@@ -133,6 +133,10 @@ def confirmer_la_cloture(request: Request, inventaire_id: int, base: SessionBase
     ]
     if etat.ce_qui_n_est_pas_valide():
         explications.insert(1, f"Attention : {etat.ce_qui_n_est_pas_valide()}. Les valider n'est pas obligatoire.")
+    if etat.positions_non_validees:  # lesquelles (T6-B10)
+        premieres = ", ".join(f"n°{p}" for p in etat.positions_non_validees[:12])
+        reste = len(etat.positions_non_validees) - 12
+        explications.insert(2, f"Non validées : {premieres}" + (f" et {reste} autres." if reste > 0 else "."))
     return page(
         request, "confirmation.html", inventaire=inventaire, action="clore",
         titre=f"Clore « {inventaire.nom} » ?", explications=explications,

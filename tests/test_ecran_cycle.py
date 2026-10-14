@@ -152,3 +152,9 @@ def test_clos_l_excel_est_l_action_principale_et_aucune_correction_se_dit(api, e
     assert 'class="bouton principal" href="/app/inventaires/' + str(extrait) + '/excel"' in suivi
     assert 'class="bouton principal" href="/app/inventaires/' + str(extrait) + '/relecture"' not in suivi
 
+
+def test_la_cloture_nomme_les_bouteilles_non_validees(api, extrait):
+    """T6-B10 : avant de clore, les numéros des bouteilles non validées."""
+    confirmation = api.get(f"/app/inventaires/{extrait}/clore").text
+    assert "Non validées : n°1, n°2" in confirmation
+

@@ -33,7 +33,7 @@
   // Ajouter, déplacer, retirer : la config affichée diffère de la version active.
   // Les colonnes ouvertes le restent après une action (ajouter une valeur,
   // monter, changer le type…) ; celle qui a agi est mise en vue (T2-2).
-  var ouvertes = null, active = null, apercus = null, ajout = false;
+  var ouvertes = null, active = null, apercus = null, ajout = false, ajoutValeur = null;
   function indexDe(element) {
     var li = element && element.closest ? element.closest("li.colonne-config") : null;
     return li ? parseInt(li.id.replace("colonne-", ""), 10) : null;
@@ -46,6 +46,7 @@
     var bouton = config.triggeringEvent && config.triggeringEvent.submitter;
     var action = bouton ? bouton.value : "";
     ajout = action === "ajouter_colonne";
+    ajoutValeur = /^ajouter_valeur-(\d+)$/.exec(action);
     active = indexDe(bouton || evenement.detail.elt);
     var m = /^(monter|descendre|supprimer)-(\d+)$/.exec(action);
     if (m) {
@@ -77,7 +78,16 @@
     // « Ajouter une colonne » : la nouvelle, encore sans nom, est mise en vue, son nom prêt à
     // taper (T5-D5). Cherchée après le « settle » d'HTMX : jusque-là, un élément de même id
     // garde les attributs (la classe) de l'ancien.
-    if (ajout) {
+    if (ajoutValeur) {
+      // « Ajouter une valeur » : le curseur dans le libellé de la nouvelle ligne (T6-B9).
+      var colonneValeur = ajoutValeur[1];
+      setTimeout(function () {
+        var lignes = document.querySelectorAll("#colonne-" + colonneValeur + " .valeurs-config tbody tr");
+        var libelle = lignes.length ? lignes[lignes.length - 1].querySelector('input[name$="_libelle"]') : null;
+        if (libelle) libelle.focus();
+      }, 60);
+      ajoutValeur = null;
+    } else if (ajout) {
       setTimeout(function () {
         var nom = Array.prototype.map.call(document.querySelectorAll("li.colonne-config.nouvelle"), function (li) {
           return li.querySelector('input[name$="_nom"]');

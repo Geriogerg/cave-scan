@@ -446,3 +446,14 @@ def test_depot_quantite_refusee_gardee_et_suivante_grisee_sans_photo(application
     assert champ.input_value() == "0"
     assert page.locator(".quantite-depot .refus-quantite").count() == 0  # sous la rangée, pas dedans
 
+
+def test_configuration_la_valeur_ajoutee_est_prete_a_saisir(application, telephone):
+    """T6-B9 : après « Ajouter une valeur », le curseur est dans son libellé."""
+    page = telephone.new_page()
+    page.goto(f"{application}/app/configuration/maison_test")
+    bouton = page.locator('button[value^="ajouter_valeur-"]').first
+    index = bouton.get_attribute("value").split("-")[1]
+    page.locator(f"#colonne-{index} details.colonne-detail > summary").click()
+    page.locator(f'#colonne-{index} button[value="ajouter_valeur-{index}"]').click()
+    page.wait_for_function("/_libelle$/.test(document.activeElement.name || '')", timeout=10_000)
+
