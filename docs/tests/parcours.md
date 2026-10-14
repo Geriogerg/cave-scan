@@ -93,11 +93,20 @@ vitesse.
 - Remettre le texte d'origine, cocher, enregistrer. Attendu : retour aux consignes d'origine.
 - Écrire un exemple de réponse dans les consignes. Attendu : avertissement « few-shot ».
 
-## P12 — Choix faits sans validation de l'utilisateur : juger s'ils sont bons
-Pour chacun, dire s'il aide ou gêne, en débutant et en expert, avec une proposition.
-- Quantité plafonnée à 100 000 ; texte libre à 1 000 caractères.
-- Téléphone, relecture : photo collée en haut (30 % de l'écran) pendant la saisie.
-- Configuration : colonnes repliées ; barre « Annuler / Vérifier / Enregistrer » masquée tant que rien n'est modifié.
-- Ordinateur : le dépôt s'ouvre en mode « Galerie ou ordinateur ».
-- Plusieurs fichiers dans `config/maisons/` sans `CAVE_SCAN_MAISON` : l'application prend le premier par ordre alphabétique (pas visible à l'écran : juger le principe).
-- Textes d'aide très réduits (demande de l'utilisateur) : reste-t-il des écrans où l'on ne comprend plus quoi faire ?
+## P12 — Décisions de l'utilisateur (2026-10-14) : vérifier qu'elles sont bien appliquées
+Les choix n° 1 à 8 de `choix_a_trancher.md` sont TRANCHÉS : ne plus les juger,
+vérifier seulement que le comportement décidé est là et compréhensible.
+- N° 1 à 6, gardés : quantité ≤ 100 000, texte ≤ 1 000 caractères, photo collée
+  au téléphone, colonnes repliées, barre de configuration masquée, galerie à
+  l'ordinateur — signaler seulement un défaut d'exécution.
+- N° 7 (decisions.md 0182) : déposer une SECONDE configuration valide dans le
+  dossier des configurations de l'application isolée, sans `CAVE_SCAN_MAISON` :
+  Configuration et Nouvel inventaire disent en rouge « Plusieurs configurations
+  trouvées », rien ne se crée ; la retirer : tout redevient normal.
+- N° 8 (decisions.md 0183) : valider une bouteille dont le format ou le
+  millésime est vide : la validation se fait, la bouteille suivante le dit
+  (« … vide : il restera vide dans l'Excel ») ; dans l'Excel, une bouteille
+  validée n'est jamais surlignée et sa colonne « À vérifier » est vide ; une
+  bouteille non validée garde son jaune.
+- Textes d'aide très réduits (demande de l'utilisateur) : reste-t-il des écrans
+  où l'on ne comprend plus quoi faire ?

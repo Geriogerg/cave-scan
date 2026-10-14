@@ -17,8 +17,8 @@ SEULE source de vérité : ne rien supposer de la conversation. Après chaque
   - `testeur-web` **bugs**, `model: sonnet` : bugs, robustesse, erreurs,
     fluidité mesurée ;
   - `testeur-web` **design**, `model: opus` : clarté, ergonomie, design,
-    affichage — et l'avis demandé par le parcours P12 sur chaque choix à
-    trancher ;
+    affichage — et le parcours P12 : les décisions de l'utilisateur sont-elles
+    bien appliquées ;
   - `verificateur`, `model: sonnet` : un verdict par recommandation de
     `etat_boucle.md` (section « Recommandations »), preuves à l'appui.
   Leur donner `docs/tests/parcours.md`, `docs/tests/journal.md` et le rapport
@@ -30,8 +30,9 @@ SEULE source de vérité : ne rien supposer de la conversation. Après chaque
   (identifiants TN-B…, TN-D… et TN-R… pour le vérificateur), avec une section
   « Points du tour précédent » qui reprend CHAQUE id « Corrigé » du journal,
   un par ligne, ✅ ou ❌ (critère R1) ; reporter les
-  verdicts dans la colonne « Statut » des recommandations ; reporter l'avis
-  P12 dans `docs/tests/choix_a_trancher.md` ; passer en phase « corriger ».
+  verdicts dans la colonne « Statut » des recommandations ; un écart à une
+  décision de l'utilisateur (P12) est un point à corriger comme les autres ;
+  passer en phase « corriger ».
 - Agents marqués lancés, mais aucun rapport disponible (nouvelle session,
   coupure) : les relancer.
 
