@@ -6,9 +6,9 @@
   {% set faites = etat.par_statut.extraite + etat.par_statut.validee %}
   <progress max="{{ etat.total or 1 }}" value="{{ faites + etat.par_statut.erreur }}"></progress>
   <ul class="chiffres">
-    <li><strong>{{ faites }}</strong> analysée(s)</li>
+    <li><strong>{{ faites }}</strong> {{ "analysées" if faites > 1 else "analysée" }}</li>
     <li><strong>{{ etat.par_statut.erreur }}</strong> en erreur</li>
-    <li><strong>{{ etat.restantes }}</strong> restante(s)</li>
+    <li><strong>{{ etat.restantes }}</strong> {{ "restantes" if etat.restantes > 1 else "restante" }}</li>
   </ul>
   {% if etat.extraction == "arretee" and not etat.terminee %}
     <p class="message alerte">L'analyse s'est arrêtée : {{ etat.motif_arret }}</p>

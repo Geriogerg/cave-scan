@@ -9,7 +9,7 @@
   {% if info %}<p class="message info" role="status">{{ info }}</p>{% endif %}
   {% if vue.erreurs %}
     <div class="message alerte" role="alert">
-      <p>Rien n'a été enregistré : {{ vue.erreurs | length }} point(s) à corriger.</p>
+      <p>Rien n'a été enregistré : {{ vue.erreurs | length | accord("point", "points") }} à corriger.</p>
       <ul class="liste-erreurs">{% for e in vue.erreurs %}<li>{{ e }}</li>{% endfor %}</ul>
     </div>
   {% endif %}
@@ -59,7 +59,7 @@
         <summary><span class="modifier">✎ Modifier</span> ·
           {% for v, l in types %}{% if v == d.type %}{{ l }}{% endif %}{% endfor %} ·
           {% for v, l in sources %}{% if v == d.source %}{{ l }}{% endif %}{% endfor %}
-          {% if d.type == "liste" %} · {{ (d.valeurs or []) | length }} valeur(s){% endif %}
+          {% if d.type == "liste" %} · {{ (d.valeurs or []) | length | accord("valeur", "valeurs") }}{% endif %}
         </summary>
         <div class="colonne-champs">
           <label>Nom (en-tête de l'Excel)

@@ -94,7 +94,7 @@ def test_la_page_d_une_bouteille(api, inventaire, base):
     premiere, seconde = ids(base, inventaire)[:2]
     texte = ouvrir(api, inventaire, premiere)
     assert "1</strong> / 6" in texte  # position
-    assert "0</strong> validée(s) sur 6" in texte
+    assert "0</strong> validée sur 6" in texte
     for attendu in ("Domaine / Château", "Millésime", "Estimation (€)", "Qté", "Valider et passer à la suivante",
                     "Ctrl+Entrée", "Raccourcis clavier", "/static/relecture.js", ">Original</a>"):
         assert attendu in texte, attendu

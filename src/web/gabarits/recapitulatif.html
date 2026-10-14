@@ -9,7 +9,7 @@
   {% if r.termine %}
     <p class="message ok">Toutes les bouteilles sont validées : l'inventaire est validé.</p>
   {% else %}
-    <p class="message attention">{{ c.validees }} bouteille(s) validée(s) sur {{ c.total }}. Il reste :</p>
+    <p class="message attention">{{ c.validees | accord("bouteille validée", "bouteilles validées") }} sur {{ c.total }}. Il reste :</p>
     <ul class="restes">
       {% if r.restantes %}
         <li><strong>{{ r.restantes | length }}</strong> à relire —
@@ -24,7 +24,7 @@
           {% for e in r.signalees %}<a href="/app/inventaires/{{ i }}/relecture/{{ e.id }}">n°{{ e.position }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</li>
       {% endif %}
       {% if r.pas_encore_extraites %}
-        <li><strong>{{ r.pas_encore_extraites | length }}</strong> pas encore analysée(s)</li>
+        <li><strong>{{ r.pas_encore_extraites | length }}</strong> {{ "pas encore analysées" if r.pas_encore_extraites | length > 1 else "pas encore analysée" }}</li>
       {% endif %}
     </ul>
   {% endif %}
@@ -46,7 +46,7 @@
   <h2>Chiffres</h2>
   <dl class="chiffres-recap">
     <dt>Bouteilles</dt><dd>{{ c.total }}</dd>
-    <dt>Corrections</dt><dd>{{ s.nb_corrections }} sur {{ s.nb_bouteilles_corrigees }} bouteille(s)</dd>
+    <dt>Corrections</dt><dd>{{ s.nb_corrections }} sur {{ s.nb_bouteilles_corrigees | accord("bouteille", "bouteilles") }}</dd>
     <dt>Champs les plus corrigés</dt>
     <dd>{% for nom, nombre in r.champs_corriges[:6] %}{{ nom }} ({{ nombre }}){% if not loop.last %}, {% endif %}{% else %}aucun{% endfor %}</dd>
     <dt>Temps de relecture</dt>

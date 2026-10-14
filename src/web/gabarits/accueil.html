@@ -17,7 +17,7 @@
             <span class="etiquette ok">Clos</span>
           {% elif inventaire.statut == "brouillon" %}
             <span class="etiquette neutre">Brouillon — dépôt des photos</span>
-            {% if etat.en_attente %}{{ etat.en_attente }} bouteille(s) photographiée(s){% endif %}
+            {% if etat.en_attente %}{{ etat.en_attente | accord("bouteille photographiée", "bouteilles photographiées") }}{% endif %}
           {% elif inventaire.statut == "valide" %}
             <span class="etiquette ok">Validé</span>
           {% elif etat.extraction == "arretee" %}
@@ -30,8 +30,8 @@
             <span class="etiquette encours">Analyse en cours</span>
           {% endif %}
           {% if inventaire.statut != "brouillon" %}
-            {{ etat.total - etat.restantes }} / {{ etat.total }} analysée(s)
-            {% if etat.terminee and etat.total %} · {{ etat.par_statut.validee }} validée(s){% endif %}
+            {{ etat.total - etat.restantes }} / {{ etat.total }} {{ "analysées" if etat.total > 1 else "analysée" }}
+            {% if etat.terminee and etat.total %} · {{ etat.par_statut.validee | accord("validée", "validées") }}{% endif %}
             {% if etat.par_statut.erreur %} · {{ etat.par_statut.erreur }} en erreur{% endif %}
           {% endif %}
         </span>
@@ -51,7 +51,7 @@
       <span class="carte-ligne">Créé le {{ inventaire.cree_le | date }}</span>
       <span class="carte-ligne">
         {% if inventaire.clos_le %}<span class="etiquette ok">Clos</span>{% endif %}
-        {% if etat %}{{ etat.total - etat.restantes }} / {{ etat.total }} analysée(s){% if etat.terminee and etat.total %} · {{ etat.par_statut.validee }} validée(s){% endif %}{% endif %}
+        {% if etat %}{{ etat.total - etat.restantes }} / {{ etat.total }} {{ "analysées" if etat.total > 1 else "analysée" }}{% if etat.terminee and etat.total %} · {{ etat.par_statut.validee | accord("validée", "validées") }}{% endif %}{% endif %}
       </span>
     </a></li>
   {% endfor %}

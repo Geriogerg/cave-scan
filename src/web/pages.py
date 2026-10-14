@@ -81,6 +81,7 @@ def _horodatage(valeur: datetime | None) -> str:
 
 
 gabarits.env.filters["duree"] = _duree
+gabarits.env.filters["accord"] = lambda nombre, singulier, pluriel: f"{nombre} {pluriel if nombre > 1 else singulier}"
 gabarits.env.filters["date"] = _date
 gabarits.env.filters["horodatage"] = _horodatage
 gabarits.env.globals["auteur_des_ecrans"] = auteur_des_ecrans

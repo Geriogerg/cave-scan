@@ -145,7 +145,7 @@ def test_parcours_complet_au_format_telephone(application, telephone, tmp_path):
     coupures["restantes"] = 0
     envoyees(page, 1)
     assert page.inner_text("#titre-en-cours") == "Bouteille 3"  # la bouteille en cours a survécu
-    assert page.inner_text("#compteur") == "1 / 4 photo"
+    assert page.inner_text("#compteur") == "1 / 4 photos"
 
     # 4. Mode galerie : bouteille 4 = deux photos de la galerie, et un fichier refusé.
     page.get_by_role("tab", name="Galerie ou ordinateur").click()
@@ -371,6 +371,43 @@ def test_au_bureau_des_photos_glissees_sur_une_carte_rejoignent_sa_bouteille(app
         inventaire_id = page.url.split("/inventaires/")[1].split("/")[0]
         apercu = httpx.get(f"{application}/inventaires/{inventaire_id}/apercu", headers={"Accept": "application/json"}).json()
         assert [len(b["photos"]) for b in apercu["bouteilles"]] == [2]
+    finally:
+        ordinateur.close()
+
+
+def test_galerie_une_carte_vide_les_doublons_dans_la_carte_et_un_seul_onglet(application, telephone, tmp_path):
+    """T5-B14 : la barre disparaît une fois tout envoyé ; T5-B7 : « déjà dans la
+    bouteille 1 » dans la carte ; T5-B6 : « Ajouter une bouteille » deux fois = une
+    seule carte vide ; T5-B11 : le même dépôt ouvert dans un second onglet se signale."""
+    ordinateur = telephone.browser.new_context(viewport={"width": 1440, "height": 900})
+    try:
+        page = ordinateur.new_page()
+        page.goto(f"{application}/app/nouveau")
+        page.get_by_label("Nom de la vente").fill("Vente galerie")
+        page.get_by_role("button", name="Créer et ajouter les photos").click()
+        page.wait_for_url("**/depot")
+        page.get_by_role("tab", name="Galerie ou ordinateur").click()
+        premiere = photo(tmp_path / "1.jpg", 1)
+        page.locator(".carte-galerie").first.locator("input[type=file]").set_input_files([premiere])
+        envoyees(page, 1)
+        page.wait_for_function("document.getElementById('barre').hidden", timeout=5_000)
+        assert "1 envoyée" in page.inner_text("#resume-texte")
+
+        page.locator(".carte-galerie").first.locator("input[type=file]").set_input_files([premiere])
+        page.wait_for_selector(".carte-galerie .refus-bouteille", timeout=5_000)
+        assert "déjà dans la bouteille 1" in page.locator(".carte-galerie").first.inner_text()
+
+        ajouter = page.get_by_role("button", name="Ajouter une bouteille")
+        ajouter.click()
+        ajouter.click()
+        vides = page.evaluate("""() => [...document.querySelectorAll('.carte-galerie')]
+            .filter((carte) => carte.querySelectorAll('.vignette-depot').length === 0).length""")
+        assert vides == 1
+
+        autre = ordinateur.new_page()
+        autre.goto(page.url)
+        page.wait_for_selector("#autre-onglet", state="visible", timeout=5_000)
+        autre.wait_for_selector("#autre-onglet", state="visible", timeout=5_000)
     finally:
         ordinateur.close()
 

@@ -122,7 +122,7 @@ def test_retirer_une_photo_supprimer_une_bouteille_changer_la_quantite(api):
     deposer(api, inventaire_id, bouteilles=2)
     premiere = attente(api, inventaire_id)[0]
     apres = api.post(f"/app/inventaires/{inventaire_id}/verifier/retirer-photo/{premiere['photos'][0]['id']}", headers=HX)
-    assert apres.status_code == 200 and "2 bouteille(s) en attente · 3 photo(s)" in apres.text
+    assert apres.status_code == 200 and "2 bouteilles en attente · 3 photos" in apres.text
 
     quantite = api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{premiere['groupe_id']}", data={"quantite": "6"}, headers=HX)
     assert 'value="6"' in quantite.text
@@ -130,7 +130,7 @@ def test_retirer_une_photo_supprimer_une_bouteille_changer_la_quantite(api):
     assert "Quantité invalide" in refus.text
 
     supprimee = api.post(f"/app/inventaires/{inventaire_id}/verifier/supprimer/{premiere['groupe_id']}", headers=HX)
-    assert "1 bouteille(s) en attente" in supprimee.text
+    assert "1 bouteille en attente" in supprimee.text
 
 
 def test_la_quantite_tapee_part_avec_le_lancement(api):
@@ -162,7 +162,7 @@ def test_ajouter_des_bouteilles_apres_le_lancement(api):
     assert envoyer(api, inventaire_id, jpeg(77), "tard.jpg", "b1", 1).json()["code"] == "depot_ferme"  # déjà formée
     deposer(api, inventaire_id, bouteilles=1, photos=1, premier=3)
     suivi = api.get(f"/app/inventaires/{inventaire_id}/suivi").text
-    assert "1 bouteille(s) ajoutée(s)" in suivi and "pas encore lancée(s)" in suivi
+    assert "1 bouteille ajoutée, pas encore lancée" in suivi
     lance = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX)
     assert lance.status_code == 204
     assert api.get(f"/inventaires/{inventaire_id}").json()["progression"]["total"] == 3

@@ -157,7 +157,7 @@ def test_une_config_invalide_n_est_jamais_ecrite(client, configs):
     champs["photos_max_par_bouteille"] = "douze"
     refus = agir(client, champs, "enregistrer")
     assert refus.status_code == 422
-    assert "Rien n'a été enregistré" in refus.text and "2 point(s) à corriger" in refus.text
+    assert "Rien n'a été enregistré" in refus.text and "2 points à corriger" in refus.text
     assert "indiquez un nombre de 1 à 10" in refus.text and "même en-tête" in refus.text
     assert 'value="douze"' in refus.text  # la saisie reste à l'écran pour être corrigée
     assert (configs / CONFIG_TEST.name).read_text(encoding="utf-8") == avant

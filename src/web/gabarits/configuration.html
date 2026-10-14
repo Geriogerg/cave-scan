@@ -8,7 +8,7 @@
 {% if info %}<p class="message info" role="status">{{ info }}</p>{% endif %}
 {% if erreurs %}
   <div class="message alerte" role="alert">
-    <p>« {{ importe }} » n'a pas été importé : {{ erreurs | length }} erreur(s) à corriger dans le fichier.</p>
+    <p>« {{ importe }} » n'a pas été importé : {{ erreurs | length | accord("erreur", "erreurs") }} à corriger dans le fichier.</p>
     <ul class="liste-erreurs">{% for e in erreurs %}<li>{{ e }}</li>{% endfor %}</ul>
   </div>
 {% endif %}

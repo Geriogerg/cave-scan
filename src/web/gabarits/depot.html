@@ -56,13 +56,17 @@
   <p id="garder-ouvert" class="message attention" hidden>
     Envoi en cours. Si l'envoi s'arrête, il reprendra tout seul à votre retour sur la page.
   </p>
+  <p id="autre-onglet" class="message attention" role="alert" hidden>
+    Ce dépôt est aussi ouvert dans un autre onglet : photographiez dans un seul, sinon
+    leurs photos se mêlent dans les mêmes bouteilles.
+  </p>
   <p id="memoire-indisponible" class="message attention" hidden>
     Ce navigateur ne peut pas garder les photos en attente d'envoi : gardez cette page ouverte
     jusqu'à la fin de l'envoi.
   </p>
 
   <div id="resume" class="resume" aria-live="polite">
-    <span id="resume-texte">{% if vue.nb_photos %}{{ vue.nb_photos }} photo(s) reçue(s) dans {{ vue.bouteilles | length }} bouteille(s) en attente.{% else %}Aucune photo reçue pour l'instant.{% endif %}</span>
+    <span id="resume-texte">{% if vue.nb_photos %}{{ vue.nb_photos | accord("photo reçue", "photos reçues") }} dans {{ vue.bouteilles | length | accord("bouteille", "bouteilles") }} en attente.{% else %}Aucune photo reçue pour l'instant.{% endif %}</span>
     <progress id="barre" max="1" value="0" hidden></progress>
   </div>
 

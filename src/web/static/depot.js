@@ -36,18 +36,33 @@
   var barre = document.getElementById("barre");
   var garderOuvert = document.getElementById("garder-ouvert");
   var memoireIndisponible = document.getElementById("memoire-indisponible");
+  var autreOnglet = document.getElementById("autre-onglet");
   var versVerification = document.getElementById("vers-verification");
 
   var file = [];       // les envois : { bouteille, fichier, nom, signature, etat, message, essais, ligne, idb }
+  var avisDeLaPage = {};  // clé de bouteille -> dernier avis (photo déjà choisie), montré dans sa carte
   var actifs = 0;
   var verrouEcran = null;
 
   function api(chemin) { return "/inventaires/" + inventaire + chemin; }
+  // « 1 photo », « 3 photos » : pas de « photo(s) » (T4-D14). Zéro s'accorde au singulier.
+  function accord(nombre, singulier, pluriel) { return nombre + " " + (nombre > 1 ? pluriel : singulier); }
   function lireJson(texte) { try { return JSON.parse(texte || "{}") || {}; } catch (e) { return {}; } }
 
   // --- l'état du dépôt : la bouteille en cours, les cartes de la galerie ----------------------------
 
   var etat = lireEtat();
+
+  // Deux onglets du même navigateur partagent l'état du dépôt : leurs photos
+  // iraient dans les mêmes bouteilles. Chacun le dit (T5-B11).
+  try {
+    var canal = new BroadcastChannel(CLE_ETAT);
+    canal.onmessage = function (evenement) {
+      if (evenement.data === "ouvert") canal.postMessage("deja-ouvert");
+      autreOnglet.hidden = false;
+    };
+    canal.postMessage("ouvert");
+  } catch (e) { /* navigateur sans BroadcastChannel : rien à signaler */ }
 
   function lireEtat() {
     var lu = null;
@@ -238,7 +253,7 @@
     var bouteille = etat.enCours;
     var nombre = nombrePhotos(bouteille);
     titreEnCours.textContent = "Bouteille " + rang(bouteille);
-    compteur.textContent = nombre + " / " + maximum + " photo" + (nombre > 1 ? "s" : "");
+    compteur.textContent = nombre + " / " + accord(maximum, "photo", "photos");
     champQuantite.value = bouteille.quantite;
     var plein = nombre >= maximum;
     boutonPhoto.classList.toggle("inactif", plein);
@@ -252,7 +267,7 @@
       ligne.className = "precedente";
       var texte = document.createElement("span");
       var enCours = enAttenteLocale(b);
-      texte.textContent = "Bouteille " + rang(b) + " · " + nombrePhotos(b) + " photo(s)"
+      texte.textContent = "Bouteille " + rang(b) + " · " + accord(nombrePhotos(b), "photo", "photos")
         + (b.quantite > 1 ? " · × " + b.quantite : "") + (enCours ? " · envoi en cours" : " · reçue");
       var bouton = document.createElement("button");
       bouton.type = "button";
@@ -270,9 +285,21 @@
   var cartes = document.getElementById("bouteilles-galerie");
 
   document.getElementById("ajouter-bouteille").addEventListener("click", function () {
-    etat.galerie.push(nouvelleBouteille());
-    sauver();
-    afficherGalerie();
+    // Une carte encore vide l'attend déjà : on la montre au lieu d'en créer une
+    // seconde, numérotée pareil (T5-B6).
+    var vide = etat.galerie.filter(function (b) { return nombrePhotos(b) === 0; })[0];
+    if (!vide) {
+      vide = nouvelleBouteille();
+      etat.galerie.push(vide);
+      sauver();
+      afficherGalerie();
+    }
+    var carte = cartes.querySelector('[data-cle="' + vide.cle + '"]');
+    if (carte) {
+      carte.scrollIntoView({ block: "center", behavior: "smooth" });
+      var choisir = carte.querySelector("input[type=file]");
+      if (choisir) choisir.focus({ preventScroll: true });
+    }
   });
 
   // En galerie : les bouteilles déjà photographiées (ici, à l'appareil photo, ou
@@ -287,13 +314,14 @@
     bouteillesDeLaGalerie().forEach(function (bouteille) {
       var carte = document.createElement("li");
       carte.className = "carte-galerie";
+      carte.dataset.cle = bouteille.cle;
       var tete = document.createElement("div");
       tete.className = "en-cours-tete";
       var titre = document.createElement("strong");
       titre.textContent = "Bouteille " + rang(bouteille);
       var nombre = document.createElement("span");
       nombre.className = "compteur";
-      nombre.textContent = nombrePhotos(bouteille) + " / " + maximum + " photo" + (nombrePhotos(bouteille) > 1 ? "s" : "");
+      nombre.textContent = nombrePhotos(bouteille) + " / " + accord(maximum, "photo", "photos");
       tete.appendChild(titre);
       tete.appendChild(nombre);
       carte.appendChild(tete);
@@ -375,13 +403,15 @@
     var refus = carte ? carte.querySelector(".refus-bouteille") : null;
     if (refus) refus.remove();
     var refusees = file.filter(function (envoi) { return envoi.bouteille.cle === bouteille.cle && envoi.etat === "refusee"; });
-    if (carte && refusees.length) {
+    var messages = refusees.map(function (envoi) { return envoi.message; });
+    if (avisDeLaPage[bouteille.cle]) messages.push(avisDeLaPage[bouteille.cle]);
+    if (carte && messages.length) {
       refus = document.createElement("ul");
       refus.className = "refus-bouteille";
       refus.setAttribute("role", "alert");
-      refusees.forEach(function (envoi) {
+      messages.forEach(function (message) {
         var ligne = document.createElement("li");
-        ligne.textContent = envoi.message;
+        ligne.textContent = message;
         refus.appendChild(ligne);
       });
       conteneur.insertAdjacentElement("afterend", refus);
@@ -421,7 +451,7 @@
     if (anciennes > miniatures.length) {
       var note = document.createElement("li");
       note.className = "vignette-depot deja";
-      note.textContent = "+ " + (anciennes - miniatures.length) + " déjà reçue(s)";
+      note.textContent = "+ " + accord(anciennes - miniatures.length, "déjà reçue", "déjà reçues");
       conteneur.appendChild(note);
     }
   }
@@ -515,10 +545,14 @@
   function ajouter(bouteille, fichier, depuisLaPage) {
     var signature = fichier.name + "|" + fichier.size + "|" + fichier.lastModified;
     var deja = file.filter(function (envoi) { return envoi.signature === signature && envoi.etat !== "refusee"; })[0];
-    if (deja) {  // choisie une seconde fois : on le dit (T4-B15)
-      afficherResume("« " + (fichier.name || "photo") + " » est déjà dans la bouteille " + rang(deja.bouteille) + ".");
+    if (deja) {  // choisie une seconde fois : on le dit, dans la carte visée aussi (T4-B15, T5-B7)
+      var avis = "« " + (fichier.name || "photo") + " » est déjà dans la bouteille " + rang(deja.bouteille) + ".";
+      avisDeLaPage[bouteille.cle] = avis;
+      afficherResume(avis);
+      afficherGalerie();
       return;
     }
+    delete avisDeLaPage[bouteille.cle];
     var envoi = {
       bouteille: bouteille, fichier: fichier, nom: fichier.name || "photo.jpg", signature: signature,
       etat: "attente", message: "En attente", essais: 0, idb: null,
@@ -566,7 +600,11 @@
         envoi.ligne = creerLigne(envoi);
         file.push(envoi);
       });
-      if (gardees.length) afficherResume(gardees.length + " photo(s) prise(s) ici et pas encore reçue(s) : l'envoi reprend.");
+      if (gardees.length) {
+        afficherResume(gardees.length > 1
+          ? gardees.length + " photos prises ici et pas encore reçues : l'envoi reprend."
+          : "1 photo prise ici et pas encore reçue : l'envoi reprend.");
+      }
     });
   }
 
@@ -786,12 +824,12 @@
     var total = file.length;
     var termines = compter("ok") + compter("deja") + compter("refusee");
     var parties = [];
-    if (compter("ok")) parties.push(compter("ok") + " envoyée(s)");
-    if (compter("deja")) parties.push(compter("deja") + " déjà reçue(s)");
-    if (compter("refusee")) parties.push(compter("refusee") + " refusée(s) — voir la raison");
+    if (compter("ok")) parties.push(accord(compter("ok"), "envoyée", "envoyées"));
+    if (compter("deja")) parties.push(accord(compter("deja"), "déjà reçue", "déjà reçues"));
+    if (compter("refusee")) parties.push(accord(compter("refusee"), "refusée", "refusées") + " — voir la raison");
     if (total - termines) parties.push((total - termines) + " en cours");
     resumeTexte.textContent = message || (total ? parties.join(" · ") : resumeInitial);
-    barre.hidden = !total;
+    barre.hidden = !total || termines === total;  // tout est fini : le résumé suffit (T5-B14)
     barre.max = total || 1;
     barre.value = termines;
 

@@ -160,3 +160,8 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 5 | T5-B2 | majeur | Avertissement permanent avec clé interne | Corrigé : « Sans la colonne « À vérifier »… » ; avertissements aussi sans quantité, sans « N° », sans colonne du noyau ; test | lot 24 |
 | 5 | T5-B8 | mineur | Identifiant d'une nouvelle colonne figé au premier « Vérifier » | Corrigé : il suit le nom jusqu'à l'enregistrement ; test | lot 24 |
 | 5 | T5-B9 | mineur | Import sans colonnes : onze phrases | Corrigé : « Aucune colonne », seul ; test | lot 24 |
+| 5 | T5-B6 | mineur | Galerie : plusieurs cartes vides « Bouteille 4 » | Corrigé : « Ajouter une bouteille » montre la carte vide existante au lieu d'en créer une ; test navigateur | lot 25 |
+| 5 | T5-B7 / T4-D9 | mineur | Galerie : « déjà dans la bouteille 1 » en bas seulement | Corrigé : aussi dans la carte visée ; test navigateur | lot 25 |
+| 5 | T5-B14 | suggestion | Barre de progression pleine après la fin | Corrigé : masquée quand tout est envoyé ; test navigateur | lot 25 |
+| 5 | T5-B11 | mineur | Deux onglets sur le même dépôt : photos fondues | Corrigé : chaque onglet le signale (« ouvert dans un autre onglet ») ; test navigateur | lot 25 |
+| 5 | T4-D14 (reste) | mineur | « (s) » partout ; « 0 / 4 photo » | Corrigé : accords (filtre `accord`, fonction JS) au dépôt, Vérifier, suivi, accueil, récapitulatif, relecture, configuration ; « N / 4 photos » | lot 25 |

@@ -4,7 +4,7 @@
 {% block contenu %}
 <h1>{{ inventaire.nom }}</h1>
 {% set exemplaires = inventaire.bouteilles | sum(attribute="quantite") %}
-<p class="aide">{{ inventaire.bouteilles | length }} bouteille(s){% if exemplaires > inventaire.bouteilles | length %} ({{ exemplaires }} exemplaires){% endif %}</p>
+<p class="aide">{{ inventaire.bouteilles | length | accord("bouteille", "bouteilles") }}{% if exemplaires > inventaire.bouteilles | length %} ({{ exemplaires }} exemplaires){% endif %}</p>
 {% if inventaire.archive_le %}
   <div class="message info">Inventaire archivé.
     <form method="post" action="/app/inventaires/{{ inventaire.id }}/desarchiver" class="en-ligne"><button class="lien">Sortir des archives</button></form></div>
@@ -16,7 +16,7 @@
 {% endif %}
 {% if en_attente %}
   <p class="message attention">
-    {{ en_attente | length }} bouteille(s) ajoutée(s), pas encore lancée(s) :
+    {{ en_attente | length | accord("bouteille ajoutée, pas encore lancée", "bouteilles ajoutées, pas encore lancées") }} :
     <a href="/app/inventaires/{{ inventaire.id }}/verifier">les vérifier et lancer leur analyse</a>.
   </p>
 {% endif %}
