@@ -113,7 +113,7 @@ def test_valider_refuse_une_bouteille_pas_encore_extraite(base, capsys, tmp_path
         )
     code, _, erreur = lancer(capsys, base, "valider", 2, 1, "--auteur", "expert")
     assert code == 2
-    assert "pas encore extraite" in erreur
+    assert "pas encore lue" in erreur
 
 
 def test_fiche_montre_le_modele_la_correction_et_l_extraction_d_origine(base, capsys):

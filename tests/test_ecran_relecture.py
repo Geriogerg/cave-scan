@@ -251,7 +251,26 @@ def test_bouteille_en_erreur_la_raison_en_clair_et_reanalyser(api, dossier_photo
     assert api.get(f"/app/inventaires/{inventaire_id}/relecture/{en_erreur}/attente").headers.get("HX-Refresh") is None
     base.expire_all()
     traiter_reservee(base, reserver_bouteille(base, "w", inventaire_id), ExtracteurScenario(), api.stockage, "w")
-    assert api.get(f"/app/inventaires/{inventaire_id}/relecture/{en_erreur}/attente").headers["HX-Refresh"] == "true"
+    # Lue : la page se recharge et le dit (T5-B15).
+    fin = api.get(f"/app/inventaires/{inventaire_id}/relecture/{en_erreur}/attente")
+    assert fin.headers["HX-Redirect"].endswith(f"/relecture/{en_erreur}?fait=lue")
+    assert "Le modèle a lu la bouteille" in api.get(fin.headers["HX-Redirect"]).text
+
+
+def test_une_bouteille_pas_encore_lue_ne_se_valide_pas_et_le_dit(api, dossier_photos, base):
+    """T5-B1 : analyse en pause, bouteille jamais lue : le bandeau dit la pause (rien
+    ne bougera seul), « Valider » est grisé avec sa raison, aucune « Note du modèle »
+    inventée, et le refus du serveur ne montre aucun nom de statut."""
+    inventaire_id = envoyer(api, dossier_photos).json()["id"]
+    api.post(f"/inventaires/{inventaire_id}/lancer")
+    api.post(f"/inventaires/{inventaire_id}/annuler")  # en pause avant toute lecture
+    premiere = ids(base, inventaire_id)[0]
+    texte = ouvrir(api, inventaire_id, premiere)
+    assert "Analyse en pause" in texte and "Réanalyse" not in texte
+    assert "se mettra à jour toute seule" not in texte and "Note du modèle" not in texte
+    assert re.search(r'id="valider" disabled\s+title="Le modèle n', texte)
+    refus = api.post(f"/app/inventaires/{inventaire_id}/relecture/{premiere}/valider", data=formulaire(texte), headers=HX)
+    assert refus.status_code == 409 and "pas encore lue" in refus.text and "a_extraire" not in refus.text
 
 
 def test_la_page_montre_toutes_les_photos_numerotees_sans_inversion(api, inventaire, base):

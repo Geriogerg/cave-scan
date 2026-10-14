@@ -217,6 +217,8 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 /* --- Relecture (guide de session 5) : pensée pour l'ordinateur, grand écran, clavier. --- */
 .message.info { color: var(--texte); border-color: var(--bordure); background: #f4f4f1; }
 .alerte-texte { color: var(--alerte); }
+#valider { transition: opacity .25s; }
+#valider.en-garde { opacity: .6; }  /* les 500 premières ms : un appui y est ignoré (T5-B13) */
 kbd {
   display: inline-block; padding: 0 5px; border: 1px solid var(--bordure); border-bottom-width: 2px;
   border-radius: 4px; background: var(--fond); font: 0.8em/1.5 ui-monospace, Consolas, monospace; color: var(--texte-doux);

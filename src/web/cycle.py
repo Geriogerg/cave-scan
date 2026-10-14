@@ -41,6 +41,8 @@ MESSAGES = {
     "restaure": "Inventaire restauré.",
     "excel_refuse": "L'Excel n'est pas encore disponible : chaque bouteille doit d'abord avoir sa ligne (voir ci-dessous).",
     "corbeille": "Inventaire mis à la corbeille.",
+    "deja_lancee": "Analyse déjà lancée : plus rien à vérifier. Suivez-la ici.",
+    "clos": "Inventaire clos : ses photos ne se modifient plus (rouvrez-le pour en ajouter).",
 }
 
 

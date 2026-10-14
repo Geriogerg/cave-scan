@@ -165,6 +165,12 @@
   var validationAcceptee = false;
   var afficheeLe = Date.now();
   var DELAI_APRES_AFFICHAGE_MS = 500;
+  // Le délai se voit : le bouton s'éclaire à la fin (T5-B13).
+  var boutonValider = document.getElementById("valider");
+  if (boutonValider && !boutonValider.disabled) {
+    boutonValider.classList.add("en-garde");
+    setTimeout(function () { boutonValider.classList.remove("en-garde"); }, DELAI_APRES_AFFICHAGE_MS);
+  }
 
   document.body.addEventListener("htmx:beforeRequest", function (evenement) {
     var config = evenement.detail.requestConfig || {};
@@ -346,6 +352,10 @@
     compterLeTemps();
     var suivante = document.querySelector("#valider[data-lecture-seule]");
     if (suivante) { location.href = suivante.href; return; }  // inventaire clos : on passe, simplement
+    // Bouton grisé avec sa raison (photos signalées, lecture en attente) : Ctrl+Entrée
+    // la dit, au lieu d'un refus du serveur (T5-B1).
+    var bouton = document.getElementById("valider");
+    if (bouton && bouton.disabled && bouton.title) { annoncer(bouton.title); return; }
     fiche.requestSubmit();  // tout le formulaire part : rien de ce qui est affiché n'est perdu
   }
 

@@ -28,6 +28,7 @@ from src.services.extraction import BouteilleIntrouvable, extractions_de
 from src.services.inventaires import charger_inventaire, config_figee
 from src.services.pilotage import Avancement, avancement
 from src.services.relecture import (
+    extraction_qui_fait_foi,
     CHAMP_STATUT,
     LIBELLES_EVENEMENT,
     champs_corrigeables,
@@ -393,7 +394,7 @@ class FicheRelecture:
     notes_modele: str
     erreur: str | None  # bouteille en erreur : la raison, en clair
     obligatoires: list[str]  # en erreur : ce qu'il faut saisir pour la valider à la main (0169)
-    en_attente: bool  # réanalyse demandée, pas encore faite
+    en_attente: bool  # analyse ou réanalyse demandée, pas encore faite
     historique: list[LigneHistorique]
     compteurs: Compteurs
     precedente_id: int | None
@@ -405,6 +406,25 @@ class FicheRelecture:
     regroupement: list[str]  # noms des colonnes de regroupement de la maison
     filtre: bool
     rang: int = 0  # place parmi les bouteilles présentes (une retirée ne compte plus, T4-B8)
+    attente: Attente | None = None  # en attente du modèle : en pause ? déjà lue ?
+
+
+@dataclass(frozen=True)
+class Attente:
+    """Une bouteille que le modèle n'a pas (encore) lue : ce que l'écran en dit (T5-B1)."""
+
+    arretee: str  # "" si l'analyse tourne ; sinon son état (« en pause »…) : rien ne bougera seul
+    deja_essayee: bool  # une lecture a déjà été tentée : c'est une réanalyse
+
+
+def attente_de(bouteille: FicheBouteille) -> Attente | None:
+    if bouteille.statut not in ("a_extraire", "en_cours"):
+        return None
+    extraction = bouteille.inventaire.extraction
+    arretee = "" if extraction == "lancee" or bouteille.statut == "en_cours" else (
+        "pas encore lancée" if extraction == "non_lancee" else "en pause"
+    )
+    return Attente(arretee=arretee, deja_essayee=bool(extractions_de(bouteille)))
 
 
 def fiche_de_relecture(
@@ -435,10 +455,12 @@ def fiche_de_relecture(
         champs=champs,
         doutes_ailleurs=sorted(d for d in doutes if d not in noms_affiches and d not in ("tous", DOUTE_PAIRE_PHOTOS)),
         doute_paire=DOUTE_PAIRE_PHOTOS in modele.champs_a_verifier,
-        notes_modele=modele.notes if bouteille.statut != "erreur" else "",
+        # Pas de « Note du modèle » inventée pour une bouteille qu'il n'a jamais lue (T5-B1).
+        notes_modele=modele.notes if bouteille.statut != "erreur" and extraction_qui_fait_foi(bouteille) else "",
         erreur=raison_de_l_erreur(bouteille) if bouteille.statut == "erreur" else None,
         obligatoires=[config.colonne(cle).nom for cle in champs_obligatoires(config)],
         en_attente=bouteille.statut in ("a_extraire", "en_cours"),
+        attente=attente_de(bouteille),
         historique=_historique(session, bouteille, config),
         compteurs=compter(etats),
         rang=next((n for n, e in enumerate(etats, start=1) if e.id == bouteille.id), bouteille.position),

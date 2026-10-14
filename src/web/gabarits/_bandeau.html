@@ -3,7 +3,7 @@
   {% if b.statut == "validee" %}
     <p class="message ok">Bouteille validée.</p>
   {% elif f.en_attente %}
-    {% with inventaire_id = i, bouteille = b %}{% include "_attente.html" %}{% endwith %}
+    {% with inventaire_id = i, bouteille = b, attente = f.attente %}{% include "_attente.html" %}{% endwith %}
   {% elif b.statut == "erreur" %}
     <div class="message alerte" role="alert">
       <p><strong>Analyse en échec.</strong> {{ f.erreur }}</p>

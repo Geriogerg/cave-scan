@@ -149,7 +149,7 @@ def depot(request: Request, inventaire_id: int, base: SessionBase):
     """Le dépôt d'un brouillon, ou l'ajout de bouteilles à un inventaire lancé —
     pas à un inventaire clos (lecture seule, 0168)."""
     if charger_inventaire(base, inventaire_id).clos_le is not None:
-        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi", status_code=303)
+        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=clos", status_code=303)
     vue = apercu(base, inventaire_id)
     # Clé -> photos déjà reçues (leurs identifiants : la page montre leurs
     # miniatures) et numéro : un autre appareil voit aussi ces bouteilles (T2-D1).
@@ -174,7 +174,14 @@ def depot(request: Request, inventaire_id: int, base: SessionBase):
 
 @routeur.get("/app/inventaires/{inventaire_id}/verifier")
 def verifier(request: Request, inventaire_id: int, base: SessionBase):
-    return page(request, "verifier.html", vue=apercu(base, inventaire_id))
+    vue = apercu(base, inventaire_id)
+    # Déjà lancée (retour arrière après « Lancer ») ou close : rien à vérifier ici,
+    # le suivi le dit au lieu d'une page vide (T5-B5).
+    if vue.inventaire.clos_le is not None:
+        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=clos", status_code=303)
+    if vue.inventaire.statut != "brouillon" and not vue.bouteilles:
+        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=deja_lancee", status_code=303)
+    return page(request, "verifier.html", vue=vue)
 
 
 def _en_attente(request: Request, base, inventaire_id: int, action, groupe_id: int | None = None) -> HTMLResponse:
@@ -270,7 +277,7 @@ def suivi(request: Request, inventaire_id: int, base: SessionBase, fait: str | N
     return page(
         request, "suivi.html", inventaire=inventaire, etat=avancement(base, inventaire_id),
         en_attente=apercu(base, inventaire_id).bouteilles, fait=MESSAGES.get(fait or ""),
-        fait_attention=fait in ("excel_refuse", "nom_vide"),  # un refus, pas un succès (T4-D6)
+        fait_attention=fait in ("excel_refuse", "nom_vide", "clos", "deja_lancee"),  # pas un succès (T4-D6)
     )
 
 

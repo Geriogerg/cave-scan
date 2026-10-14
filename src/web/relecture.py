@@ -29,6 +29,7 @@ from src.services.cas_particuliers import (
     signaler_paire,
 )
 from src.services.consultation import (
+    attente_de,
     bouteille_de,
     etats_de_relecture,
     fiche_de_relecture,
@@ -55,6 +56,7 @@ MESSAGES_FAIT = {
     "levee": "Signalement levé : la bouteille peut de nouveau être validée.",
     "separee": "Bouteille séparée. Ajustez l'état et la description de cet exemplaire ; la bouteille d'origine est à revalider.",
     "retiree": "Bouteille retirée de l'inventaire. Elle se remet depuis le récapitulatif.",
+    "lue": "Le modèle a lu la bouteille : relisez ses champs.",
 }
 
 routeur = APIRouter(include_in_schema=False)
@@ -114,11 +116,15 @@ def afficher(request: Request, inventaire_id: int, bouteille_id: int, base: Sess
 
 @routeur.get("/app/inventaires/{inventaire_id}/relecture/{bouteille_id}/attente")
 def attente(request: Request, inventaire_id: int, bouteille_id: int, base: SessionBase):
-    """Réanalyse en attente : la page se recharge d'elle-même quand elle est faite."""
+    """En attente du modèle : la page se recharge d'elle-même quand il a lu la
+    bouteille, et le dit (T5-B15) ; en échec, le bandeau d'échec parle seul."""
     bouteille = bouteille_de(base, inventaire_id, bouteille_id)
     if bouteille.statut in ("a_extraire", "en_cours"):
-        return page(request, "_attente.html", inventaire_id=inventaire_id, bouteille=bouteille)
-    return Response(status_code=200, headers={"HX-Refresh": "true"})
+        return page(request, "_attente.html", inventaire_id=inventaire_id, bouteille=bouteille,
+                    attente=attente_de(bouteille))
+    filtre = f"filtre={FILTRE}" in request.headers.get("HX-Current-URL", "")
+    fait = "lue" if bouteille.statut in ("extraite", "validee") else None
+    return Response(status_code=200, headers={"HX-Redirect": adresse(inventaire_id, bouteille_id, filtre, fait)})
 
 
 @routeur.get("/app/inventaires/{inventaire_id}/recapitulatif")

@@ -152,3 +152,7 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 5 | T5-B4 | mineur | Quantité de plus de 4 300 chiffres : 500 | Corrigé : jamais convertie, refus en clair (Vérifier, lancement, relecture, Séparer), « ² » aussi ; configuration et JSON importé : refus en clair ; test | lot 22 |
 | 5 | T5-B10 | mineur | Nom de vente sans limite côté serveur | Corrigé : 200 caractères au plus, caractères de contrôle remplacés (création, envoi par l'API, renommage) ; test | lot 22 |
 | 5 | T5-B12 | mineur | Vérifier : refus de quantité qui redit le numéro, carte décalée | Corrigé : « Quantité invalide… » sous le champ, carte inchangée ; test | lot 22 |
+| 5 | T5-B1 | majeur | Valider pendant une (ré)analyse : statut interne, bandeau faux, note inventée | Corrigé : « Valider » grisé avec sa raison (Ctrl+Entrée la dit) ; refus « le modèle ne l'a pas encore lue » ; bandeau « Analyse / Réanalyse en pause » ou « pas encore lancée » avec lien au suivi ; pas de « Note du modèle » sans lecture ; test | lot 23 |
+| 5 | T5-B15 | suggestion | Fin de réanalyse muette | Corrigé : la page se recharge avec « Le modèle a lu la bouteille : relisez ses champs. » ; test | lot 23 |
+| 5 | T5-B5 | mineur | Vérifier d'une vente lancée ou close : page vide | Corrigé : renvoi au suivi avec la raison (« Analyse déjà lancée », « Inventaire clos ») ; test | lot 23 |
+| 5 | T5-B13 | suggestion | Appui ignoré 500 ms sans signe | Corrigé : bouton atténué pendant le délai | lot 23 |

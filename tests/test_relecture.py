@@ -297,7 +297,7 @@ def test_une_bouteille_en_erreur_se_valide_en_saisie_manuelle_une_fois_ses_champ
 
 def test_on_ne_valide_pas_une_bouteille_pas_encore_extraite(session, nom_maison, dossier_photos, stockage):
     cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Cave", stockage)
-    with pytest.raises(ValidationRefusee, match="pas encore extraite"):
+    with pytest.raises(ValidationRefusee, match="pas encore lue"):
         valider(session, charger_inventaire(session, cree.inventaire_id).bouteilles[0].id, "expert")
 
 

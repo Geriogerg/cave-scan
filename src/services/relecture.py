@@ -674,9 +674,10 @@ def valider(session: Session, bouteille_id: int, auteur: str, temps_ms: int | No
                 f"valider en saisie manuelle, remplissez d'abord : {', '.join(manquants)} — ou réanalysez-la."
             )
     elif bouteille.statut != "extraite":
+        pause = " L'analyse est arrêtée : reprenez-la depuis le suivi." if bouteille.inventaire.extraction != "lancee" else ""
         raise ValidationRefusee(
-            f"Bouteille n°{bouteille.position} ({bouteille.identifiant}) pas encore "
-            f"extraite (statut « {bouteille.statut} »)."
+            f"Bouteille n°{bouteille.position} : le modèle ne l'a pas encore lue. Validez-la une "
+            f"fois ses champs remplis.{pause}"
         )
     if bouteille.paire_signalee:
         raise ValidationRefusee(

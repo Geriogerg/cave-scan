@@ -376,3 +376,18 @@ def test_le_nom_de_la_vente_est_borne_aussi_cote_serveur(api):
     noms = [i["nom"] for i in api.get("/inventaires").json()]
     assert "Vente  de printemps" in noms
 
+
+def test_verifier_une_vente_deja_lancee_renvoie_au_suivi_avec_la_raison(api):
+    """T5-B5 : retour arrière après « Lancer » : plus rien à vérifier ; le suivi le
+    dit au lieu d'une page vide et muette."""
+    from tests.test_pages import HX, attente, creer, deposer
+
+    inventaire_id = creer(api)
+    deposer(api, inventaire_id, bouteilles=1, photos=1)
+    groupe = attente(api, inventaire_id)[0]["groupe_id"]
+    lance = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX, data={"groupe": [str(groupe)], "quantite": ["1"]})
+    assert lance.status_code == 204
+    retour = api.get(f"/app/inventaires/{inventaire_id}/verifier", follow_redirects=False)
+    assert retour.status_code == 303 and retour.headers["location"].endswith("/suivi?fait=deja_lancee")
+    assert "Analyse déjà lancée" in api.get(retour.headers["location"]).text
+

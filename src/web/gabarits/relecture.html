@@ -96,6 +96,9 @@
         {% if b.paire_signalee %}
         <button type="submit" class="bouton principal" id="valider" disabled
                 title="Problème de photos signalé : levez le signalement pour valider">Valider — problème de photos signalé</button>
+        {% elif f.en_attente %}
+        <button type="submit" class="bouton principal" id="valider" disabled
+                title="Le modèle n'a pas encore lu cette bouteille : validez-la une fois ses champs remplis.">Valider — lecture du modèle en attente</button>
         {% else %}
         <button type="submit" class="bouton principal" id="valider">
           {% if b.statut == "validee" %}Déjà validée — passer à la suivante{% else %}Valider et passer à la suivante{% endif %}

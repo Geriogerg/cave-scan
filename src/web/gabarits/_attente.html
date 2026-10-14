@@ -1,4 +1,10 @@
 <div id="attente" class="message attention" role="status"
      hx-get="/app/inventaires/{{ inventaire_id }}/relecture/{{ bouteille.id }}/attente" hx-trigger="every 2s" hx-swap="outerHTML">
-  Réanalyse en attente du modèle{% if bouteille.statut == "en_cours" %} (en cours){% endif %}… La page se mettra à jour toute seule.
+  {%- set mot = "Réanalyse" if attente and attente.deja_essayee else "Analyse" %}
+  {% if attente and attente.arretee %}
+  {{ mot }} {{ attente.arretee }} : le modèle n'a pas encore lu cette bouteille.
+  <a href="/app/inventaires/{{ inventaire_id }}/suivi">Voir le suivi de l'analyse</a>
+  {% else %}
+  {{ mot }} en attente du modèle{% if bouteille.statut == "en_cours" %} (en cours){% endif %}… La page se mettra à jour toute seule.
+  {% endif %}
 </div>
