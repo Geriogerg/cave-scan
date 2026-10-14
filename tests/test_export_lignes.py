@@ -170,8 +170,9 @@ def test_la_config_avertit_s_il_manque_la_colonne_a_verifier(tmp_path):
     brut["colonnes"] = [c for c in brut["colonnes"] if c["cle"] != "a_verifier"]
     chemin = tmp_path / "sans_a_verifier.json"
     chemin.write_text(json.dumps(brut, ensure_ascii=False), encoding="utf-8")
-    assert any("a_verifier" in a and "couleur" in a for a in charger_config(chemin).avertissements)
-    assert not any("a_verifier" in a for a in charger_config(CONFIG_TEST).avertissements)
+    # Dit avec le nom de la colonne à l'écran, pas son identifiant interne (T5-B2).
+    assert any("« À vérifier »" in a and "couleur" in a for a in charger_config(chemin).avertissements)
+    assert not any("À vérifier" in a for a in charger_config(CONFIG_TEST).avertissements)
 
 
 # --- par les écrans et l'API -----------------------------------------------------------------------

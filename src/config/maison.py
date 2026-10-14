@@ -67,6 +67,15 @@ DESCRIPTION_NON_DETERMINABLE = (
 # Plafond de photos par bouteille (decisions.md 0159) : chaque photo envoyée au
 # modèle se paie. 4 par défaut : étiquette, contre-étiquette, capsule,
 # bouteille entière.
+# Les mots de la page Configuration : les refus les reprennent (T5-B3).
+LIBELLES_SOURCES = {
+    "modele": "Lue par le modèle",
+    "modele_best_effort": "Proposée par le modèle, toujours à vérifier",
+    "expert": "Saisie par l'expert (jamais envoyée au modèle)",
+    "systeme": "Calculée par l'outil (jamais envoyée au modèle)",
+}
+LIBELLES_TYPES = {"texte": "Texte", "liste": "Liste de valeurs", "nombre": "Nombre"}
+
 PHOTOS_MAX_DEFAUT = 4
 PHOTOS_MAX_BORNES = (1, 10)
 
@@ -295,8 +304,7 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
     minimum, maximum = PHOTOS_MAX_BORNES
     if isinstance(photos_max, bool) or not isinstance(photos_max, int) or not minimum <= photos_max <= maximum:
         erreurs.append(
-            f"« photos_max_par_bouteille » : entier de {minimum} à {maximum} attendu (reçu "
-            f"{photos_max!r}). Chaque photo envoyée au modèle se paie."
+            f"« photos_max_par_bouteille » : indiquez un nombre de {minimum} à {maximum} (reçu « {_cite(photos_max)} »)."
         )
 
     consignes = brut.get("consignes")
@@ -308,12 +316,25 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
     colonnes_brutes = brut.get("colonnes")
     colonnes: list[Colonne] = []
     if not isinstance(colonnes_brutes, list) or not colonnes_brutes:
-        erreurs.append("« colonnes » : liste non vide attendue.")
+        # Une cause, une phrase : le regroupement n'a alors rien à dire de plus (T5-B9).
+        erreurs.append("Aucune colonne : « colonnes » est vide ou absent.")
+        brut = {**brut, "regroupement_export": []}
     else:
+        premieres: dict[str, str] = {}  # identifiant -> nom de la première colonne qui le porte
         for index, entree in enumerate(colonnes_brutes):
+            cle = entree.get("cle") if isinstance(entree, dict) else None
+            if isinstance(cle, str) and cle in premieres:
+                # Un identifiant déjà pris : c'est LA cause ; ses autres refus en découleraient (T5-B3).
+                erreurs.append(
+                    f"colonne n°{index + 1} « {entree.get('nom') or cle} » : identifiant « {cle} » déjà pris "
+                    f"par la colonne « {premieres[cle]} » — changez son nom (ou son identifiant)."
+                )
+                continue
             colonne = _valider_colonne(entree, index, erreurs)
             if colonne is not None:
                 colonnes.append(colonne)
+            if isinstance(cle, str) and cle:
+                premieres[cle] = str(entree.get("nom") or cle)
 
     _verifier_unicite(colonnes, erreurs)
     # Clés déclarées, valides ou non : une colonne déjà signalée invalide ne doit
@@ -525,33 +546,28 @@ def _verifier_coherence(colonne: Colonne, ou: str, erreurs: list[str]) -> None:
         erreurs.append(f"{ou} : cette colonne est calculée par l'outil, sa source doit être « systeme ».")
 
     if cle == COLONNE_QUANTITE and (source != "expert" or colonne.type != "nombre"):
-        erreurs.append(f"{ou} : la quantité est saisie par l'expert (source « expert », type « nombre ») — decisions.md 0017.")
+        erreurs.append(f"{ou} : la quantité est saisie par l'expert, en nombre (source « expert », type « nombre »).")
 
+    # Les refus disent les mots de la page (types, sources), sans jargon (T5-B3).
     if colonne.envoyee_au_modele:
         if cle in CLES_RESERVEES_AU_PIPELINE:
-            erreurs.append(f"{ou} : « {cle} » est réservé au pipeline, le modèle ne peut pas le remplir.")
+            erreurs.append(f"{ou} : ce champ est rempli par l'outil, pas par le modèle.")
         nature = NATURE_DES_CHAMPS.get(cle)
         if nature is not None and nature != colonne.type:
             erreurs.append(
-                f"{ou} : « {cle} » est un champ {nature} du contrat Bouteille, la "
-                f"config ne peut pas en faire un champ {colonne.type}."
+                f"{ou} : son type ne peut être que « {LIBELLES_TYPES.get(nature, nature)} » : "
+                f"c'est ainsi que le modèle lit ce champ."
             )
     elif source == "expert" and cle in NATURE_DES_CHAMPS:
         erreurs.append(
-            f"{ou} : « {cle} » est extrait par le modèle ; une colonne expert du même "
-            f"nom rendrait ambigu qui remplit quoi."
+            f"{ou} : ce champ est toujours lu par le modèle ; choisissez la source "
+            f"« {LIBELLES_SOURCES['modele']} » ou « {LIBELLES_SOURCES['modele_best_effort']} »."
         )
 
     if colonne.canonique and cle not in NOYAU_CANONIQUE:
-        erreurs.append(
-            f"{ou} : seuls {', '.join(NOYAU_CANONIQUE)} forment le noyau canonique "
-            f"(decisions.md 0021)."
-        )
-    if cle in NOYAU_CANONIQUE:
-        if not colonne.canonique:
-            erreurs.append(f"{ou} : champ du noyau canonique (decisions.md 0021), ajouter \"canonique\": true.")
-        if not colonne.envoyee_au_modele:
-            erreurs.append(f"{ou} : le noyau canonique est toujours extrait par le modèle, source « modele » ou « modele_best_effort » attendue.")
+        erreurs.append(f"{ou} : seuls {', '.join(NOYAU_CANONIQUE)} forment le noyau toujours lu ; retirez \"canonique\".")
+    if cle in NOYAU_CANONIQUE and not colonne.canonique:
+        erreurs.append(f"{ou} : ce champ est toujours lu par le modèle ; ajoutez \"canonique\": true.")
 
 
 def _verifier_unicite(colonnes: list[Colonne], erreurs: list[str]) -> None:
@@ -559,14 +575,14 @@ def _verifier_unicite(colonnes: list[Colonne], erreurs: list[str]) -> None:
     noms_vus: dict[str, str] = {}
     for colonne in colonnes:
         if colonne.cle in cles_vues:
-            erreurs.append(f"colonne « {colonne.cle} » : clé en double.")
+            erreurs.append(f"colonne « {colonne.cle} » : identifiant déjà pris par une autre colonne.")
         cles_vues.add(colonne.cle)
 
         nom = plier(colonne.nom)
         if nom in noms_vus:
             erreurs.append(
-                f"colonnes « {noms_vus[nom]} » et « {colonne.cle} » : même en-tête "
-                f"« {colonne.nom} » — impossible de relire le fichier de l'expert."
+                f"colonne « {colonne.cle} » : même en-tête « {colonne.nom} » qu'une autre colonne — "
+                f"impossible de relire le fichier de l'expert."
             )
         noms_vus.setdefault(nom, colonne.cle)
 
@@ -600,13 +616,35 @@ def _valider_regroupement(
 
 
 def _reperer_manques(colonnes: list[Colonne]) -> list[str]:
-    """Une config valide, mais à qui il manque de quoi dire une erreur dans l'Excel."""
-    if any(colonne.cle == COLONNE_A_VERIFIER for colonne in colonnes):
-        return []
-    return [
-        f"Pas de colonne système « {COLONNE_A_VERIFIER} » : dans l'Excel, une bouteille dont "
-        f"l'analyse a échoué ne se reconnaîtra qu'à la couleur de sa ligne (decisions.md 0170)."
-    ]
+    """Une config valide, mais à qui il manque une colonne utile dans l'Excel : dit
+    en mots d'expert, sans identifiant interne (T5-B2)."""
+    presentes = {colonne.cle for colonne in colonnes}
+    avertissements = []
+    if COLONNE_A_VERIFIER not in presentes:
+        avertissements.append(
+            "Sans la colonne « À vérifier », seule la couleur de la ligne signale, dans l'Excel, "
+            "une bouteille à relire ou dont l'analyse a échoué."
+        )
+    if COLONNE_QUANTITE not in presentes:
+        avertissements.append("Sans colonne de quantité, l'Excel ne dit pas combien d'exemplaires compte chaque bouteille.")
+    if COLONNE_ID not in presentes:
+        avertissements.append("Sans la colonne « N° », une ligne de l'Excel ne renvoie plus à sa bouteille dans l'outil.")
+    noyau_absent = [cle for cle in NOYAU_CANONIQUE if cle not in presentes]
+    if noyau_absent:
+        avertissements.append(
+            f"Sans colonne pour {', '.join(LIBELLES_NOYAU[cle] for cle in noyau_absent)} : toujours lu par le "
+            f"modèle, mais absent de l'Excel."
+        )
+    return avertissements
+
+
+LIBELLES_NOYAU = {"domaine": "le domaine", "appellation": "l'appellation", "millesime": "le millésime", "format": "le format"}
+
+
+def _cite(valeur: Any, longueur: int = 20) -> str:
+    """Une saisie citée dans un message, coupée si elle est longue."""
+    texte = str(valeur)
+    return texte if len(texte) <= longueur else texte[: longueur - 1] + "…"
 
 
 def _reperer_exemples(colonnes: list[Colonne]) -> list[str]:

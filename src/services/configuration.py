@@ -559,11 +559,13 @@ def _en_clair(erreurs: list[str], colonnes: list[dict[str, Any]]) -> tuple[list[
                         erreur = f"La colonne n°{i + 1} n'a pas de nom : donnez-lui un nom (l'en-tête de l'Excel) ou retirez-la."
                 elif cle:
                     erreur = erreur.replace(f"colonne « {cle} »", f"Colonne « {nom} »", 1)
+                erreur = erreur.replace(f"colonne n°{i + 1} « {nom} »", f"Colonne « {nom} »", 1)
                 break
         if index is not None:
             fautives.add(index)
         if erreur:
             erreur = erreur.replace("« cle »", "« clé »").replace("« libelle »", "« libellé »")
+            erreur = erreur.replace("« photos_max_par_bouteille » :", "Photos au plus par bouteille :")
             en_clair.append(erreur)
     return en_clair, fautives
 

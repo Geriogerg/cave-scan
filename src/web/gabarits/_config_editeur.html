@@ -70,7 +70,9 @@
           <details class="large detail-avance">
             <summary>Réglage avancé : identifiant interne</summary>
             <label>Identifiant (facultatif)
-              <input type="text" name="c{{ i }}_cle" value="{{ d.cle or '' }}" placeholder="créé à partir du nom" maxlength="60">
+              {#- Tiré du nom, il suit le nom corrigé jusqu'à l'enregistrement (T5-B8). #}
+              <input type="text" name="c{{ i }}_cle" value="{{ '' if d.cle == identifiant(d.nom or '') else (d.cle or '') }}"
+                     placeholder="{{ d.cle or 'créé à partir du nom' }}" maxlength="60">
             </label>
           </details>
           {% else %}

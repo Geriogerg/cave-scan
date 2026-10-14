@@ -16,7 +16,7 @@ from fastapi import APIRouter, File, Query, Request, UploadFile
 from fastapi.responses import RedirectResponse, Response
 
 from src.api.dependances import Formulaire, SessionBase
-from src.config.maison import NOYAU_CANONIQUE, ConfigInvalide
+from src.config.maison import LIBELLES_SOURCES, LIBELLES_TYPES, NOYAU_CANONIQUE, ConfigInvalide
 from src.extract.consignes import CONSIGNES_MODIFIABLES, REGLES_FIXES_DEBUT, REGLES_FIXES_FIN
 from src.services.configuration import (
     _identifiant,
@@ -40,14 +40,6 @@ from src.services.configuration import (
 from src.web.pages import page
 
 routeur = APIRouter(include_in_schema=False)
-
-LIBELLES_SOURCES = {
-    "modele": "Lue par le modèle",
-    "modele_best_effort": "Proposée par le modèle, toujours à vérifier",
-    "expert": "Saisie par l'expert (jamais envoyée au modèle)",
-    "systeme": "Calculée par l'outil (jamais envoyée au modèle)",
-}
-LIBELLES_TYPES = {"texte": "Texte", "liste": "Liste de valeurs", "nombre": "Nombre"}
 
 
 def _contexte_edition(request: Request, base, nom: str, vue, **messages) -> dict:

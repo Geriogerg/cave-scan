@@ -123,7 +123,7 @@ def test_cle_racine_en_double_refusee(tmp_path):
 
 def test_deux_colonnes_meme_cle_refusees(tmp_path, brut):
     brut["colonnes"].append(copy.deepcopy(colonne(brut, "cuvee")) | {"nom": "Autre en-tête"})
-    refusee(tmp_path, brut, "« cuvee » : clé en double")
+    refusee(tmp_path, brut, "identifiant « cuvee » déjà pris")
 
 
 def test_deux_colonnes_meme_en_tete_refusees(tmp_path, brut):
@@ -198,7 +198,7 @@ def test_json_illisible_refuse(tmp_path):
 
 def test_config_sans_colonne_refusee(tmp_path, brut):
     brut["colonnes"] = []
-    refusee(tmp_path, brut, "« colonnes » : liste non vide")
+    refusee(tmp_path, brut, "Aucune colonne")
 
 
 def test_toutes_les_erreurs_sont_rapportees_ensemble(tmp_path, brut):
@@ -234,8 +234,11 @@ def test_quantite_doit_rester_saisie_par_l_expert(tmp_path, brut):
 
 @pytest.mark.parametrize("cle", ["id", "a_verifier", "champs_a_verifier", "couleur_source", "photos_meme_bouteille"])
 def test_le_modele_ne_peut_pas_remplir_un_champ_du_pipeline(tmp_path, brut, cle):
+    # Sans la colonne qui porte déjà cette clé : sinon le seul refus serait
+    # « identifiant déjà pris » (une cause, une phrase, T5-B3).
+    brut["colonnes"] = [c for c in brut["colonnes"] if c["cle"] != cle]
     brut["colonnes"].append({"cle": cle, "nom": f"En-tête {cle}", "type": "texte", "source": "modele"})
-    refusee(tmp_path, brut, "réservé au pipeline|calculée par l'outil")
+    refusee(tmp_path, brut, "rempli par l'outil|calculée par l'outil")
 
 
 def test_une_config_ne_change_pas_la_nature_d_un_champ_v0(tmp_path, brut):
@@ -243,12 +246,12 @@ def test_une_config_ne_change_pas_la_nature_d_un_champ_v0(tmp_path, brut):
     col = colonne(brut, "couleur")
     col["type"] = "texte"
     del col["valeurs"]
-    refusee(tmp_path, brut, "champ liste du contrat Bouteille")
+    refusee(tmp_path, brut, "ne peut être que « Liste de valeurs »")
 
 
 def test_colonne_expert_sur_un_champ_extrait_refusee(tmp_path, brut):
     colonne(brut, "cuvee")["source"] = "expert"
-    refusee(tmp_path, brut, "ambigu qui remplit quoi")
+    refusee(tmp_path, brut, "toujours lu par le modèle")
 
 
 # --- noyau canonique (decisions.md 0021) -----------------------------------
@@ -256,12 +259,12 @@ def test_colonne_expert_sur_un_champ_extrait_refusee(tmp_path, brut):
 
 def test_canonique_hors_noyau_refuse(tmp_path, brut):
     colonne(brut, "cuvee")["canonique"] = True
-    refusee(tmp_path, brut, "noyau canonique")
+    refusee(tmp_path, brut, "forment le noyau")
 
 
 def test_champ_du_noyau_sans_marque_canonique_refuse(tmp_path, brut):
     del colonne(brut, "millesime")["canonique"]
-    refusee(tmp_path, brut, "ajouter \"canonique\": true")
+    refusee(tmp_path, brut, "ajoutez \"canonique\": true")
 
 
 def test_le_noyau_n_a_pas_a_etre_affiche(tmp_path, brut):

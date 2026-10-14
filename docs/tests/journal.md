@@ -156,3 +156,7 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 5 | T5-B15 | suggestion | Fin de réanalyse muette | Corrigé : la page se recharge avec « Le modèle a lu la bouteille : relisez ses champs. » ; test | lot 23 |
 | 5 | T5-B5 | mineur | Vérifier d'une vente lancée ou close : page vide | Corrigé : renvoi au suivi avec la raison (« Analyse déjà lancée », « Inventaire clos ») ; test | lot 23 |
 | 5 | T5-B13 | suggestion | Appui ignoré 500 ms sans signe | Corrigé : bouton atténué pendant le délai | lot 23 |
+| 5 | T5-B3 | majeur | Refus de configuration en jargon, plusieurs phrases pour une cause | Corrigé : mots de la page (types, sources, « Photos au plus par bouteille »), sans « contrat Bouteille », « noyau canonique » ni decisions.md ; un identifiant déjà pris = un seul refus, sur la nouvelle colonne ; test | lot 24 |
+| 5 | T5-B2 | majeur | Avertissement permanent avec clé interne | Corrigé : « Sans la colonne « À vérifier »… » ; avertissements aussi sans quantité, sans « N° », sans colonne du noyau ; test | lot 24 |
+| 5 | T5-B8 | mineur | Identifiant d'une nouvelle colonne figé au premier « Vérifier » | Corrigé : il suit le nom jusqu'à l'enregistrement ; test | lot 24 |
+| 5 | T5-B9 | mineur | Import sans colonnes : onze phrases | Corrigé : « Aucune colonne », seul ; test | lot 24 |

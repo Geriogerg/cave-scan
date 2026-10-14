@@ -158,7 +158,7 @@ def test_une_config_invalide_n_est_jamais_ecrite(client, configs):
     refus = agir(client, champs, "enregistrer")
     assert refus.status_code == 422
     assert "Rien n'a été enregistré" in refus.text and "2 point(s) à corriger" in refus.text
-    assert "photos_max_par_bouteille" in refus.text and "même en-tête" in refus.text
+    assert "indiquez un nombre de 1 à 10" in refus.text and "même en-tête" in refus.text
     assert 'value="douze"' in refus.text  # la saisie reste à l'écran pour être corrigée
     assert (configs / CONFIG_TEST.name).read_text(encoding="utf-8") == avant
 
@@ -405,4 +405,69 @@ def test_un_nombre_demesure_dans_la_configuration_est_refuse_en_clair(client):
     importe = client.post("/app/configuration/importer",
                           files={"fichier": ("demesure.json", texte.encode("utf-8"), "application/json")})
     assert importe.status_code == 422 and "démesuré" in importe.text
+
+
+def _colonne(champs: dict[str, str], cle: str) -> int:
+    return next(k for k in range(int(champs["nb_colonnes"])) if champs.get(f"c{k}_cle") == cle)
+
+
+def test_les_refus_de_la_configuration_parlent_la_langue_de_la_page(client):
+    """T5-B3 : ni identifiant interne, ni « contrat Bouteille », ni renvoi à
+    decisions.md : les mots de la page, une phrase par cause."""
+    champs = formulaire(ouvrir(client))
+    champs["photos_max_par_bouteille"] = "abc"
+    champs[f"c{_colonne(champs, 'millesime')}_type"] = "nombre"
+    champs[f"c{_colonne(champs, 'couleur')}_source"] = "expert"
+    refus = agir(client, champs, "verifier").text
+    assert "Photos au plus par bouteille :" in refus and "indiquez un nombre de 1 à 10" in refus
+    assert "Colonne « Millésime » : son type" in refus and "ne peut être que « Texte »" in refus
+    assert "Colonne « Couleur » : ce champ" in refus and "toujours lu par le modèle" in refus
+    for jargon in ("photos_max_par_bouteille »", "contrat Bouteille", "noyau canonique", "decisions.md", "modele_best_effort »"):
+        assert jargon not in refus, jargon
+
+
+def test_une_nouvelle_colonne_au_nom_deja_pris_n_a_qu_un_refus(client):
+    """T5-B3 : « Domaine » ajoutée alors que « Domaine / Château » existe : un seul
+    refus, sur la nouvelle colonne, qui dit quoi faire."""
+    champs = formulaire(agir(client, formulaire(ouvrir(client)), "ajouter_colonne").text)
+    i = nouvelle_colonne(champs)
+    champs.update({f"c{i}_nom": "Domaine", f"c{i}_type": "texte", f"c{i}_source": "expert"})
+    refus = agir(client, champs, "verifier").text
+    assert refus.count("déjà pris") == 1 and "toujours lu par le modèle" not in refus
+    assert "Colonne « Domaine » : identifiant" in refus and "colonne « Domaine / Château »" in refus
+
+
+def test_l_identifiant_d_une_nouvelle_colonne_suit_son_nom_jusqu_a_l_enregistrement(client, configs):
+    """T5-B8 : nommée « Premier nom », vérifiée, renommée « Second nom » : la colonne
+    enregistrée a l'identifiant du nom final."""
+    champs = formulaire(agir(client, formulaire(ouvrir(client)), "ajouter_colonne").text)
+    i = nouvelle_colonne(champs)
+    champs.update({f"c{i}_nom": "Premier nom", f"c{i}_type": "texte", f"c{i}_source": "expert"})
+    champs = formulaire(agir(client, champs, "verifier").text)
+    champs[f"c{i}_nom"] = "Second nom"
+    assert agir(client, champs, "enregistrer").status_code == 204
+    cles = [c["cle"] for c in json.loads((configs / CONFIG_TEST.name).read_text(encoding="utf-8"))["colonnes"]]
+    assert "second_nom" in cles and "premier_nom" not in cles
+
+
+def test_un_fichier_sans_colonne_n_a_qu_un_refus(client):
+    """T5-B9 : « colonnes » vide : une phrase, pas une par colonne de regroupement."""
+    brut = json.loads(CONFIG_TEST.read_text(encoding="utf-8"))
+    brut["colonnes"] = []
+    refus = client.post("/app/configuration/importer",
+                        files={"fichier": ("vide.json", json.dumps(brut).encode("utf-8"), "application/json")})
+    assert refus.status_code == 422 and "Aucune colonne" in refus.text
+    assert "aucune colonne de clé" not in refus.text and refus.text.count("Aucune colonne") == 1
+
+
+def test_une_configuration_sans_a_verifier_avertit_en_clair(client):
+    """T5-B2 : sans « À vérifier » (ni quantité), l'avertissement dit la conséquence
+    dans l'Excel, sans identifiant interne ni renvoi à decisions.md."""
+    champs = formulaire(ouvrir(client))
+    champs = formulaire(agir(client, champs, f"supprimer-{_colonne(champs, 'a_verifier')}").text)
+    champs = formulaire(agir(client, champs, f"supprimer-{_colonne(champs, 'quantite')}").text)
+    assert agir(client, champs, "enregistrer").status_code == 204
+    page = ouvrir(client)
+    assert "Sans la colonne « À vérifier »" in page and "Sans colonne de quantité" in page
+    assert "a_verifier »" not in page and "decisions.md" not in page
 
