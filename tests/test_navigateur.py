@@ -428,3 +428,21 @@ def test_configuration_la_colonne_ajoutee_est_prete_a_nommer(application, teleph
     page.wait_for_function("/^c[0-9]+_nom$/.test(document.activeElement.name || '')", timeout=10_000)
     assert page.evaluate("document.activeElement.value") == ""
 
+
+def test_depot_quantite_refusee_gardee_et_suivante_grisee_sans_photo(application, telephone):
+    """T6-D4 : au téléphone, une quantité refusée reste dans son champ, la raison
+    sous la rangée ; T6-B5 : « Bouteille suivante » grisée tant qu'il n'y a pas
+    de photo."""
+    page = telephone.new_page()
+    page.goto(f"{application}/app/nouveau")
+    page.get_by_label("Nom de la vente").fill("Vente quantité")
+    page.get_by_role("button", name="Créer et ajouter les photos").click()
+    page.wait_for_url("**/depot")
+    page.wait_for_function("document.getElementById('suivante').getAttribute('aria-disabled') === 'true'", timeout=5_000)
+    champ = page.locator(".quantite-depot input").first
+    champ.fill("0")
+    champ.press("Tab")
+    page.wait_for_selector(".refus-quantite", timeout=5_000)
+    assert champ.input_value() == "0"
+    assert page.locator(".quantite-depot .refus-quantite").count() == 0  # sous la rangée, pas dedans
+

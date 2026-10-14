@@ -343,7 +343,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
   .visionneuse { height: 30vh; min-height: 180px; }
   .champs { gap: 2px; }
   .champ { padding: 4px 6px; scroll-margin-top: calc(30vh + 24px); }  /* jamais sous la photo collée (T4-D3) */
-  .relecture-grille:has(.saisie:focus) .commandes-photo { display: none; }  /* saisie : la photo, sans vignettes */
+  /* Saisie : vignettes effacées, mais leur place gardée — si elles revenaient à la
+     perte du focus, « Valider » bougerait sous le doigt et le premier appui serait
+     perdu (T6-B1). */
+  .relecture-grille:has(.saisie:focus) .commandes-photo { visibility: hidden; }
   /* Premier écran : la navigation tient sur une ligne, les compteurs détaillés
      restent au récapitulatif (T4-D4, T4-B24). */
   .barre-relecture { gap: 6px 10px; padding: 4px 0 8px; margin-bottom: 8px; }

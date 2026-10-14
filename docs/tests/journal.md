@@ -186,3 +186,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 6 | T6-D8 | mineur | Nom de vente coupé sans « … » au toucher | Corrigé : `inline-block` + marge pour les 44 px | lot 31 |
 | 6 | T6-D7 | mineur | Récapitulatif collé à gauche | Corrigé : même colonne que les autres écrans | lot 31 |
 | 6 | T6-B8 | mineur | Plusieurs configurations : l'API crée un inventaire | Écarté : l'appelant de l'API nomme la maison, c'est une désignation explicite (comme `--maison`) ; 0182 vise le cas sans désignation | — |
+| 6 | T6-B1 | majeur | Téléphone : premier appui sur « Valider » perdu depuis un champ | Corrigé : au toucher, validation au relâchement du doigt (même garde), clic suivant ignoré ; vignettes effacées sans perdre leur place ; test navigateur tactile | lot 32 |
+| 6 | T6-B2 | mineur | Refus de validation qui reste après correction | Corrigé : retiré dès qu'aucun champ n'est refusé ; test navigateur | lot 32 |
+| 6 | T6-B4 | mineur | Barre de navigation plus haute sur la première / dernière bouteille | Corrigé : boutons inactifs avec mots courts ; test navigateur | lot 32 |
+| 6 | T6-B5 | mineur | « Bouteille suivante » sans photo : sans effet visible | Corrigé : grisé, avec sa raison ; test navigateur | lot 32 |
+| 6 | T6-B7 | mineur | « Leurs photos » pour 1 ; Ctrl+Entrée au téléphone ; « doute du modèle » sans lecture | Corrigé ; tests | lot 32 |
+| 6 | T6-D4 / T6-B7 (d) | mineur | Dépôt : quantité refusée effacée, rangée cassée | Corrigé : saisie gardée, raison sous la rangée ; test navigateur | lot 32 |

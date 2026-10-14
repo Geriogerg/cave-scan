@@ -21,12 +21,12 @@
     {% if adresse_precedente %}
       <a class="bouton petit" id="precedente" data-navigation href="{{ adresse_precedente }}" aria-label="Précédente">← <span class="mot-long">Précédente</span> <kbd>J</kbd></a>
     {% else %}
-      <span class="bouton petit inactif" aria-disabled="true">← Précédente</span>
+      <span class="bouton petit inactif" aria-disabled="true" aria-label="Précédente">← <span class="mot-long">Précédente</span></span>
     {% endif %}
     {% if adresse_suivante %}
       <a class="bouton petit" id="suivante" data-navigation href="{{ adresse_suivante }}" aria-label="Suivante"><span class="mot-long">Suivante</span> <kbd>K</kbd> →</a>
     {% else %}
-      <span class="bouton petit inactif" aria-disabled="true">Suivante →</span>
+      <span class="bouton petit inactif" aria-disabled="true" aria-label="Suivante"><span class="mot-long">Suivante</span> →</span>
     {% endif %}
     <a class="filtre{% if f.filtre %} actif{% endif %}" data-navigation href="{{ adresse_filtre }}"
        role="switch" aria-checked="{{ 'true' if f.filtre else 'false' }}"><span class="mot-long">Seulement les bouteilles à vérifier</span><span class="mot-court">À vérifier</span></a>

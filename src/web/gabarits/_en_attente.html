@@ -58,6 +58,6 @@
             hx-post="/app/inventaires/{{ id }}/lancer" hx-include=".quantite-attente" {{ cible | safe }}
             hx-trigger="click throttle:1s" hx-disabled-elt="this"
             {% set exemplaires = vue.bouteilles | map(attribute="groupe") | sum(attribute="quantite") %}
-            hx-confirm="Lancer l'analyse de {{ vue.bouteilles | length | accord("bouteille", "bouteilles") }}{% if exemplaires > vue.bouteilles | length %} ({{ exemplaires }} exemplaires){% endif %} ? Leurs photos ne pourront plus être modifiées.">Lancer l'analyse</button>
+            hx-confirm="Lancer l'analyse de {{ vue.bouteilles | length | accord("bouteille", "bouteilles") }}{% if exemplaires > vue.bouteilles | length %} ({{ exemplaires }} exemplaires){% endif %} ? {{ "Leurs photos ne pourront plus être modifiées" if vue.bouteilles | length > 1 else "Ses photos ne pourront plus être modifiées" }}.">Lancer l'analyse</button>
   </nav>
 </section>

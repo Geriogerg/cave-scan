@@ -438,6 +438,8 @@ def fiche_de_relecture(
 
     best_effort = {colonne.cle for colonne in config.colonnes_best_effort}
     doutes = set(modele.champs_a_verifier) - best_effort
+    if bouteille.statut in ("a_extraire", "en_cours") and extraction_qui_fait_foi(bouteille) is None:
+        doutes = set()  # pas encore lue : ni doute ni certitude du modèle (T6-B7)
     affiches = [colonne for colonne in config.colonnes if colonne.source != "systeme"]
     champs = [
         _champ(colonne, courantes, modele, colonne.cle in corriges, "tous" in doutes or colonne.cle in doutes)

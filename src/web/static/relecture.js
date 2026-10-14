@@ -180,6 +180,26 @@
     boutonValider.classList.add("en-garde");
     setTimeout(function () { boutonValider.classList.remove("en-garde"); }, DELAI_APRES_AFFICHAGE_MS);
   }
+  // Au toucher, « Valider » part au relâchement du doigt : un champ qui perd le
+  // focus déplace la mise en page entre l'appui et le relâchement, et le
+  // navigateur n'envoie alors aucun « click » — le premier appui était perdu
+  // (T6-B1). Même délai de garde que le clic (T4-B2) ; le clic qui suivrait est
+  // ignoré.
+  var appuiTactile = false, valideAuToucher = 0;
+  if (boutonValider && !boutonValider.hasAttribute("data-lecture-seule")) {
+    boutonValider.addEventListener("pointerdown", function (evenement) { appuiTactile = evenement.pointerType === "touch"; });
+    boutonValider.addEventListener("pointerup", function (evenement) {
+      if (!appuiTactile || evenement.pointerType !== "touch" || boutonValider.disabled) return;
+      appuiTactile = false;
+      if (Date.now() - afficheeLe < DELAI_APRES_AFFICHAGE_MS) return;
+      evenement.preventDefault();
+      valideAuToucher = Date.now();
+      valider();
+    });
+    boutonValider.addEventListener("click", function (evenement) {
+      if (Date.now() - valideAuToucher < 1000) { evenement.preventDefault(); evenement.stopImmediatePropagation(); }
+    }, true);
+  }
 
   document.body.addEventListener("htmx:beforeRequest", function (evenement) {
     var config = evenement.detail.requestConfig || {};
@@ -246,6 +266,11 @@
     // Saisi de nouveau pendant l'envoi : le prochain envoi suit déjà.
     if (etats[cle] === "modifie") return;
     poser(cle, etat);
+    // Plus aucun champ refusé : le refus de validation n'a plus de raison d'être (T6-B2).
+    if (!cles(function (e) { return e === "refuse" || e === "conflit"; }).length) {
+      var perime = document.querySelector("#messages [data-refus-validation]");
+      if (perime) perime.remove();
+    }
     // Un conflit tranché (« Enregistrer quand même ») : la version affichée est à
     // jour, les autres champs bloqués par ce conflit repartent seuls (T2-D5).
     if (etat === "enregistre") {
@@ -258,7 +283,8 @@
 
   function apresValidation(statut) {
     if (statut === 0) {
-      annoncer("La validation n'a pas pu être envoyée (connexion interrompue ?). Rien n'est perdu : réessayez avec Ctrl+Entrée.");
+      var geste = window.matchMedia && window.matchMedia("(pointer: coarse)").matches ? "touchez de nouveau « Valider »" : "réessayez avec Ctrl+Entrée";
+      annoncer("La validation n'a pas pu être envoyée (connexion interrompue ?). Rien n'est perdu : " + geste + ".");
       return;
     }
     if (statut >= 500) {

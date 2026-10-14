@@ -14,7 +14,7 @@
       — l'historique garde toutes les corrections.</p>
   </div>
 {% else %}
-  <p class="message alerte" role="alert">{{ message }}</p>
+  <p class="message alerte" role="alert" data-refus-validation>{{ message }}</p>
   {% with oob = True %}
     {% for c in fiche.champs %}
       {% with etat = "refuse" if c.cle in refus else "", message = refus.get(c.cle) %}

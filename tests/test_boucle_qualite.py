@@ -406,3 +406,14 @@ def test_une_quantite_refusee_reste_dans_son_champ(api):
     assert 'value="0"' in carte and 'value="3"' not in carte and 'id="refus-quantite"' in carte
     assert api.get(f"/inventaires/{inventaire_id}/apercu").json()["bouteilles"][0]["quantite"] == 3
 
+
+def test_lancer_une_seule_bouteille_dit_ses_photos(api):
+    """T6-B7 : « Lancer l'analyse de 1 bouteille ? Ses photos… », pas « Leurs »."""
+    from tests.test_pages import attente, creer, deposer
+
+    inventaire_id = creer(api)
+    deposer(api, inventaire_id, bouteilles=1, photos=1)
+    assert attente(api, inventaire_id)
+    page = api.get(f"/app/inventaires/{inventaire_id}/verifier").text
+    assert "Ses photos ne pourront plus" in page and "Leurs photos" not in page
+

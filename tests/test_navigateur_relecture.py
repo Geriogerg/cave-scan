@@ -435,3 +435,44 @@ def test_au_telephone_le_premier_champ_se_voit_sans_defiler(application, ordinat
     finally:
         telephone.close()
 
+
+def test_au_telephone_un_seul_appui_valide_meme_depuis_un_champ(application, ordinateur, tmp_path):
+    """T6-B1 : champ actif, un seul appui sur « Valider » valide et passe à la
+    suivante (la mise en page ne bouge plus à la perte du focus). T6-B2 : un
+    refus de validation corrigé disparaît. T6-B4 : la barre garde sa forme sur la
+    première bouteille."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 3)
+    b = ids(application, inventaire_id)
+    telephone = ordinateur.browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    try:
+        page = telephone.new_page()
+        page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{b[0]}")
+        sur_la_bouteille(page, b[0])
+        hauteur_nav = page.evaluate("document.querySelector('.navigation-relecture').getBoundingClientRect().height")
+        assert hauteur_nav < 60, hauteur_nav  # première bouteille : « ← » inactif court aussi
+
+        page.wait_for_timeout(700)  # passé le délai de garde de l'affichage
+        page.locator("#saisie-domaine").tap()
+        page.locator("#saisie-domaine").fill("Domaine du doigt")
+        page.tap("#valider")  # UN appui, le champ ayant encore le focus
+        sur_la_bouteille(page, b[1])
+        statut = httpx.get(f"{application}/inventaires/{inventaire_id}/bouteilles/{b[0]}").json()["statut"]
+        assert statut == "validee"
+    finally:
+        telephone.close()
+
+
+def test_un_refus_de_validation_corrige_disparait(application, ordinateur, tmp_path):
+    """T6-B2 : quantité 0 puis Ctrl+Entrée : refus ; la quantité corrigée et
+    enregistrée, le refus devenu faux disparaît."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 2)
+    premiere = ids(application, inventaire_id)[0]
+    page = ordinateur.new_page()
+    page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{premiere}")
+    sur_la_bouteille(page, premiere)
+    page.locator("#saisie-quantite").fill("0")
+    page.keyboard.press("Control+Enter")
+    page.wait_for_selector("#messages [data-refus-validation]", timeout=10_000)
+    page.locator("#saisie-quantite").fill("2")
+    page.keyboard.press("Escape")  # quitte le champ : il s'enregistre
+    page.wait_for_function("!document.querySelector('#messages [data-refus-validation]')", timeout=10_000)

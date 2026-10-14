@@ -381,3 +381,12 @@ def test_l_avis_de_la_derniere_bouteille_s_affiche_au_recapitulatif(api, inventa
     assert cible.endswith(f"/recapitulatif?validee={vide}") and "X-Avis-Validation" not in reponse.headers
     assert "resteront vides" in api.get(cible).text or "restera vide" in api.get(cible).text
 
+
+def test_une_bouteille_pas_encore_lue_n_affiche_aucun_doute(api, dossier_photos, base):
+    """T6-B7 : sans lecture du modèle, ni doute ni certitude : pas de « doute du modèle »."""
+    inventaire_id = envoyer(api, dossier_photos).json()["id"]
+    api.post(f"/inventaires/{inventaire_id}/lancer")
+    api.post(f"/inventaires/{inventaire_id}/annuler")
+    texte = ouvrir(api, inventaire_id, ids(base, inventaire_id)[0])
+    assert "doute du modèle" not in texte
+

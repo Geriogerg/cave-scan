@@ -1331,6 +1331,16 @@ un renvoi d'une ligne à leur place.
   récapitulatif prend la colonne des autres écrans — écarté : un libellé sur
   une seule ligne à tout prix (coupé au téléphone, T6-D1).
 
+- 0191 — Valider d'un seul appui au téléphone (tour 6, lot 32). Au toucher,
+  « Valider » part au relâchement du doigt (même délai de garde que le clic,
+  0176 ; le clic qui suivrait est ignoré) : un champ qui perd le focus déplace
+  la mise en page entre l'appui et le relâchement, et le navigateur n'envoyait
+  alors aucun clic (T6-B1). Pendant la saisie, les vignettes sont effacées
+  mais gardent leur place — écarté : les retirer de la mise en page (la
+  validation restait perdue). Une bouteille que le modèle
+  n'a pas lue n'affiche aucun « doute du modèle ». Au dépôt, une quantité
+  refusée reste dans son champ, comme sur Vérifier.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

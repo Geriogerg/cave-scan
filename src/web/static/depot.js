@@ -259,6 +259,10 @@
     var plein = nombre >= maximum;
     boutonPhoto.classList.toggle("inactif", plein);
     boutonPhoto.textContent = plein ? "Plafond de " + maximum + " photos atteint" : "Prendre une photo";
+    var suivanteBouton = document.getElementById("suivante");  // pas de photo : rien à passer (T6-B5)
+    suivanteBouton.classList.toggle("inactif", !nombre);
+    suivanteBouton.setAttribute("aria-disabled", nombre ? "false" : "true");
+    suivanteBouton.title = nombre ? "" : "Prenez d'abord une photo de cette bouteille";
     camera.disabled = plein;
     afficherVignettes(vignettesEnCours, bouteille);
 
@@ -501,14 +505,13 @@
   var QUANTITE_MAX = 100000;
 
   function changerQuantite(bouteille, valeur, champ) {
+    // Refusée, la saisie reste dans le champ, à côté de sa raison (T6-D4, comme Vérifier).
     if (valeur > QUANTITE_MAX) {
       signalerQuantite(champ, "100 000 au plus.");
-      if (champ) champ.value = bouteille.quantite;
       return;
     }
     if (!(valeur >= 1)) {  // 0, « abc », -3 : refusés comme sur « Vérifier » (T4-B15)
       signalerQuantite(champ, "Indiquez un nombre de bouteilles (1 ou plus).");
-      if (champ) champ.value = bouteille.quantite;
       return;
     }
     signalerQuantite(champ, "");
@@ -522,12 +525,14 @@
   // Le refus d'une quantité s'affiche juste à côté du champ (T3-D8).
   function signalerQuantite(champ, message) {
     if (!champ) { if (message) afficherResume("Quantité : " + message); return; }
-    var zone = champ.parentNode.querySelector(".refus-quantite");
+    // Sous la rangée « − champ + », qui ne se casse pas (T6-D4).
+    var rangee = champ.closest(".quantite-depot") || champ.parentNode;
+    var zone = rangee.parentNode.querySelector(".refus-quantite");
     if (!zone && message) {
-      zone = document.createElement("span");
-      zone.className = "refus-quantite alerte-texte";
+      zone = document.createElement("p");
+      zone.className = "refus-quantite alerte-texte refus-carte";
       zone.setAttribute("role", "alert");
-      champ.insertAdjacentElement("afterend", zone);
+      rangee.insertAdjacentElement("afterend", zone);
     }
     if (zone) zone.textContent = message;
   }
