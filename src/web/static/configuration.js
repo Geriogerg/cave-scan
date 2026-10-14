@@ -6,18 +6,26 @@
   var modifiee = false;
   // La barre « Annuler / Vérifier / Enregistrer » n'occupe l'écran qu'une fois
   // quelque chose de modifié (T2-DS5).
+  // Le formulaire a changé : l'aperçu montré est celui d'avant (T4-D7).
+  function marquerModifie() {
+    var editeur = document.getElementById("editeur");
+    if (editeur) editeur.classList.add("modifie");
+  }
+
   function montrerLaBarre() {
     var barre = document.querySelector(".barre-config");
     if (barre) barre.removeAttribute("data-sans-modification");
   }
   // Masquée au chargement par le script seulement : sans JavaScript, elle reste là.
   var barreInitiale = document.querySelector(".barre-config");
-  if (barreInitiale && !document.querySelector("#editeur > .message.alerte")) {
+  // Visible d'emblée seulement si la page porte une modification refusée — pas
+  // après une erreur d'import, où rien n'a changé (T4-D7).
+  if (barreInitiale && !barreInitiale.hasAttribute("data-modifiee")) {
     barreInitiale.setAttribute("data-sans-modification", "");
   }
 
   document.addEventListener("input", function (evenement) {
-    if (evenement.target.closest && evenement.target.closest("[data-config]")) { modifiee = true; montrerLaBarre(); }
+    if (evenement.target.closest && evenement.target.closest("[data-config]")) { modifiee = true; montrerLaBarre(); marquerModifie(); }
   });
   document.addEventListener("change", function (evenement) {
     if (evenement.target.closest && evenement.target.closest("[data-config]")) { modifiee = true; montrerLaBarre(); }

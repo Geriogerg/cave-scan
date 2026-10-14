@@ -158,6 +158,7 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 .gestion-boutons { display: flex; flex-wrap: wrap; gap: 8px; }
 .formulaire-en-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .formulaire-en-ligne input { flex: 1 1 200px; }
+.formulaire-en-ligne input[type="file"] { flex: 0 1 auto; max-width: 100%; }  /* « Importer » juste à côté (T4-B25) */
 .explications { line-height: 1.6; padding-left: 20px; }
 .bouton.danger-plein { background: var(--alerte); border-color: var(--alerte); color: #fff; }
 
@@ -384,6 +385,9 @@ textarea {
 .valeurs-config input { width: 100%; min-height: 40px; }
 .apercu-modele { margin-top: 10px; }
 .apercu-modele summary, .bloc-repli summary { cursor: pointer; color: var(--accent); }
+.editeur-config.modifie .apercu-modele pre::before {
+  content: "Aperçu d'avant vos modifications : « Vérifier » le met à jour.\A\A"; white-space: pre-wrap; color: var(--attention);
+}
 .bloc-repli { margin: 18px 0; }
 .consignes textarea { font: 0.85rem/1.45 ui-monospace, Consolas, monospace; }
 .consignes textarea[readonly] { background: #f4f4f1; color: var(--texte-doux); }

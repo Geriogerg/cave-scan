@@ -135,7 +135,7 @@ def test_deux_colonnes_meme_en_tete_refusees(tmp_path, brut):
 def test_code_en_double_refuse(tmp_path, brut):
     valeurs = colonne(brut, "couleur")["valeurs"]
     valeurs.append(dict(valeurs[0]) | {"libelle": "Autre libellé"})
-    refusee(tmp_path, brut, "code « .+ » en double")
+    refusee(tmp_path, brut, "identifiant « .+ » en double")
 
 
 def test_libelle_en_double_refuse(tmp_path, brut):

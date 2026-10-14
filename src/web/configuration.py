@@ -19,6 +19,7 @@ from src.api.dependances import Formulaire, SessionBase
 from src.config.maison import NOYAU_CANONIQUE, ConfigInvalide
 from src.extract.consignes import CONSIGNES_MODIFIABLES, REGLES_FIXES_DEBUT, REGLES_FIXES_FIN
 from src.services.configuration import (
+    _identifiant,
     config_de_l_instance,
     consignes_modifiees,
     creer_configuration,
@@ -58,6 +59,7 @@ def _contexte_edition(request: Request, base, nom: str, vue, **messages) -> dict
         types=[(t, LIBELLES_TYPES[t]) for t in TYPES_EDITABLES],
         noyau=NOYAU_CANONIQUE,
         commentaires_de_colonne=commentaires_de_colonne,
+        identifiant=_identifiant,
         consignes=vue.brut.get("consignes") or CONSIGNES_MODIFIABLES,
         regles_fixes=(REGLES_FIXES_DEBUT, REGLES_FIXES_FIN),
         consignes_d_origine=not vue.brut.get("consignes"),
@@ -118,7 +120,8 @@ async def importer_un_fichier(
         erreurs = refus.erreurs
     except ConfigInchangee as refus:  # le fichier qu'on vient d'exporter : rien à faire
         if active is not None:
-            return _afficher(request, base, active.fichier.stem, edition(active), info=f"« {fichier.filename} » : {refus}")
+            return _afficher(request, base, active.fichier.stem, edition(active),
+                             info=f"« {fichier.filename} » ne change rien à la version active : rien n'a été enregistré.")
         return page(request, "configuration.html", info=f"« {fichier.filename} » : {refus}")
     else:
         cible = f"/app/configuration/{enregistree.fichier.stem}?enregistree={enregistree.version}"
@@ -126,7 +129,9 @@ async def importer_un_fichier(
     if active is not None:  # on reste sur l'éditeur, le refus en haut (T3-D9)
         return _afficher(
             request, base, active.fichier.stem, edition(active), 422,
-            erreur=f"« {fichier.filename} » n'a pas été importé : " + " ; ".join(erreurs),
+            # Chaque erreur commence déjà par le nom du fichier : ne pas le répéter (T4-D14).
+            erreur=f"« {fichier.filename} » n'a pas été importé : "
+            + " ; ".join(e.removeprefix(f"{fichier.filename} : ") for e in erreurs),
         )
     return page(request, "configuration.html", 422, erreurs=erreurs, importe=fichier.filename)
 
@@ -162,7 +167,8 @@ def agir(request: Request, nom: str, base: SessionBase, champs: Formulaire):
         vue = edition(active, brut if verifier else appliquer(brut, action), verifier=verifier)
         statut = 422 if vue.erreurs else 200
         fait = "Configuration valide : vous pouvez l'enregistrer." if verifier and not vue.erreurs else None
-        return _afficher(request, base, nom, vue, statut, fait=fait)
+        return _afficher(request, base, nom, vue, statut, fait=fait,
+                         confirmer_consignes=champs.get("confirmer_consignes") == "1")
 
     # Garde-fou des consignes générales (decisions.md 0173) : les modifier
     # demande une confirmation explicite, vérifiée ici, côté serveur.

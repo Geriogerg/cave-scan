@@ -433,7 +433,11 @@ def appliquer(brut: dict[str, Any], action: str) -> dict[str, Any]:
         return 0 <= i < len(colonnes)
 
     if nom == "ajouter_colonne":
-        colonnes.append({"cle": "", "nom": "", "type": "texte", "source": "expert"})
+        # Avant les colonnes calculées qui ferment l'Excel (« À vérifier »…) (T4-B22).
+        fin = len(colonnes)
+        while fin > 0 and colonnes[fin - 1].get("source") == "systeme" and colonnes[fin - 1].get("cle") != "id":
+            fin -= 1
+        colonnes.insert(fin, {"cle": "", "nom": "", "type": "texte", "source": "expert"})
     elif nom in ("monter", "descendre") and len(index) == 1 and existe(index[0]):
         i = index[0]
         j = i - 1 if nom == "monter" else i + 1

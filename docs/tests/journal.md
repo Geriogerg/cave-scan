@@ -124,3 +124,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 4 | T4-D3 | mineur | Téléphone, clavier : champ sous la photo | Corrigé : marge de défilement, vignettes masquées pendant la saisie | lot 18 |
 | 4 | T4-D4 / T4-B24 | mineur | Téléphone : aucun champ au premier écran ; confirmation cachée | Corrigé : en-tête de relecture resserré (compteurs détaillés au récapitulatif) ; « Bouteille n°X validée » aussi dans l'indicateur du haut | lot 18 |
 | 4 | T4-B17 | mineur | Durée allongée par la réanalyse d'une bouteille séparée | Corrigé : seules les bouteilles lues au lancement comptent | lot 18 |
+| 4 | T4-B10 | mineur | Valeur en double : identifiant auto figé ; « code » | Corrigé : l'identifiant tiré du libellé suit le libellé ; « identifiant … en double : changez le libellé ou l'identifiant, ou retirez la ligne » ; test | lot 19 |
+| 4 | T4-B12 | mineur | « Vérifier » décoche « Je confirme » | Corrigé ; test | lot 19 |
+| 4 | T4-D7 | mineur | Aperçu périmé ; barre après erreur d'import | Corrigé : l'aperçu dit qu'il date tant qu'on n'a pas vérifié ; barre seulement s'il y a une modification refusée | lot 19 |
+| 4 | T4-B22 / T4-DS5 (1re partie) | suggestion | Nouvelle colonne après « À vérifier » | Corrigé : insérée avant les colonnes calculées de fin ; test | lot 19 |
+| 4 | T4-B25 | suggestion | « Importer » loin du choix du fichier | Corrigé : juste à côté. « Choose File » : texte du navigateur, en français dans un navigateur français | lot 19 |
+| 4 | T4-D14 (import) | mineur | Nom de fichier répété ; deux deux-points | Corrigé | lot 19 |

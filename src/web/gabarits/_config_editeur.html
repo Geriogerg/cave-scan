@@ -118,7 +118,9 @@
                 {% if v.code in c.codes_existants %}
                   <input type="hidden" name="c{{ i }}_v{{ j }}_code" value="{{ v.code }}"><code>{{ v.code }}</code>
                 {% else %}
-                  <input type="text" name="c{{ i }}_v{{ j }}_code" value="{{ v.code or '' }}" placeholder="auto" size="12">
+                  {#- Un identifiant tiré du libellé n'est pas figé : il suit le libellé corrigé (T4-B10). #}
+                  <input type="text" name="c{{ i }}_v{{ j }}_code" value="{{ '' if v.code == identifiant(v.libelle or '') else (v.code or '') }}"
+                         placeholder="{{ v.code or 'auto' }}" size="12">
                 {% endif %}
               </td>
               <td><input type="text" name="c{{ i }}_v{{ j }}_libelle" value="{{ v.libelle or '' }}"></td>
@@ -173,12 +175,12 @@
         <button class="bouton petit" type="button" id="deverrouiller-consignes"
                 data-question="Modifier les consignes envoyées au modèle ? Elles changent la lecture de toutes les prochaines bouteilles.">Modifier les consignes</button>
         <label class="case{% if erreur_consignes %} a-cocher{% endif %}" id="confirmer-consignes">
-          <input type="checkbox" name="confirmer_consignes" value="1"> Je confirme modifier les consignes
+          <input type="checkbox" name="confirmer_consignes" value="1" {% if confirmer_consignes %}checked{% endif %}> Je confirme modifier les consignes
         </label>
       </p>
     </details>
 
-    <nav class="barre-actions barre-config">
+    <nav class="barre-actions barre-config"{% if vue.erreurs or erreur_consignes %} data-modifiee{% endif %}>
       <a class="bouton" href="{{ adresse }}" data-abandon>Annuler</a>
       <button class="bouton" type="submit" name="action" value="verifier">Vérifier</button>
       <button class="bouton principal" type="submit" name="action" value="enregistrer">Enregistrer la version {{ config.version + 1 }}</button>

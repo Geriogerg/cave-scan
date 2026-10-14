@@ -475,7 +475,7 @@ def _valider_valeurs(brutes: Any, type_: Any, ou: str, erreurs: list[str]) -> tu
             )
             continue
         if code in codes_vus:
-            erreurs.append(f"{ou} : code « {code} » en double.")
+            erreurs.append(f"{ou} : identifiant « {code} » en double : changez le libellé ou l'identifiant, ou retirez la ligne.")
             continue
         if plier(libelle) in libelles_vus:
             erreurs.append(

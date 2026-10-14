@@ -66,6 +66,12 @@ def _texte(html: str) -> str:
     )
 
 
+def nouvelle_colonne(champs: dict[str, str]) -> int:
+    """L'index de la colonne qui vient d'être ajoutée (sans nom) : elle arrive avant
+    les colonnes calculées de fin, pas forcément en dernier (T4-B22)."""
+    return next(k for k in range(int(champs["nb_colonnes"])) if not champs.get(f"c{k}_nom"))
+
+
 def ouvrir(client) -> str:
     reponse = client.get(f"/app/configuration/{NOM}")
     assert reponse.status_code == 200, reponse.text
@@ -123,7 +129,7 @@ def test_les_actions_ne_changent_que_l_affichage(client, configs):
 def test_ajouter_une_colonne_puis_l_enregistrer_cree_une_version(client, configs):
     champs = formulaire(ouvrir(client))
     champs = formulaire(agir(client, champs, "ajouter_colonne").text)
-    i = int(champs["nb_colonnes"]) - 1
+    i = nouvelle_colonne(champs)
     champs.update({f"c{i}_nom": "Bouchon", f"c{i}_type": "liste", f"c{i}_source": "modele_best_effort"})
     champs = formulaire(agir(client, champs, f"ajouter_valeur-{i}").text)
     champs.update({f"c{i}_v0_libelle": "Bouchon sain", f"c{i}_v0_description": "Aucune trace sur le liège."})
@@ -221,7 +227,7 @@ def test_reimporter_la_version_active_n_est_pas_une_erreur(client):
     reponse = client.post(
         "/app/configuration/importer", files={"fichier": ("maison.json", active.content, "application/json")}
     )
-    assert reponse.status_code == 200 and "Aucun changement" in reponse.text
+    assert reponse.status_code == 200 and "ne change rien à la version active" in reponse.text
 
 
 def test_un_refus_designe_la_colonne_par_son_nom_et_l_encadre(client):
@@ -281,7 +287,7 @@ def test_creer_la_configuration_a_la_main_sans_json(tmp_path):
         champs = formulaire(editeur)
         champs = formulaire(client.post(f"/app/configuration/{nom}", data=dict(champs, action="ajouter_colonne"),
                                         headers=HX).text)
-        i = int(champs["nb_colonnes"]) - 1
+        i = nouvelle_colonne(champs)
         champs.update({f"c{i}_nom": "Caisse", f"c{i}_type": "liste", f"c{i}_source": "expert"})
         champs = formulaire(client.post(f"/app/configuration/{nom}", data=dict(champs, action="afficher"), headers=HX).text)
         champs = formulaire(client.post(f"/app/configuration/{nom}", data=dict(champs, action=f"ajouter_valeur-{i}"),
@@ -349,3 +355,24 @@ def test_le_refus_des_consignes_s_affiche_a_cote_de_la_case(client):
     champs = formulaire(ouvrir(client))
     refus = agir(client, dict(champs, consignes=CONSIGNES_MODIFIABLES + "\nAjout."), "enregistrer")
     assert refus.status_code == 422 and 'id="refus-consignes"' in refus.text and "a-cocher" in refus.text
+
+
+def test_ajouter_une_colonne_la_place_avant_a_verifier_et_l_identifiant_suit_le_libelle(client):
+    """T4-B22 : une colonne ajoutée arrive avant « À vérifier » ; T4-B10 : l'identifiant
+    tiré du libellé n'est pas figé ; T4-B12 : « Vérifier » garde la case cochée."""
+    champs = formulaire(ouvrir(client))
+    n = int(champs["nb_colonnes"])
+    page = agir(client, champs, "ajouter_colonne").text
+    champs = formulaire(page)
+    assert champs[f"c{n}_cle"] == "a_verifier"  # « À vérifier » reste la dernière
+    i = nouvelle_colonne(champs)
+    assert i == n - 1
+    champs.update({f"c{i}_nom": "Provenance", f"c{i}_type": "liste"})
+    champs = formulaire(agir(client, champs, "afficher").text)
+    champs = formulaire(agir(client, champs, f"ajouter_valeur-{i}").text)
+    champs[f"c{i}_v0_libelle"] = "Cave Dupont"
+    champs = formulaire(agir(client, champs, "verifier").text)
+    assert champs.get(f"c{i}_v0_code", "") == ""  # tiré du libellé : non figé
+    champs[f"c{i}_v0_libelle"] = "Cave Martin"
+    verifiee = agir(client, dict(champs, confirmer_consignes="1"), "verifier")
+    assert 'name="confirmer_consignes" value="1" checked' in verifiee.text
