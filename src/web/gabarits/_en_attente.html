@@ -19,9 +19,10 @@
           <label>Quantité <input type="text" inputmode="numeric" name="quantite" size="3"
                           value="{{ saisie_refusee if groupe_en_erreur == g.id and saisie_refusee is not none else g.quantite }}"
                           aria-label="Quantité de la bouteille {{ b.numero }}"></label>
-          {% if groupe_en_erreur == g.id %}<span class="alerte-texte" role="alert" id="refus-quantite">{{ erreur }}</span>{% endif %}
         </form>
       </div>
+      {#- Sous l'en-tête, pas dans son flex : la carte garde sa mise en page (T6-D3). #}
+      {% if groupe_en_erreur == g.id %}<p class="alerte-texte refus-carte" role="alert" id="refus-quantite">{{ erreur }}</p>{% endif %}
       <div class="attente-photos">
         {% for p in b.photos %}
         <figure class="vignette">

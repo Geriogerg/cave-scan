@@ -224,7 +224,7 @@ def test_la_derniere_bouteille_validee_mene_au_recapitulatif(api, inventaire, ba
         reponse = api.post(f"/app/inventaires/{inventaire}/relecture/{bouteille_id}/valider",
                            data=formulaire(ouvrir(api, inventaire, bouteille_id)), headers=HX)
         assert reponse.status_code == 204, reponse.text
-    assert reponse.headers["HX-Redirect"] == f"/app/inventaires/{inventaire}/recapitulatif"
+    assert reponse.headers["HX-Redirect"].split("?")[0] == f"/app/inventaires/{inventaire}/recapitulatif"  # ?validee=… (T6-X1)
     recap = api.get(f"/app/inventaires/{inventaire}/recapitulatif").text
     assert "l'inventaire est validé" in recap
     assert f"/app/inventaires/{inventaire}/excel" in recap  # route d'écran : un refus se dit (T3-D4)
@@ -360,4 +360,24 @@ def test_valider_une_bouteille_au_format_vide_le_dit_sans_bloquer(api, inventair
     avis = unquote(reponse.headers["X-Avis-Validation"])
     assert "validée" in avis and "dans l'Excel" in avis
     assert api.get(f"/inventaires/{inventaire}/bouteilles/{bouteille_id}").json()["statut"] == "validee"
+
+
+def test_l_avis_de_la_derniere_bouteille_s_affiche_au_recapitulatif(api, inventaire, base):
+    """T6-X1 : validée en dernier, une bouteille au format ou millésime vide le
+    dit au récapitulatif (et non sur une page d'une autre vente)."""
+    from src.services.relecture import champs_restes_vides
+
+    toutes = ids(base, inventaire)
+    vide = next((b for b in toutes if champs_restes_vides(base, b)), None)
+    if vide is None:
+        pytest.skip("aucune bouteille au format ou au millésime vide dans les fixtures")
+    for autre in toutes:
+        if autre != vide:
+            texte = ouvrir(api, inventaire, autre)
+            api.post(f"/app/inventaires/{inventaire}/relecture/{autre}/valider", data=formulaire(texte), headers=HX)
+    texte = ouvrir(api, inventaire, vide)
+    reponse = api.post(f"/app/inventaires/{inventaire}/relecture/{vide}/valider", data=formulaire(texte), headers=HX)
+    cible = reponse.headers["HX-Redirect"]
+    assert cible.endswith(f"/recapitulatif?validee={vide}") and "X-Avis-Validation" not in reponse.headers
+    assert "resteront vides" in api.get(cible).text or "restera vide" in api.get(cible).text
 

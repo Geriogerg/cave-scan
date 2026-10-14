@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% set r = recap %}{% set i = r.inventaire.id %}{% set c = r.compteurs %}{% set s = r.stats %}
 {% block titre %}Récapitulatif — {{ r.inventaire.nom }}{% endblock %}
-{% block classe %}relecture{% endblock %}
 {% block fil %}<a class="fil" href="/app/inventaires/{{ i }}/suivi">{{ r.inventaire.nom }}</a>{% endblock %}
 {% block contenu %}
 <div class="recapitulatif">
   <h1>Récapitulatif de la relecture</h1>
+  {% if avis_validation %}<p class="message attention" role="status">{{ avis_validation }}</p>{% endif %}
   {% if r.termine %}
     <p class="message ok">Toutes les bouteilles sont validées : l'inventaire est validé.</p>
   {% else %}

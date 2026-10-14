@@ -179,3 +179,10 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 5 | T5-DS3 | suggestion | Version reprise sans origine | Corrigé : « (reprise de la version N) » ; test | lot 28 |
 | 5 | Choix n° 7 (décision) | décision | Plusieurs configurations : la première par ordre alphabétique, en silence | Appliqué (option A, 0182) : aucune choisie sans `CAVE_SCAN_MAISON` ; bandeau rouge sur Configuration et Nouvel inventaire, création et import refusés, ligne de commande arrêtée avec la raison ; test | lot 29 |
 | 5 | Choix n° 8 (décision) | décision | Bouteille validée encore surlignée dans l'Excel (T4-B18) | Appliqué (option A, 0183) : validée = jamais surlignée, « À vérifier » vide, case d'abstention vide ; la validation d'une bouteille au format ou millésime vide le dit sur la suivante, sans bloquer ; tests | lot 30 |
+| 6 | T6-X1 | majeur | Avis de validation de la dernière bouteille perdu, puis affiché dans une autre vente | Corrigé : au récapitulatif (`?validee=`) ; l'avis rangé avec son inventaire n'est jamais affiché ailleurs ; test | lot 31 |
+| 6 | T6-D1 | mineur (régression) | Libellés longs coupés au téléphone | Corrigé : ils passent à la ligne | lot 31 |
+| 6 | T6-D2 / T6-B3 | mineur (régression) | ✕ en ellipse au téléphone | Corrigé : la règle « pleine largeur » exclut le ✕ | lot 31 |
+| 6 | T6-D3 / T5-B12 | mineur | Refus de quantité qui réorganise la carte | Corrigé : sous l'en-tête de la carte ; « Pas enregistrée » aussi, avec « elle partira avec Lancer l'analyse » (T6-D10) | lot 31 |
+| 6 | T6-D8 | mineur | Nom de vente coupé sans « … » au toucher | Corrigé : `inline-block` + marge pour les 44 px | lot 31 |
+| 6 | T6-D7 | mineur | Récapitulatif collé à gauche | Corrigé : même colonne que les autres écrans | lot 31 |
+| 6 | T6-B8 | mineur | Plusieurs configurations : l'API crée un inventaire | Écarté : l'appelant de l'API nomme la maison, c'est une désignation explicite (comme `--maison`) ; 0182 vise le cas sans désignation | — |

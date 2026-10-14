@@ -132,12 +132,22 @@ def attente(request: Request, inventaire_id: int, bouteille_id: int, base: Sessi
 
 
 @routeur.get("/app/inventaires/{inventaire_id}/recapitulatif")
-def recapituler(request: Request, inventaire_id: int, base: SessionBase, erreur: str | None = None):
+def recapituler(request: Request, inventaire_id: int, base: SessionBase, erreur: str | None = None,
+                validee: int | None = None):
     inventaire = charger_inventaire(base, inventaire_id)
     if inventaire.statut == "brouillon":
         return RedirectResponse(f"/app/inventaires/{inventaire_id}/depot", status_code=303)
+    # Dernière bouteille validée avec un format ou un millésime vide : le dire ici (T6-X1, 0183).
+    avis = None
+    if validee is not None:
+        try:
+            bouteille = bouteille_de(base, inventaire_id, validee)
+        except ERREURS_DE_SERVICE:
+            bouteille = None
+        vides = champs_restes_vides(base, bouteille.id) if bouteille is not None else []
+        avis = avis_de_validation(bouteille.position, vides) if vides else None
     return page(request, "recapitulatif.html", recap=recapitulatif(base, inventaire_id),
-                retirees=bouteilles_retirees(base, inventaire_id))
+                retirees=bouteilles_retirees(base, inventaire_id), avis_validation=avis)
 
 
 @routeur.post("/app/inventaires/{inventaire_id}/bouteilles/{bouteille_id}/remettre")
@@ -227,8 +237,11 @@ def valider(request: Request, inventaire_id: int, bouteille_id: int,
     except ERREURS_DE_SERVICE as refus:
         return _refus_de_validation(request, base, inventaire_id, bouteille_id, filtre, 409, str(refus))
     prochaine = prochaine_a_relire(etats_de_relecture(base, inventaire_id), position, filtre)
-    reponse = _redirection(request, adresse(inventaire_id, prochaine, filtre))
     vides = champs_restes_vides(base, bouteille_id)
+    if prochaine is None:  # le récapitulatif le dira (T6-X1)
+        cible = adresse(inventaire_id) + (f"?validee={bouteille_id}" if vides else "")
+        return _redirection(request, cible)
+    reponse = _redirection(request, adresse(inventaire_id, prochaine, filtre))
     if vides:  # la bouteille suivante le dit, sans bloquer (decisions.md 0183)
         reponse.headers["X-Avis-Validation"] = quote(avis_de_validation(position, vides))
     return reponse

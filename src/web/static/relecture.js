@@ -85,6 +85,9 @@
     var zone = document.getElementById("messages");
     var message = document.createElement("p");
     var court = position ? "Bouteille n°" + position + " validée." : "Bouteille validée.";
+    // Un avis rangé pour un autre inventaire ne s'affiche jamais ici (T6-X1).
+    try { avis = avis ? JSON.parse(avis) : null; } catch (e) { avis = null; }
+    avis = avis && avis.inventaire === racine.dataset.inventaire ? avis.texte : null;
     message.className = avis ? "message attention" : "message ok";
     message.setAttribute("role", "status");
     message.textContent = avis || court;
@@ -208,7 +211,7 @@
         var avis = evenement.detail.xhr.getResponseHeader("X-Avis-Validation");  // format, millésime vides (0183)
         try {
           sessionStorage.setItem("cave-scan-validee", racine.dataset.position || "");
-          if (avis) sessionStorage.setItem("cave-scan-validee-avis", decodeURIComponent(avis));
+          if (avis) sessionStorage.setItem("cave-scan-validee-avis", JSON.stringify({ inventaire: racine.dataset.inventaire, texte: decodeURIComponent(avis) }));
         } catch (e) { /* stockage refusé */ }
       }
     }

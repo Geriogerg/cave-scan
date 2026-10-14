@@ -1322,6 +1322,15 @@ un renvoi d'une ligne à leur place.
   l'écran, vignettes sur une rangée, pour lire le premier champ sans
   défiler. Inventaire clos : « Télécharger l'Excel » est l'action principale.
 
+- 0190 — L'avis de validation va avec sa bouteille (tour 6, lot 31). Vers la
+  bouteille suivante : en-tête lu par la page, rangé avec le numéro de
+  l'inventaire, jamais affiché dans un autre. Vers le récapitulatif (dernière
+  bouteille) : `?validee=<id>`, le récapitulatif le dit. Au téléphone, un
+  libellé de bouton long passe à la ligne plutôt que d'être coupé ; le refus
+  d'une quantité s'affiche sous l'en-tête de sa carte, qui ne bouge pas ; le
+  récapitulatif prend la colonne des autres écrans — écarté : un libellé sur
+  une seule ligne à tout prix (coupé au téléphone, T6-D1).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

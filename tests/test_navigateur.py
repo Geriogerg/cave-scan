@@ -339,7 +339,7 @@ def test_une_coupure_reseau_sur_verifier_est_signalee(application, telephone, tm
     page.wait_for_selector("#erreur-serveur", timeout=10_000)
     assert "Connexion interrompue" in page.inner_text("#erreur-serveur")
     # T5-D2 : dans la carte aussi, et la saisie reste dans le champ.
-    page.wait_for_selector(".quantite-attente .non-enregistree", timeout=5_000)
+    page.wait_for_selector(".carte-attente .non-enregistree", timeout=5_000)
     assert quantite.input_value() == "2"
 
 

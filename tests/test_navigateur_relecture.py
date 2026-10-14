@@ -185,7 +185,7 @@ def test_relire_dix_bouteilles_uniquement_au_clavier(application, ordinateur, tm
         clavier.press("Enter")
         sur_la_bouteille(page, suivante)
     clavier.press("Enter")
-    page.wait_for_url("**/recapitulatif", timeout=10_000)
+    page.wait_for_url("**/recapitulatif*", timeout=10_000)
     assert "Toutes les bouteilles sont validées" in page.inner_text("main")
     assert erreurs == []
 

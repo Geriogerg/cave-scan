@@ -189,12 +189,12 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 .attente-titre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .quantite-attente { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .quantite-attente label { white-space: nowrap; }
-.quantite-attente .alerte-texte { flex-basis: 100%; }  /* sous le champ, la carte garde sa mise en page (T5-B12) */
+.refus-carte { margin: 4px 0 0; font-size: 0.92rem; }  /* sous l'en-tête de la carte (T6-D3) */
 .quantite-attente input { width: 4em; text-align: center; min-height: 44px; }
 .attente-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 @media (max-width: 719px) {
   .attente-photos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .attente-photos .vignette-actions .bouton { width: 100%; min-height: 40px; padding: 4px 6px; font-size: 0.8rem; }
+  .attente-photos .vignette-actions .bouton:not(.retirer-photo) { width: 100%; min-height: 40px; padding: 4px 6px; font-size: 0.8rem; }
   .attente-photos figcaption { display: none; }
 }
 /* « Vérifier » : la même barre pleine largeur que les autres écrans (T2-D9). */
@@ -322,7 +322,7 @@ input.saisie::placeholder { color: var(--texte-doux); }
 .aide-clavier dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; }
 .aide-clavier dt { white-space: nowrap; }
 .aide-clavier dd { margin: 0; }
-.recapitulatif { max-width: 860px; }  /* aligné à gauche, comme les autres écrans (T5-D4) */
+.recapitulatif { max-width: none; }  /* la colonne des autres écrans (T6-D7) */
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .restes { padding-left: 20px; }
 .chiffres-recap { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
@@ -374,7 +374,8 @@ input[type="file"] { min-height: 44px; font: inherit; }
   /* En-tête et liens dans le texte : la zone à toucher s'agrandit sans décaler la
      ligne (T4-D16, T4-B19). */
   .entete { align-items: center; }
-  .marque, a.fil { display: inline-flex; align-items: center; min-height: 44px; }
+  .marque { display: inline-flex; align-items: center; min-height: 44px; }
+  a.fil { display: inline-block; padding-block: 12px; line-height: 20px; }  /* 44 px, avec « … » (T6-D8) */
   .contenu a:not(.bouton):not(.carte) { padding-block: 10px; }
   .quantite-depot .bouton { min-width: 44px; }
   /* Liens et petits boutons : 44 px à toucher (T3-D20). */
@@ -434,9 +435,9 @@ textarea {
 .editeur-config .barre-actions { position: sticky; margin: 16px -16px 0; }
 .barre-config[data-sans-modification] { display: none; }
 @media (max-width: 719px) {
-  .barre-actions .bouton { white-space: nowrap; font-size: 0.92rem; }  /* un libellé, une ligne (T5-D4) */
+  .barre-actions .bouton { font-size: 0.92rem; overflow-wrap: anywhere; }  /* jamais coupé (T6-D1) */
   .barre-config { flex-wrap: nowrap; }
-  .barre-config > * { flex: 1 1 0; padding: 8px 6px; font-size: 0.9rem; }
+  .barre-config > * { flex: 1 1 0; min-width: 0; padding: 8px 6px; font-size: 0.9rem; overflow-wrap: anywhere; }
 }
 @media (max-width: 640px) {
   .colonne-champs { grid-template-columns: minmax(0, 1fr); }

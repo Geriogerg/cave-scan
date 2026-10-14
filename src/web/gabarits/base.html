@@ -42,12 +42,13 @@
         // Une quantité de « Vérifier » : le champ garde la saisie, la carte dit qu'elle
         // n'est pas enregistrée (T5-D2).
         var formulaire = e.target && e.target.closest ? e.target.closest(".quantite-attente") : null;
-        if (formulaire && !formulaire.querySelector(".non-enregistree")) {
-          var avis = document.createElement("span");
-          avis.className = "alerte-texte non-enregistree";
+        var tete = formulaire ? formulaire.parentNode : null;
+        if (tete && !tete.parentNode.querySelector(".non-enregistree")) {
+          var avis = document.createElement("p");
+          avis.className = "alerte-texte refus-carte non-enregistree";
           avis.setAttribute("role", "alert");
-          avis.textContent = "Pas enregistrée (connexion interrompue) : réessayez.";
-          formulaire.appendChild(avis);
+          avis.textContent = "Pas enregistrée (connexion interrompue) : elle partira avec « Lancer l'analyse », ou réessayez.";
+          tete.insertAdjacentElement("afterend", avis);
         }
       });
     });
