@@ -228,6 +228,8 @@ def config_depuis_texte(texte: str, source: str | Path) -> ConfigMaison:
         ) from erreur
     except _CleEnDouble as erreur:
         raise ConfigInvalide(f"{source} : {erreur}") from None
+    except ValueError:  # un nombre de plus de 4 300 chiffres (T5-B4)
+        raise ConfigInvalide(f"{source} : un nombre du fichier est démesuré (plus de 4 300 chiffres).") from None
 
     return _valider(brut, source)
 
@@ -340,8 +342,20 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
             *_reperer_exemples(colonnes), *_reperer_manques(colonnes), *_reperer_exemple_consignes(consignes)
         ),
         photos_max_par_bouteille=photos_max,
-        consignes=consignes.strip() if isinstance(consignes, str) else None,
+        consignes=_consignes_propres(consignes),
     )
+
+
+def _consignes_propres(consignes: Any) -> str | None:
+    """Les consignes réécrites par la maison ; None quand ce sont celles d'origine
+    (au blanc près) : le texte envoyé reste alors celui d'origine, au caractère
+    près, et le score n'est pas dit « non comparable » (T5-R5)."""
+    if not isinstance(consignes, str):
+        return None
+    from src.extract.consignes import CONSIGNES_MODIFIABLES
+
+    propres = consignes.replace("\r\n", "\n").strip()
+    return None if propres == CONSIGNES_MODIFIABLES.strip() else propres
 
 
 def _reperer_exemple_consignes(consignes: Any) -> list[str]:

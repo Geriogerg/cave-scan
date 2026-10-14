@@ -390,3 +390,19 @@ def test_revenir_a_une_ancienne_version(client, configs):
     retour = client.post(f"/app/configuration/{NOM}/revenir/{numero}", follow_redirects=False)
     assert retour.status_code == 303 and "enregistree=5" in retour.headers["location"]
     assert charger_config(configs / CONFIG_TEST.name).colonne("quantite").nom == "Nombre"  # la version 3 revenue
+
+
+def test_un_nombre_demesure_dans_la_configuration_est_refuse_en_clair(client):
+    """T5-B4 : 4 400 chiffres dans « Photos au plus par bouteille », ou dans un JSON
+    importé, sont refusés avec une phrase, jamais une erreur serveur."""
+    champs = formulaire(ouvrir(client))
+    champs["photos_max_par_bouteille"] = "9" * 4400
+    refus = agir(client, champs, "verifier")
+    assert refus.status_code == 422 and "Erreur inattendue" not in refus.text
+    brut = json.loads(CONFIG_TEST.read_text(encoding="utf-8"))
+    texte = json.dumps(brut, ensure_ascii=False).replace('"photos_max_par_bouteille": 4', '"photos_max_par_bouteille": ' + "9" * 4400)
+    assert "9" * 4400 in texte
+    importe = client.post("/app/configuration/importer",
+                          files={"fichier": ("demesure.json", texte.encode("utf-8"), "application/json")})
+    assert importe.status_code == 422 and "démesuré" in importe.text
+

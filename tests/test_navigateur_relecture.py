@@ -364,6 +364,40 @@ def test_passer_a_la_suivante_est_immediat_sur_300_bouteilles(trois_cents, ordin
     assert sum(1 for d in demandes if "taille=reduite" in d) >= 12
 
 
+def test_une_bouteille_plus_disponible_n_est_jamais_dite_enregistree(application, ordinateur, tmp_path):
+    """T4-B4 : une réponse 404 (bouteille mise à la corbeille, inventaire clos
+    ailleurs) : ni la validation ni la saisie ne sont dites faites (contrainte 5)."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 2)
+    premiere = ids(application, inventaire_id)[0]
+    page = ordinateur.new_page()
+
+    def disparue(route):
+        if route.request.method == "POST":
+            route.fulfill(status=404, content_type="text/html", body="<p>Introuvable</p>")
+        else:
+            route.continue_()
+
+    page.route("**/valider", disparue)
+    page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{premiere}")
+    sur_la_bouteille(page, premiere)
+    page.keyboard.press("Control+Enter")
+    page.wait_for_selector("#messages .message.alerte", timeout=5_000)
+    assert "pas validée" in page.inner_text("#messages")
+
+    page.route("**/champ/*", disparue)
+    page.keyboard.press("Tab")
+    page.keyboard.press("Tab")
+    page.keyboard.type("Domaine disparu")
+    page.keyboard.press("Escape")
+    page.wait_for_function("document.getElementById('messages').textContent.includes('pas enregistrée')",
+                           timeout=10_000)
+    page.wait_for_timeout(300)
+    assert page.inner_text("#indicateur") != "Tout est enregistré"
+    assert page.url.endswith(f"/relecture/{premiere}")
+    fiche = httpx.get(f"{application}/inventaires/{inventaire_id}/bouteilles/{premiere}").json()
+    assert fiche["statut"] == "extraite" and fiche["valeurs_courantes"]["domaine"] != "Domaine disparu"
+
+
 def test_un_double_appui_sur_valider_ne_valide_qu_une_bouteille(application, ordinateur, tmp_path):
     """T4-B2 : deux appuis à 250 ms ne valident jamais la bouteille suivante sans l'avoir vue."""
     inventaire_id = inventaire_extrait(application, tmp_path, 3)

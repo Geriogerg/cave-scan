@@ -52,6 +52,7 @@ from src.services.inventaires import (
     bouteille_du_groupe,
     charger_inventaire,
     config_figee,
+    nom_de_vente,
     verifier_modifiable,
 )
 from src.services.pilotage import LancementRefuse
@@ -81,8 +82,7 @@ class BrouillonCree:
 def creer_brouillon(session: Session, maison: str, config_path: str | Path, nom: str) -> BrouillonCree:
     """Un inventaire vide en brouillon. La config de la maison est figée dès
     maintenant, comme pour un inventaire créé d'un coup (decisions.md 0073)."""
-    if not nom.strip():
-        raise EnvoiRefuse("Donnez un nom à la vente : il ne peut pas rester vide.")
+    nom = nom_de_vente(nom, EnvoiRefuse)
     config, texte = lire_config(config_path)
     if plier(config.maison) != plier(maison):
         raise EnvoiRefuse(f"La config {Path(config_path).name} décrit « {config.maison} », pas « {maison} ».")
@@ -90,7 +90,7 @@ def creer_brouillon(session: Session, maison: str, config_path: str | Path, nom:
     version, nouvelle, avertissements = _version_de_config(
         session, maison_bd, config, texte, Path(config_path).name
     )
-    inventaire = Inventaire(maison=maison_bd, config_version=version, nom=nom.strip(), statut="brouillon")
+    inventaire = Inventaire(maison=maison_bd, config_version=version, nom=nom, statut="brouillon")
     session.add(inventaire)
     session.commit()
     return BrouillonCree(inventaire.id, version.numero, nouvelle, [*config.avertissements, *avertissements])

@@ -34,7 +34,7 @@ from src.io import heic  # noqa: F401 — rend le HEIC d'iPhone lisible par Pill
 from src.donnees.modeles import ConfigVersion, Maison, Photo
 from src.donnees.stockage import chemin_stocke
 from src.io.photos import PhotosBouteille, Regroupement, date_de_prise_de_vue
-from src.services.inventaires import InventaireCree, charger_inventaire, creer_inventaire_depuis_groupes
+from src.services.inventaires import InventaireCree, charger_inventaire, creer_inventaire_depuis_groupes, nom_de_vente
 
 TAILLE_MAX_OCTETS = 30 * 1024 * 1024  # par photo : large pour un téléphone récent
 NOMBRE_MAX = 800  # par inventaire : au moins 600 photos = 300 bouteilles (guide)
@@ -116,8 +116,7 @@ def creer_inventaire_depuis_envoi(
     dernière la bouteille 3 ; sans lui, une photo par bouteille."""
     taille_max = taille_max or TAILLE_MAX_OCTETS
     nombre_max = nombre_max or NOMBRE_MAX
-    if not nom.strip():
-        raise EnvoiRefuse("Donnez un nom à la vente : il ne peut pas rester vide.")
+    nom = nom_de_vente(nom, EnvoiRefuse)
     fichiers = list(fichiers)
     if not fichiers:
         raise EnvoiRefuse("Aucune photo envoyée.")
@@ -140,7 +139,7 @@ def creer_inventaire_depuis_envoi(
             bouteilles.append(PhotosBouteille(photos=photos, nom=" + ".join(p.name for p in photos)))
             debut += taille
         regroupement = Regroupement(bouteilles=bouteilles, dates={p: date_de_prise_de_vue(p) for p in recus})
-        return creer_inventaire_depuis_groupes(session, maison, config_path, regroupement, nom.strip(), stockage)
+        return creer_inventaire_depuis_groupes(session, maison, config_path, regroupement, nom, stockage)
 
 
 def _tailles_des_bouteilles(photos_par_bouteille: str | None, nombre: int) -> list[int]:

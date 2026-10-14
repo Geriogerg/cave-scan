@@ -150,6 +150,49 @@ def test_le_score_signale_des_consignes_modifiees(tmp_path, capsys):
     assert AVERTISSEMENT_CONSIGNES in sortie and "Comparaison auto vs manuel" in sortie
 
 
+def test_des_consignes_recopiees_a_l_identique_ne_sont_pas_des_consignes_modifiees(tmp_path, capsys):
+    """T5-R5 : une config qui recopie le texte d'origine (fins de ligne Windows
+    comprises) envoie le texte d'origine au caractère près, et le score ne la dit
+    pas modifiée."""
+    import json
+
+    import run_v0
+    from src.compare.compare_listings import AVERTISSEMENT_CONSIGNES
+    from src.extract.consignes import CONSIGNES_MODIFIABLES, SYSTEM_PROMPT, consignes_systeme
+
+    brut = json.loads(CONFIG_TEST.read_text(encoding="utf-8"))
+    brut["consignes"] = CONSIGNES_MODIFIABLES.replace("\n", "\r\n") + "\n"
+    recopiee = tmp_path / "recopiee.json"
+    recopiee.write_text(json.dumps(brut, ensure_ascii=False), encoding="utf-8")
+
+    config = charger_config(recopiee)
+    assert config.consignes is None and consignes_systeme(config) == SYSTEM_PROMPT
+    assert run_v0.main(["--dry-run", "--maison", str(recopiee), "--sortie", str(tmp_path / "a.xlsx")]) == 0
+    assert AVERTISSEMENT_CONSIGNES not in capsys.readouterr().out
+
+
+def test_sans_listing_le_rapport_signale_aussi_des_consignes_modifiees(tmp_path, capsys):
+    """T5-R5 : la reprise d'un inventaire sans listing manuel (signaux du modèle
+    seuls) avertit aussi quand ses consignes ont été modifiées."""
+    import json
+
+    import run_v0
+    from src.compare.compare_listings import AVERTISSEMENT_CONSIGNES
+
+    brut = json.loads(CONFIG_TEST.read_text(encoding="utf-8"))
+    brut["consignes"] = "Lis les étiquettes avec soin ; précise toujours le climat s'il est écrit."
+    modifiee = tmp_path / "modifiee.json"
+    modifiee.write_text(json.dumps(brut, ensure_ascii=False), encoding="utf-8")
+    base = tmp_path / "base.db"
+
+    assert run_v0.main(["--dry-run", "--maison", str(modifiee), "--base", str(base),
+                        "--sortie", str(tmp_path / "a.xlsx")]) == 0
+    capsys.readouterr()
+    assert run_v0.main(["--inventaire", "1", "--base", str(base), "--sortie", str(tmp_path / "b.xlsx")]) == 0
+    sortie = capsys.readouterr().out
+    assert "PAS DE SCORE" in sortie and AVERTISSEMENT_CONSIGNES in sortie
+
+
 def test_l_excel_refuse_depuis_un_ecran_revient_au_suivi_avec_la_raison(api, dossier_photos):
     """T3-D4 : un Excel refusé (bouteille sans ligne) ne laisse ni téléchargement
     annulé en silence, ni JSON brut : retour au suivi, avec la raison."""
@@ -282,3 +325,54 @@ def test_suggestions_du_tour_4(api, dossier_photos):
 
     api.put(f"/inventaires/{inventaire_id}/bouteilles/{premiere}/quantite", json={"quantite": 3}, headers=AUTEUR)
     assert "8 exemplaires" in api.get(f"/app/inventaires/{inventaire_id}/suivi").text
+
+
+def test_une_quantite_demesuree_ou_exotique_est_refusee_en_clair(api):
+    """T5-B4 : plus de 4 300 chiffres (Python refuse de les convertir) ou « ² »
+    (un chiffre pour `isdigit`, pas pour `int`) : un refus en clair, jamais une 500 ;
+    la saisie citée est coupée."""
+    import pytest
+
+    from src.services.relecture import CorrectionRefusee, quantite_valide
+    from tests.test_pages import HX, attente, creer, deposer
+
+    for saisie, raison in (("9" * 4400, "trop grande"), ("0" * 4400, "invalide"), ("²", "invalide"), ("007", None)):
+        if raison is None:
+            assert quantite_valide(saisie) == 7
+            continue
+        with pytest.raises(CorrectionRefusee, match=raison) as refus:
+            quantite_valide(saisie)
+        assert len(str(refus.value)) < 120
+
+    inventaire_id = creer(api)
+    deposer(api, inventaire_id, bouteilles=1, photos=1)
+    groupe = attente(api, inventaire_id)[0]["groupe_id"]
+    refus = api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{groupe}", data={"quantite": "9" * 4400}, headers=HX)
+    assert refus.status_code < 500 and "trop grande" in refus.text
+    lancement = api.post(f"/app/inventaires/{inventaire_id}/lancer", headers=HX,
+                         data={"groupe": [str(groupe)], "quantite": ["9" * 4400]})
+    assert "trop grande" in lancement.text and "Bouteille 1 :" in lancement.text
+
+
+def test_le_refus_de_quantite_dans_sa_carte_ne_redit_pas_son_numero(api):
+    """T5-B12 : la carte porte déjà « Bouteille 1 » : le refus dit seulement quoi faire."""
+    from tests.test_pages import HX, attente, creer, deposer
+
+    inventaire_id = creer(api)
+    deposer(api, inventaire_id, bouteilles=1, photos=1)
+    groupe = attente(api, inventaire_id)[0]["groupe_id"]
+    refus = api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{groupe}", data={"quantite": "2,5"}, headers=HX).text
+    message = refus.split('id="refus-quantite">')[1].split("</span>")[0]
+    assert message.startswith("Quantité invalide") and "Bouteille" not in message
+
+
+def test_le_nom_de_la_vente_est_borne_aussi_cote_serveur(api):
+    """T5-B10 : 5 000 caractères ou un caractère NUL envoyés sans passer par le
+    navigateur : refus « 200 caractères au plus » ; caractères de contrôle retirés."""
+    trop_long = api.post("/app/nouveau", data={"nom": "x" * 5000}, follow_redirects=False)
+    assert trop_long.status_code == 422 and "200 caractères au plus" in trop_long.text
+    cree = api.post("/app/nouveau", data={"nom": "Vente\x00 de\tprintemps"}, follow_redirects=False)
+    assert cree.status_code == 303
+    noms = [i["nom"] for i in api.get("/inventaires").json()]
+    assert "Vente  de printemps" in noms
+

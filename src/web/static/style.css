@@ -180,7 +180,9 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 .attente-photos .vignette { position: relative; }
 .attente-photos .retirer-photo { position: absolute; top: 4px; right: 4px; min-height: 44px; background: rgba(255, 255, 255, 0.92); }
 .attente-titre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-.quantite-attente { display: flex; align-items: center; gap: 6px; }
+.quantite-attente { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.quantite-attente label { white-space: nowrap; }
+.quantite-attente .alerte-texte { flex-basis: 100%; }  /* sous le champ, la carte garde sa mise en page (T5-B12) */
 .quantite-attente input { width: 4em; text-align: center; min-height: 44px; }
 .attente-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 @media (max-width: 719px) {

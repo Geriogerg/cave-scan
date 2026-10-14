@@ -33,12 +33,12 @@ from src.services.depot import (
     supprimer_groupe,
     supprimer_photo,
 )
-from src.config.maison import QUANTITE_MAX
 from src.services.depot import ModificationRefusee
 from src.services.configuration import maison_de_l_instance
 from src.services.envoi import TAILLE_MAX_OCTETS, EnvoiRefuse, config_de_la_maison
 from src.services.inventaires import charger_inventaire, lister_inventaires
 from src.services.pilotage import avancement, reprendre
+from src.services.relecture import CorrectionRefusee, quantite_valide
 
 DOSSIER = Path(__file__).resolve().parent
 
@@ -222,17 +222,12 @@ def _numero(base, inventaire_id: int, groupe_id: int) -> str:
 def quantite(request: Request, inventaire_id: int, groupe_id: int, base: SessionBase,
              quantite: Annotated[str, Form()] = ""):
     def changer():
-        if not quantite.strip().isdigit() or int(quantite) < 1:
-            raise ModificationRefusee(
-                f"Bouteille {_numero(base, inventaire_id, groupe_id)} — quantité invalide (« {quantite} ») : "
-                f"indiquez un nombre de bouteilles (1 ou plus)."
-            )
-        if int(quantite) > QUANTITE_MAX:
-            raise ModificationRefusee(
-                f"Bouteille {_numero(base, inventaire_id, groupe_id)} — quantité trop grande : « {quantite} » "
-                f"({QUANTITE_MAX:,} au plus).".replace(",", " ")
-            )
-        quantite_du_groupe(base, inventaire_id, groupe_id, int(quantite))
+        # Le refus s'affiche dans la carte de la bouteille : sans redire son numéro (T5-B12).
+        try:
+            nombre = quantite_valide(quantite)
+        except CorrectionRefusee as refus:
+            raise ModificationRefusee(str(refus)) from None
+        quantite_du_groupe(base, inventaire_id, groupe_id, nombre)
 
     return _en_attente(request, base, inventaire_id, changer, groupe_id)
 
@@ -244,16 +239,15 @@ async def lancer_l_analyse(request: Request, inventaire_id: int, base: SessionBa
     saisies = await request.form()
     try:
         for groupe, quantite in zip(saisies.getlist("groupe"), saisies.getlist("quantite"), strict=False):
-            if not str(quantite).strip().isdigit() or int(quantite) < 1:
+            if not str(groupe).isdigit():
+                continue  # pas une bouteille de la page
+            try:
+                nombre = quantite_valide(quantite)
+            except CorrectionRefusee as refus:
                 raise ModificationRefusee(
-                    f"Bouteille {_numero(base, inventaire_id, int(groupe))} — quantité invalide (« {quantite} ») : "
-                    f"indiquez un nombre de bouteilles (1 ou plus). Rien n'a été lancé."
-                )
-            if int(quantite) > QUANTITE_MAX:
-                raise ModificationRefusee(
-                    f"Quantité trop grande : « {quantite} » ({QUANTITE_MAX:,} au plus). Rien n'a été lancé.".replace(",", " ")
-                )
-            quantite_du_groupe(base, inventaire_id, int(groupe), int(quantite))
+                    f"Bouteille {_numero(base, inventaire_id, int(groupe))} : {refus} Rien n'a été lancé."
+                ) from None
+            quantite_du_groupe(base, inventaire_id, int(groupe), nombre)
         finaliser(base, inventaire_id, stockage)
     except ERREURS_DE_SERVICE as refus:
         return page(request, "_en_attente.html", vue=apercu(base, inventaire_id), erreur=str(refus))

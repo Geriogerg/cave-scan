@@ -145,3 +145,10 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 4 | T4-DS5 (2e partie) | suggestion | Version active, revenir à une version | Corrigé : « active » marquée ; « revenir à cette version » (nouvelle version, confirmée) ; test | lot 21 |
 | 4 | T4-DS6 | suggestion | Relecture à l'ordinateur : vignettes coupées | Corrigé : photo moins haute | lot 21 |
 | 4 | T4-B19 (ligne d'envoi) | mineur | Nom coupé sur la ligne de reprise | Corrigé | lot 21 |
+| 5 | T5-R5 | réserve | Consignes recopiées à l'identique dites « modifiées » | Corrigé : identiques au texte d'origine (au blanc près) = pas de consignes propres, texte envoyé au caractère près ; test. Branche « sans listing » : test | lot 22 |
+| 5 | T5-R9 | réserve | T4-B4, T4-B5, T4-DS1, T4-DS2 sans test | Corrigé : tests navigateur (404 en relecture, coupure sur Vérifier, glisser-déposer, curseur sur le nom), chacun vérifié en échec avant le correctif d'origine | lot 22 |
+| 5 | T5-R8 | réserve | decisions.md sans ligne pour les lots 15 à 21 | Corrigé : 0175 à 0180 | 6a8c8a7 |
+| 5 | T5-R1 / T5-R7 | réserve | Revérification globale ; statuts périmés | Corrigé : revérification id par id exigée (testeur-web.md, boucle-qualite.md) ; statuts à jour | 0cf18ea |
+| 5 | T5-B4 | mineur | Quantité de plus de 4 300 chiffres : 500 | Corrigé : jamais convertie, refus en clair (Vérifier, lancement, relecture, Séparer), « ² » aussi ; configuration et JSON importé : refus en clair ; test | lot 22 |
+| 5 | T5-B10 | mineur | Nom de vente sans limite côté serveur | Corrigé : 200 caractères au plus, caractères de contrôle remplacés (création, envoi par l'API, renommage) ; test | lot 22 |
+| 5 | T5-B12 | mineur | Vérifier : refus de quantité qui redit le numéro, carte décalée | Corrigé : « Quantité invalide… » sous le champ, carte inchangée ; test | lot 22 |

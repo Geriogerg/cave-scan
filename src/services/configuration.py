@@ -243,6 +243,8 @@ def importer(session: Session, dossier_configs: Path, texte: str, nom_fichier: s
             f"{source} : JSON illisible — le fichier est incomplet ou abîmé (ligne {erreur.lineno}, "
             f"colonne {erreur.colno})."
         ) from erreur
+    except ValueError:  # un nombre de plus de 4 300 chiffres (T5-B4)
+        raise ConfigInvalide(f"{source} : un nombre du fichier est démesuré (plus de 4 300 chiffres).") from None
     if not isinstance(brut, dict) or not isinstance(brut.get("maison"), str) or not brut["maison"].strip():
         # Toutes les autres erreurs, la validation complète les listera.
         config_depuis_texte(texte, source)
@@ -361,9 +363,14 @@ def brut_depuis_formulaire(champs: dict[str, str]) -> dict[str, Any]:
     def texte(nom: str) -> str:
         return (champs.get(nom) or "").strip()
 
+    def nombre(valeur: str) -> bool:
+        # Au plus 6 chiffres : au-delà, une saisie absurde que Python refuserait
+        # même de convertir (plus de 4 300 chiffres, T5-B4).
+        return valeur.isascii() and valeur.isdigit() and len(valeur) <= 6
+
     def entier(nom: str, defaut: int = 0) -> int:
         valeur = texte(nom)
-        return int(valeur) if valeur.isdigit() else defaut
+        return int(valeur) if nombre(valeur) else defaut
 
     brut: dict[str, Any] = dict(_commentaires(champs.get("commentaires")))
     brut["maison"] = texte("maison")
@@ -372,7 +379,7 @@ def brut_depuis_formulaire(champs: dict[str, str]) -> dict[str, Any]:
     plafond = texte("photos_max_par_bouteille")
     # Une saisie qui n'est pas un nombre est gardée telle quelle : la validation
     # dira pourquoi elle est refusée, au lieu de la remplacer en silence.
-    brut["photos_max_par_bouteille"] = int(plafond) if plafond.isdigit() else plafond
+    brut["photos_max_par_bouteille"] = int(plafond) if nombre(plafond) else plafond
 
     colonnes, regroupement = [], []
     for i in range(entier("nb_colonnes")):

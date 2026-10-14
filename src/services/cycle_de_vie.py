@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 from src.donnees.modeles import EvenementBouteille, EvenementInventaire, FicheBouteille, maintenant
 from src.services.depot import groupes_en_attente
 from src.services.extraction import charger_bouteille
-from src.services.inventaires import actualiser_statut, charger_inventaire, verifier_modifiable
+from src.services.inventaires import actualiser_statut, charger_inventaire, nom_de_vente, verifier_modifiable
 from src.services.relecture import auteur_valide
 
 
@@ -113,11 +113,7 @@ def renommer(session: Session, inventaire_id: int, nom: str, auteur: str) -> Non
     auteur = auteur_valide(auteur)
     inventaire = charger_inventaire(session, inventaire_id)
     verifier_modifiable(inventaire)
-    nom = (nom or "").strip()
-    if not nom:
-        raise CycleRefuse("Donnez un nom à la vente : il ne peut pas rester vide.")
-    if len(nom) > 200:
-        raise CycleRefuse("Nom trop long : 200 caractères au plus.")
+    nom = nom_de_vente(nom, CycleRefuse)
     if nom == inventaire.nom:
         return
     _tracer(session, inventaire_id, "renommage", auteur, {"avant": inventaire.nom, "apres": nom})

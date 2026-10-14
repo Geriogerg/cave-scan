@@ -318,3 +318,59 @@ def test_un_double_appui_sur_creer_ne_cree_qu_un_inventaire(application, telepho
     page.wait_for_url("**/depot")
     noms = [i["nom"] for i in httpx.get(f"{application}/inventaires").json()]
     assert noms.count("Vente double appui") == 1
+
+
+def test_une_coupure_reseau_sur_verifier_est_signalee(application, telephone, tmp_path):
+    """T4-B5 : une action de « Vérifier » qui ne part pas (réseau coupé) le dit,
+    au lieu d'un écran qui ne bouge pas."""
+    page = telephone.new_page()
+    page.goto(f"{application}/app/nouveau")
+    page.get_by_label("Nom de la vente").fill("Vente coupure")
+    page.get_by_role("button", name="Créer et ajouter les photos").click()
+    page.wait_for_url("**/depot")
+    page.get_by_role("tab", name="Galerie ou ordinateur").click()
+    page.locator(".carte-galerie").first.locator("input[type=file]").set_input_files([photo(tmp_path / "1.jpg", 1)])
+    envoyees(page, 1)
+    page.goto(page.url.replace("/depot", "/verifier"))
+    page.route("**/verifier/quantite/*", lambda route: route.abort("internetdisconnected"))
+    quantite = page.get_by_label("Quantité de la bouteille 1")
+    quantite.fill("2")
+    quantite.press("Enter")
+    page.wait_for_selector("#erreur-serveur", timeout=10_000)
+    assert "Connexion interrompue" in page.inner_text("#erreur-serveur")
+
+
+def test_au_bureau_des_photos_glissees_sur_une_carte_rejoignent_sa_bouteille(application, telephone):
+    """T4-DS1 : à l'ordinateur, glisser des photos sur une carte de la galerie les
+    envoie avec cette bouteille ; le curseur est prêt dans « Nom de la vente » (T4-DS2)."""
+    ordinateur = telephone.browser.new_context(viewport={"width": 1440, "height": 900})
+    try:
+        page = ordinateur.new_page()
+        page.goto(f"{application}/app/nouveau")
+        assert page.evaluate("document.activeElement.name") == "nom"
+        page.keyboard.type("Vente glissée")
+        page.get_by_role("button", name="Créer et ajouter les photos").click()
+        page.wait_for_url("**/depot")
+        page.get_by_role("tab", name="Galerie ou ordinateur").click()
+        page.evaluate("""async () => {
+            const toile = document.createElement("canvas");
+            toile.width = 64; toile.height = 48;
+            const transfert = new DataTransfer();
+            for (const [nom, couleur] of [["a.jpg", "#b03030"], ["b.jpg", "#3050b0"]]) {
+                const dessin = toile.getContext("2d");
+                dessin.fillStyle = couleur;
+                dessin.fillRect(0, 0, 64, 48);
+                const image = await new Promise((ok) => toile.toBlob(ok, "image/jpeg"));
+                transfert.items.add(new File([image], nom, { type: "image/jpeg" }));
+            }
+            const carte = document.querySelector(".carte-galerie");
+            carte.dispatchEvent(new DragEvent("dragover", { dataTransfer: transfert, bubbles: true, cancelable: true }));
+            carte.dispatchEvent(new DragEvent("drop", { dataTransfer: transfert, bubbles: true, cancelable: true }));
+        }""")
+        envoyees(page, 2)
+        inventaire_id = page.url.split("/inventaires/")[1].split("/")[0]
+        apercu = httpx.get(f"{application}/inventaires/{inventaire_id}/apercu", headers={"Accept": "application/json"}).json()
+        assert [len(b["photos"]) for b in apercu["bouteilles"]] == [2]
+    finally:
+        ordinateur.close()
+

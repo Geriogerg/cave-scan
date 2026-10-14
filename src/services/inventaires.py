@@ -277,6 +277,21 @@ def _version_de_config(
     return version, True, avertissements
 
 
+NOM_MAX = 200  # caractères, comme le champ de l'écran
+
+
+def nom_de_vente(nom: str | None, refus: type[Exception]) -> str:
+    """Le nom d'une vente tel qu'il sera enregistré : caractères de contrôle
+    remplacés par une espace, jamais vide, 200 caractères au plus — côté serveur
+    aussi, pas seulement dans le navigateur (T5-B10)."""
+    nom = "".join(c if c.isprintable() else " " for c in (nom or "")).strip()
+    if not nom:
+        raise refus("Donnez un nom à la vente : il ne peut pas rester vide.")
+    if len(nom) > NOM_MAX:
+        raise refus(f"Nom trop long : {NOM_MAX} caractères au plus.")
+    return nom
+
+
 def lister_inventaires(session: Session, corbeille: bool = False) -> list[Inventaire]:
     """Les inventaires, hors corbeille ; ou ceux de la corbeille."""
     condition = Inventaire.supprime_le.is_not(None) if corbeille else Inventaire.supprime_le.is_(None)

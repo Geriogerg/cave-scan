@@ -504,12 +504,23 @@ TEXTE_MAX = 1000  # une description d'état tient largement ; au-delà, un colla
 
 
 def quantite_valide(valeur: Any) -> int:
+    """Une quantité saisie (Vérifier, lancement, relecture, Séparer). Une saisie
+    absurde (4 400 chiffres, « ² ») est refusée en clair, jamais convertie : au-delà
+    de 4 300 chiffres, Python refuse la conversion (T5-B4)."""
     texte = str(valeur).strip()
-    if isinstance(valeur, bool) or not texte.isdigit() or int(texte) < 1:
-        raise CorrectionRefusee(f"Quantité invalide (« {valeur} ») : indiquez un nombre de bouteilles (1 ou plus).")
-    if int(texte) > QUANTITE_MAX:
-        raise CorrectionRefusee(f"Quantité trop grande : « {texte} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
-    return int(texte)
+    if isinstance(valeur, bool) or not (texte.isascii() and texte.isdigit()):
+        raise CorrectionRefusee(f"Quantité invalide (« {extrait(texte)} ») : indiquez un nombre de bouteilles (1 ou plus).")
+    chiffres = texte.lstrip("0")
+    if len(chiffres) > len(str(QUANTITE_MAX)) or int(chiffres or "0") > QUANTITE_MAX:
+        raise CorrectionRefusee(f"Quantité trop grande : « {extrait(texte)} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
+    if not chiffres:
+        raise CorrectionRefusee("Quantité invalide (« 0 ») : indiquez un nombre de bouteilles (1 ou plus).")
+    return int(chiffres)
+
+
+def extrait(texte: str, longueur: int = 20) -> str:
+    """Une saisie citée dans un message, coupée si elle est longue."""
+    return texte if len(texte) <= longueur else texte[: longueur - 1] + "…"
 
 
 def _nombre(champ: str, valeur: Any) -> float | int:
