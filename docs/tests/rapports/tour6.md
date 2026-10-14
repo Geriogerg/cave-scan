@@ -76,3 +76,45 @@ R1 ✅ (réserves) · R2 ✅ · R2b ✅ · R3 ✅ · R4 ✅ · R5 ✅ · R6 ✅
 - **T6-R6** — 0171 non annoté (remplacé par 0182) ; README imprécis.
 - **T6-R7** — « photo(s) » dans src/io/photos.py (messages pouvant atteindre
   l'expert).
+
+## Testeur bugs (Sonnet)
+
+0 bloquant, 1 majeur, 7 mineurs, 2 suggestions. Écrans ≈ 110 ms (le plus lent :
+accueil à l'ordinateur, 228 à 409 ms avec 15 inventaires) ; Excel de 41
+bouteilles 601 ms ; aucune erreur JavaScript ; aucun défilement horizontal ;
+cibles ≥ 39 px (mesurées avant capture).
+
+### Points du tour précédent
+
+- [T5-B1] ✅ · [T5-B2] ✅ · [T5-B3] ✅ · [T5-B4] ✅ · [T5-B5] ✅ · [T5-B6] ✅
+- [T5-B7] ✅ · [T5-B8] ✅ · [T5-B9] ✅ · [T5-B10] ✅ · [T5-B11] ✅ · [T5-B12] ✅
+- [T5-B13] ✅ · [T5-B14] ✅ · [T5-B15] ✅ · [T5-D1] ✅ · [T5-D2] ✅ · [T5-D3] ✅
+- [T5-D4] ✅ · [T5-D5] ✅ · [T5-DS1] ✅ · [T5-DS2] ✅ · [T5-DS3] ✅ · [T5-R5] ✅
+- [T5-R1], [T5-R7], [T5-R8], [T5-R9] : non retestés (processus, documentation,
+  tests ; comportements de T5-R9 vus sans défaut)
+- [T4-D10] ❌ au téléphone (T6-B3) · [T4-D4] ❌ en partie (T6-B4) ·
+  [T4-D14] ❌ en partie (T6-B6) · [T3-D2] ✅
+- [Choix n° 7] ✅ (API : T6-B8) · [Choix n° 8] ✅
+
+### Nouveaux points
+
+- **T6-B1** MAJEUR — Au téléphone, le premier appui sur « Valider » ne valide
+  pas quand un champ a le focus : la rangée de vignettes réapparaît à la perte
+  du focus, le bouton bouge de 152 px entre l'appui et le relâchement, aucun
+  `click`.
+- **T6-B2** mineur — Message « Bouteille non validée : une saisie est refusée »
+  qui reste après correction.
+- **T6-B3** mineur — ✕ de Vérifier en ellipse au téléphone (= T6-D2).
+- **T6-B4** mineur — Barre de navigation plus haute sur la première et la
+  dernière bouteille (boutons inactifs sans mots courts).
+- **T6-B5** mineur — « Bouteille suivante » sans photo : aucun effet, aucun
+  message.
+- **T6-B6** mineur — « (s) » restants (Clore, Séparer, historique, API export).
+- **T6-B7** mineur — « Leurs photos » pour 1 bouteille ; « Ctrl+Entrée » au
+  téléphone ; « doute du modèle » sur une bouteille pas lue ; galerie : quantité
+  refusée remise à 1.
+- **T6-B8** mineur — Plusieurs configurations : l'API crée quand même un
+  inventaire (la maison y est désignée explicitement).
+- **T6-B9** suggestion — « Ajouter une valeur » sans focus sur la nouvelle ligne.
+- **T6-B10** suggestion — Inventaire clos : deux encadrés presque identiques ;
+  clôture sans la liste des non validées.
