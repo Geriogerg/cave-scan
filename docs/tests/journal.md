@@ -165,3 +165,8 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 5 | T5-B14 | suggestion | Barre de progression pleine après la fin | Corrigé : masquée quand tout est envoyé ; test navigateur | lot 25 |
 | 5 | T5-B11 | mineur | Deux onglets sur le même dépôt : photos fondues | Corrigé : chaque onglet le signale (« ouvert dans un autre onglet ») ; test navigateur | lot 25 |
 | 5 | T4-D14 (reste) | mineur | « (s) » partout ; « 0 / 4 photo » | Corrigé : accords (filtre `accord`, fonction JS) au dépôt, Vérifier, suivi, accueil, récapitulatif, relecture, configuration ; « N / 4 photos » | lot 25 |
+| 5 | T4-D10 | mineur (régression) | ✕ qui voile l'étiquette | Corrigé : pastille ronde de 32 px dans le coin, zone à toucher de 44 px | lot 26 |
+| 5 | T5-D1 | mineur | Refus de quantité au téléphone : carte déformée, champ remis à l'ancienne valeur | Corrigé : saisie refusée gardée dans son champ ; guillemets insécables ; test | lot 26 |
+| 5 | T5-D2 | mineur | Coupure réseau sur Vérifier : quantité non enregistrée sans le dire | Corrigé : « Pas enregistrée (connexion interrompue) » dans la carte ; test navigateur | lot 26 |
+| 5 | T5-D3 | mineur | Bouteilles faites en galerie invisibles en mode appareil photo | Corrigé : listées aussi, « Reprendre » possible ; test navigateur | lot 26 |
+| 5 | T5-DS1 | suggestion | Glisser-déposer : pas annoncé ; hors carte, la photo s'ouvre | Corrigé : astuce au bureau ; dépôt hors carte refusé en clair ; test navigateur | lot 26 |

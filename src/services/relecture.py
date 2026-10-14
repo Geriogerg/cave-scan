@@ -509,12 +509,12 @@ def quantite_valide(valeur: Any) -> int:
     de 4 300 chiffres, Python refuse la conversion (T5-B4)."""
     texte = str(valeur).strip()
     if isinstance(valeur, bool) or not (texte.isascii() and texte.isdigit()):
-        raise CorrectionRefusee(f"Quantité invalide (« {extrait(texte)} ») : indiquez un nombre de bouteilles (1 ou plus).")
+        raise CorrectionRefusee(f"Quantité invalide (« {extrait(texte)} ») : indiquez un nombre de bouteilles (1 ou plus).")
     chiffres = texte.lstrip("0")
     if len(chiffres) > len(str(QUANTITE_MAX)) or int(chiffres or "0") > QUANTITE_MAX:
-        raise CorrectionRefusee(f"Quantité trop grande : « {extrait(texte)} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
+        raise CorrectionRefusee(f"Quantité trop grande : « {extrait(texte)} » ({QUANTITE_MAX:,} au plus).".replace(",", " "))
     if not chiffres:
-        raise CorrectionRefusee("Quantité invalide (« 0 ») : indiquez un nombre de bouteilles (1 ou plus).")
+        raise CorrectionRefusee("Quantité invalide (« 0 ») : indiquez un nombre de bouteilles (1 ou plus).")
     return int(chiffres)
 
 

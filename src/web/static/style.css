@@ -71,7 +71,8 @@ input[type="text"], select {
   border: 1px solid var(--bordure); border-radius: var(--rayon); background: var(--surface); color: var(--texte);
 }
 .case { display: flex; gap: 10px; align-items: flex-start; font-weight: 400 !important; margin: 14px 0; }
-@media (pointer: fine) { .case-reduire { display: none; } }  /* réduire « pour la 4G » : sans objet au bureau (T3-D18) */
+@media (pointer: fine) { .case-reduire { display: none; } }
+@media not (pointer: fine) { .aide-glisser { display: none; } }  /* glisser : au bureau seulement */  /* réduire « pour la 4G » : sans objet au bureau (T3-D18) */
 .case input { width: 24px; height: 24px; flex: none; margin-top: 1px; }
 
 /* Messages : chaque état est visible, avec sa raison. */
@@ -178,7 +179,13 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 .vignette-actions .bouton.icone { min-width: 44px; padding: 6px 10px; }
 /* « ✕ » dans le coin de la photo : les « ✂ Couper » restent alignés (T4-D10). */
 .attente-photos .vignette { position: relative; }
-.attente-photos .retirer-photo { position: absolute; top: 4px; right: 4px; min-height: 44px; background: rgba(255, 255, 255, 0.92); }
+/* Le ✕ : une pastille de 32 px dans le coin, qui ne voile pas l'étiquette ; sa zone
+   à toucher (::before) déborde jusqu'à 44 px (T4-D10). */
+.attente-photos .vignette-actions .retirer-photo {
+  position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; min-height: 32px; min-width: 0;
+  padding: 0; border-radius: 50%; font-size: 0.95rem; line-height: 1; background: rgba(255, 255, 255, 0.9);
+}
+.attente-photos .retirer-photo::before { content: ""; position: absolute; inset: -6px; }
 .attente-titre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .quantite-attente { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .quantite-attente label { white-space: nowrap; }

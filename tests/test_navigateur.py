@@ -338,6 +338,9 @@ def test_une_coupure_reseau_sur_verifier_est_signalee(application, telephone, tm
     quantite.press("Enter")
     page.wait_for_selector("#erreur-serveur", timeout=10_000)
     assert "Connexion interrompue" in page.inner_text("#erreur-serveur")
+    # T5-D2 : dans la carte aussi, et la saisie reste dans le champ.
+    page.wait_for_selector(".quantite-attente .non-enregistree", timeout=5_000)
+    assert quantite.input_value() == "2"
 
 
 def test_au_bureau_des_photos_glissees_sur_une_carte_rejoignent_sa_bouteille(application, telephone):
@@ -368,6 +371,11 @@ def test_au_bureau_des_photos_glissees_sur_une_carte_rejoignent_sa_bouteille(app
             carte.dispatchEvent(new DragEvent("drop", { dataTransfer: transfert, bubbles: true, cancelable: true }));
         }""")
         envoyees(page, 2)
+        page.evaluate("""() => document.body.dispatchEvent(new DragEvent("drop", { dataTransfer: new DataTransfer(), bubbles: true, cancelable: true }))""")
+        assert "Déposez les photos sur la carte" in page.inner_text("#resume-texte")  # T5-DS1
+        page.get_by_role("tab", name="Appareil photo").click()
+        assert "Bouteille 1 · 2 photos" in page.inner_text("#precedentes")  # T5-D3
+        page.get_by_role("tab", name="Galerie ou ordinateur").click()
         inventaire_id = page.url.split("/inventaires/")[1].split("/")[0]
         apercu = httpx.get(f"{application}/inventaires/{inventaire_id}/apercu", headers={"Accept": "application/json"}).json()
         assert [len(b["photos"]) for b in apercu["bouteilles"]] == [2]

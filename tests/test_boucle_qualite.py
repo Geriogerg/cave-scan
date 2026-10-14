@@ -391,3 +391,18 @@ def test_verifier_une_vente_deja_lancee_renvoie_au_suivi_avec_la_raison(api):
     assert retour.status_code == 303 and retour.headers["location"].endswith("/suivi?fait=deja_lancee")
     assert "Analyse déjà lancée" in api.get(retour.headers["location"]).text
 
+
+def test_une_quantite_refusee_reste_dans_son_champ(api):
+    """T5-D1 : « 0 » refusé : le champ montre « 0 », pas l'ancienne quantité, à côté
+    du refus qui le cite."""
+    from tests.test_pages import HX, attente, creer, deposer
+
+    inventaire_id = creer(api)
+    deposer(api, inventaire_id, bouteilles=1, photos=1)
+    groupe = attente(api, inventaire_id)[0]["groupe_id"]
+    api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{groupe}", data={"quantite": "3"}, headers=HX)
+    refus = api.post(f"/app/inventaires/{inventaire_id}/verifier/quantite/{groupe}", data={"quantite": "0"}, headers=HX).text
+    carte = refus.split(f'id="groupe-{groupe}"')[1]
+    assert 'value="0"' in carte and 'value="3"' not in carte and 'id="refus-quantite"' in carte
+    assert api.get(f"/inventaires/{inventaire_id}/apercu").json()["bouteilles"][0]["quantite"] == 3
+

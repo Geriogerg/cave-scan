@@ -36,9 +36,19 @@
     /* Coupure réseau ou délai dépassé : l'action n'a pas été faite, et l'écran le dit
        (Vérifier, Configuration… ; la relecture a son propre message, T4-B5). */
     ["htmx:sendError", "htmx:timeout"].forEach(function (nom) {
-      document.addEventListener(nom, function () {
+      document.addEventListener(nom, function (e) {
         if (document.getElementById("indicateur")) return;
         signaler("Connexion interrompue : l'action n'a pas été faite. Vérifiez le réseau et réessayez.");
+        // Une quantité de « Vérifier » : le champ garde la saisie, la carte dit qu'elle
+        // n'est pas enregistrée (T5-D2).
+        var formulaire = e.target && e.target.closest ? e.target.closest(".quantite-attente") : null;
+        if (formulaire && !formulaire.querySelector(".non-enregistree")) {
+          var avis = document.createElement("span");
+          avis.className = "alerte-texte non-enregistree";
+          avis.setAttribute("role", "alert");
+          avis.textContent = "Pas enregistrée (connexion interrompue) : réessayez.";
+          formulaire.appendChild(avis);
+        }
       });
     });
     /* Un formulaire classique (créer, rouvrir, corbeille…) ne part qu'une fois :

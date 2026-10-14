@@ -16,7 +16,8 @@
         <form class="quantite-attente" hx-post="/app/inventaires/{{ id }}/verifier/quantite/{{ g.id }}"
               hx-trigger="change, submit" {{ cible | safe }}>
           <input type="hidden" name="groupe" value="{{ g.id }}">
-          <label>Quantité <input type="text" inputmode="numeric" name="quantite" value="{{ g.quantite }}" size="3"
+          <label>Quantité <input type="text" inputmode="numeric" name="quantite" size="3"
+                          value="{{ saisie_refusee if groupe_en_erreur == g.id and saisie_refusee is not none else g.quantite }}"
                           aria-label="Quantité de la bouteille {{ b.numero }}"></label>
           {% if groupe_en_erreur == g.id %}<span class="alerte-texte" role="alert" id="refus-quantite">{{ erreur }}</span>{% endif %}
         </form>

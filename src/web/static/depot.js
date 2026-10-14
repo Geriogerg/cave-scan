@@ -242,6 +242,7 @@
 
   function reprendre(bouteille) {
     etat.precedentes = etat.precedentes.filter(function (b) { return b !== bouteille; });
+    etat.galerie = etat.galerie.filter(function (b) { return b !== bouteille; });
     if (nombrePhotos(etat.enCours)) etat.precedentes.unshift(etat.enCours);
     else etat.prochain = Math.max(etat.prochain - 1, etat.enCours.numero);  // numéro jamais utilisé : rendu
     etat.enCours = bouteille;
@@ -262,7 +263,9 @@
     afficherVignettes(vignettesEnCours, bouteille);
 
     precedentes.textContent = "";
-    etat.precedentes.slice().sort(function (a, b) { return a.numero - b.numero; }).forEach(function (b) {
+    // Les bouteilles faites en galerie aussi : un mode ne cache pas l'autre (T5-D3).
+    var galerieFaite = etat.galerie.filter(function (b) { return nombrePhotos(b) > 0; });
+    etat.precedentes.concat(galerieFaite).sort(function (a, b) { return a.numero - b.numero; }).forEach(function (b) {
       var ligne = document.createElement("li");
       ligne.className = "precedente";
       var texte = document.createElement("span");
@@ -283,6 +286,16 @@
   // --- mode galerie ou ordinateur -----------------------------------------------------------------
 
   var cartes = document.getElementById("bouteilles-galerie");
+
+  // Une photo lâchée à côté d'une carte : le navigateur l'ouvrirait à la place de la
+  // page ; on le dit au lieu de quitter le dépôt (T5-DS1).
+  document.addEventListener("dragover", function (evenement) { evenement.preventDefault(); });
+  document.addEventListener("drop", function (evenement) {
+    evenement.preventDefault();
+    if (!evenement.target.closest || !evenement.target.closest(".carte-galerie")) {
+      afficherResume("Déposez les photos sur la carte d'une bouteille.");
+    }
+  });
 
   document.getElementById("ajouter-bouteille").addEventListener("click", function () {
     // Une carte encore vide l'attend déjà : on la montre au lieu d'en créer une
