@@ -64,7 +64,9 @@ Tu juges cinq choses, à part égale :
 4. Mesurer, ne pas estimer : temps de chargement (`performance` /
    chronomètre autour des actions), défilement horizontal
    (`scrollWidth > innerWidth`), taille des zones cliquables
-   (`bounding_box`), éléments qui se chevauchent.
+   (`bounding_box`), éléments qui se chevauchent. Mesurer les cibles
+   tactiles AVANT toute capture `full_page=True` : après une telle capture,
+   Playwright perd `pointer: coarse` et les mesures deviennent fausses.
 5. Captures (`page.screenshot`, page entière) de CHAQUE écran aux deux formats,
    et de chaque problème. Les regarder avec Read : le design et l'affichage se
    jugent sur l'image, pas sur le code.

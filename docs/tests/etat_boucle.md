@@ -2,14 +2,15 @@
 
 Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 
-- Tour : 5
-- Phase : corriger
-- Agents lancés : rapports reçus (bugs, design, vérificateur)
-- Rapport du tour : docs/tests/rapports/tour5.md
-- À corriger : T5-B1 à T5-B15, T5-D1 à T5-D5 et suggestions, T5-R5 à T5-R9 du
-  vérificateur, plus les ⚠️ des points du tour 4 (T4-D14, T4-D9, T4-B10,
-  T4-D3/D4, T4-D10). T5-R8 fait (0175 à 0180).
-- Dernière mise à jour : 2026-10-14, rapports du tour 5 reçus, phase corriger.
+- Tour : 6
+- Phase : tester
+- Agents lancés : oui (2026-10-14 — bugs, design, vérificateur)
+- Rapport précédent : docs/tests/rapports/tour5.md
+- À tester en priorité : les corrections des lots 22 à 30 (tour 5), dont les
+  décisions de l'utilisateur n° 7 et 8 (parcours P12) ; revérifier id par id
+  chaque point « Corrigé » du tour 5 (journal.md).
+- Dernière mise à jour : 2026-10-14, tour 5 corrigé (lots 22 à 30), `main`
+  avancé, tour 6 lancé.
 
 ## Recommandations (vérifiées par l'agent `verificateur` à chaque tour)
 
