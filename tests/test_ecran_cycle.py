@@ -51,7 +51,8 @@ def test_renommer_et_archiver_depuis_le_suivi(api, extrait):
 
 def test_la_corbeille_demande_confirmation_et_se_restaure(api, extrait):
     confirmation = api.get(f"/app/inventaires/{extrait}/supprimer").text
-    assert "rien n&#39;est effacé" in confirmation and "Mettre à la corbeille" in confirmation
+    assert "n&#39;est effacé" in confirmation and "Mettre à la corbeille" in confirmation
+    assert "Son analyse s" not in confirmation  # elle est finie (T4-D14)
     supprime = api.post(f"/app/inventaires/{extrait}/supprimer", follow_redirects=False)
     assert supprime.headers["location"] == "/app?fait=corbeille"
     accueil = api.get("/app").text
@@ -140,3 +141,14 @@ def test_les_pages_de_confirmation_tiennent_sur_un_telephone(api, extrait):
     for geste in ("supprimer", "clore", "rouvrir"):
         texte = api.get(f"/app/inventaires/{extrait}/{geste}").text
         assert 'class="barre-actions"' in texte and re.search(r'<form method="post" action="[^"]+/' + geste + '"', texte)
+
+
+def test_clos_l_excel_est_l_action_principale_et_aucune_correction_se_dit(api, extrait):
+    """T5-DS2 : inventaire clos, « Télécharger l'Excel » est le bouton principal du
+    suivi ; T4-D14 : sans correction, le récapitulatif dit « aucune », pas « 0 sur 0 »."""
+    assert "<dd>aucune</dd>" in api.get(f"/app/inventaires/{extrait}/recapitulatif").text
+    assert api.post(f"/inventaires/{extrait}/clore", headers=AUTEUR).json()["clos"] is True
+    suivi = api.get(f"/app/inventaires/{extrait}/suivi").text
+    assert 'class="bouton principal" href="/app/inventaires/' + str(extrait) + '/excel"' in suivi
+    assert 'class="bouton principal" href="/app/inventaires/' + str(extrait) + '/relecture"' not in suivi
+

@@ -416,3 +416,22 @@ def test_un_double_appui_sur_valider_ne_valide_qu_une_bouteille(application, ord
     page.wait_for_timeout(800)
     statuts = [httpx.get(f"{application}/inventaires/{inventaire_id}/bouteilles/{x}").json()["statut"] for x in b]
     assert statuts == ["validee", "extraite", "extraite"]
+
+
+def test_au_telephone_le_premier_champ_se_voit_sans_defiler(application, ordinateur, tmp_path):
+    """T4-D4 : navigation sur une ligne, photo plus basse, vignettes sur une rangée :
+    le premier champ est dans le premier écran d'un téléphone."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 2)
+    premiere = ids(application, inventaire_id)[0]
+    telephone = ordinateur.browser.new_context(viewport={"width": 412, "height": 839}, is_mobile=True, has_touch=True)
+    try:
+        page = telephone.new_page()
+        page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{premiere}")
+        sur_la_bouteille(page, premiere)
+        haut = page.evaluate("document.querySelector('.saisie').getBoundingClientRect().top")
+        assert haut < 839 - 80, haut  # au-dessus de la barre « Valider »
+        hauteur_nav = page.evaluate("document.querySelector('.navigation-relecture').getBoundingClientRect().height")
+        assert hauteur_nav < 60, hauteur_nav  # une seule ligne
+    finally:
+        telephone.close()
+

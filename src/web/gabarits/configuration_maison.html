@@ -22,11 +22,11 @@
 <ul class="liste-versions">
   {% for v in versions %}
   <li>
-    Version {{ v.version_declaree }} · enregistrée le {{ v.cree_le | horodatage }}
+    <span>Version {{ v.version_declaree }} · enregistrée le {{ v.cree_le | horodatage }}</span>
     {% if v.version_declaree == config.version %}<span class="etiquette ok">active</span>{% endif %}
-    · <a href="/app/configuration/{{ nom }}/export?numero={{ v.numero }}">télécharger</a>
+    <a href="/app/configuration/{{ nom }}/export?numero={{ v.numero }}">télécharger</a>
     {% if v.version_declaree != config.version %}
-    · <form method="post" action="/app/configuration/{{ nom }}/revenir/{{ v.numero }}" class="en-ligne"
+    <form method="post" action="/app/configuration/{{ nom }}/revenir/{{ v.numero }}" class="en-ligne"
             onsubmit="return confirm('Revenir à la version {{ v.version_declaree }} ? Elle devient une nouvelle version, pour les prochains inventaires.')">
         <button class="lien" type="submit">revenir à cette version</button></form>
     {% endif %}

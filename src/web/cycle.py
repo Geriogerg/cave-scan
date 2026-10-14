@@ -95,12 +95,13 @@ def reprendre_l_analyse(request: Request, inventaire_id: int, base: SessionBase)
 @routeur.get("/app/inventaires/{inventaire_id}/supprimer")
 def confirmer_la_suppression(request: Request, inventaire_id: int, base: SessionBase):
     inventaire = charger_inventaire(base, inventaire_id)
-    etat = bilan(base, inventaire_id)
+    # « Son analyse s'arrête » seulement si elle tourne encore (T4-D14).
+    en_cours = inventaire.extraction == "lancee" and any(b.statut in ("a_extraire", "en_cours") for b in inventaire.bouteilles)
     return page(
         request, "confirmation.html", inventaire=inventaire, action="supprimer",
         titre=f"Mettre « {inventaire.nom} » à la corbeille ?",
         explications=[
-            "Son analyse s'arrête ; rien n'est effacé.",
+            "Son analyse s'arrête ; rien n'est effacé." if en_cours else "Rien n'est effacé.",
             "Il se restaure depuis la corbeille, en bas de l'accueil.",
         ],
         bouton="Mettre à la corbeille", danger=True,

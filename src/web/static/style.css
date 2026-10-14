@@ -267,6 +267,7 @@ body.relecture .contenu { max-width: 1680px; padding-bottom: 32px; }
 }
 .vignette-photo img { width: 46px; height: 46px; object-fit: cover; border-radius: 6px; }
 .vignette-photo.active { border-color: var(--accent); }
+.mot-court { display: none; }
 .aide-photo { margin: 0; color: var(--texte-doux); font-size: 0.88rem; }
 
 .fiche-relecture { display: flex; flex-direction: column; gap: 10px; }
@@ -321,7 +322,8 @@ input.saisie::placeholder { color: var(--texte-doux); }
 .aide-clavier dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; }
 .aide-clavier dt { white-space: nowrap; }
 .aide-clavier dd { margin: 0; }
-.recapitulatif { max-width: 860px; margin: 0 auto; }
+.recapitulatif { max-width: 860px; }  /* aligné à gauche, comme les autres écrans (T5-D4) */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .restes { padding-left: 20px; }
 .chiffres-recap { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; }
 .chiffres-recap dt { font-weight: 600; }
@@ -346,8 +348,21 @@ input.saisie::placeholder { color: var(--texte-doux); }
      restent au récapitulatif (T4-D4, T4-B24). */
   .barre-relecture { gap: 6px 10px; padding: 4px 0 8px; margin-bottom: 8px; }
   .barre-relecture .avancement { display: none; }
-  .navigation-relecture { gap: 4px 10px; font-size: 0.9rem; }
+  .navigation-relecture { gap: 4px 10px; font-size: 0.9rem; flex-wrap: nowrap; }
   .fiche-relecture { padding-bottom: 72px; }  /* Valider ne recouvre pas le dernier champ */
+  /* Premier écran : navigation sur une ligne (mots courts), photo plus basse, vignettes
+     sur une seule rangée : le premier champ se lit sans défiler (T4-D4). */
+  .navigation-relecture .mot-long { display: none; }
+  .navigation-relecture .mot-court { display: inline; }
+  .navigation-relecture .bouton { min-width: 44px; justify-content: center; }
+  .visionneuse { height: 26vh; min-height: 160px; }
+  .champ { scroll-margin-top: calc(26vh + 24px); }
+  .commandes-photo { flex-wrap: nowrap; overflow-x: auto; gap: 6px; }
+  .vignette-photo { padding: 2px; }
+  .vignette-photo span { display: none; }
+  .vignette-photo img { width: 40px; height: 40px; }
+  .titre-bouteille { font-size: 1.1rem; margin: 4px 0; }
+  .relecture .fil { overflow-wrap: normal; max-width: 45vw; }  /* nom de vente : « … » plutôt que coupé (T5-D4) */
 }
 /* Sans clavier (téléphone, tablette), les touches ne veulent rien dire (T1-m7). */
 @media (hover: none) and (pointer: coarse) {
@@ -414,10 +429,12 @@ textarea {
 .consignes textarea[readonly] { background: #f4f4f1; color: var(--texte-doux); }
 .consignes-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .case.a-cocher { outline: 2px solid var(--alerte); outline-offset: 4px; border-radius: 6px; }
-.liste-versions { padding-left: 20px; }
+.liste-versions { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.liste-versions li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; }  /* sans « · » orphelin (T5-D4) */
 .editeur-config .barre-actions { position: sticky; margin: 16px -16px 0; }
 .barre-config[data-sans-modification] { display: none; }
 @media (max-width: 719px) {
+  .barre-actions .bouton { white-space: nowrap; font-size: 0.92rem; }  /* un libellé, une ligne (T5-D4) */
   .barre-config { flex-wrap: nowrap; }
   .barre-config > * { flex: 1 1 0; padding: 8px 6px; font-size: 0.9rem; }
 }

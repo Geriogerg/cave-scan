@@ -170,3 +170,7 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 5 | T5-D2 | mineur | Coupure réseau sur Vérifier : quantité non enregistrée sans le dire | Corrigé : « Pas enregistrée (connexion interrompue) » dans la carte ; test navigateur | lot 26 |
 | 5 | T5-D3 | mineur | Bouteilles faites en galerie invisibles en mode appareil photo | Corrigé : listées aussi, « Reprendre » possible ; test navigateur | lot 26 |
 | 5 | T5-DS1 | suggestion | Glisser-déposer : pas annoncé ; hors carte, la photo s'ouvre | Corrigé : astuce au bureau ; dépôt hors carte refusé en clair ; test navigateur | lot 26 |
+| 5 | T4-D4 (reste) | mineur | Téléphone : aucun champ au premier écran | Corrigé : navigation sur une ligne (mots courts), photo à 26 % de l'écran, vignettes sur une rangée ; test navigateur | lot 27 |
+| 5 | T5-D4 | mineur | Récapitulatif mal aligné, cases bleues, libellés sur 2 lignes, nom coupé, versions avec « · » orphelin | Corrigé : récapitulatif aligné à gauche, `accent-color`, libellés de barre sur une ligne, nom en « … », versions en ligne souple | lot 27 |
+| 5 | T4-D14 (reste) | mineur | « Corrections : 0 sur 0 » ; « Son analyse s'arrête » même finie | Corrigé : « aucune » ; la corbeille ne le dit que si l'analyse tourne ; test | lot 27 |
+| 5 | T5-DS2 | suggestion | Inventaire clos : l'Excel pas en action principale | Corrigé ; test | lot 27 |

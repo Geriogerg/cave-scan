@@ -19,18 +19,18 @@
   {% include "_compteurs.html" %}
   <nav class="navigation-relecture" aria-label="Navigation entre les bouteilles">
     {% if adresse_precedente %}
-      <a class="bouton petit" id="precedente" data-navigation href="{{ adresse_precedente }}">← Précédente <kbd>J</kbd></a>
+      <a class="bouton petit" id="precedente" data-navigation href="{{ adresse_precedente }}" aria-label="Précédente">← <span class="mot-long">Précédente</span> <kbd>J</kbd></a>
     {% else %}
       <span class="bouton petit inactif" aria-disabled="true">← Précédente</span>
     {% endif %}
     {% if adresse_suivante %}
-      <a class="bouton petit" id="suivante" data-navigation href="{{ adresse_suivante }}">Suivante <kbd>K</kbd> →</a>
+      <a class="bouton petit" id="suivante" data-navigation href="{{ adresse_suivante }}" aria-label="Suivante"><span class="mot-long">Suivante</span> <kbd>K</kbd> →</a>
     {% else %}
       <span class="bouton petit inactif" aria-disabled="true">Suivante →</span>
     {% endif %}
     <a class="filtre{% if f.filtre %} actif{% endif %}" data-navigation href="{{ adresse_filtre }}"
-       role="switch" aria-checked="{{ 'true' if f.filtre else 'false' }}">Seulement les bouteilles à vérifier</a>
-    <a data-navigation href="/app/inventaires/{{ i }}/recapitulatif">Récapitulatif</a>
+       role="switch" aria-checked="{{ 'true' if f.filtre else 'false' }}"><span class="mot-long">Seulement les bouteilles à vérifier</span><span class="mot-court">À vérifier</span></a>
+    <a data-navigation href="/app/inventaires/{{ i }}/recapitulatif"><span class="mot-long">Récapitulatif</span><span class="mot-court">Récap.</span></a>
     <button type="button" class="lien" data-aide>Raccourcis <kbd>?</kbd></button>
   </nav>
 </div>
