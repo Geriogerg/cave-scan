@@ -2,13 +2,14 @@
 
 Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 
-- Tour : 4
-- Phase : corriger (tour 4 : rapports bugs et design ; le vérificateur s'est arrêté sur la limite de session, sans rapport — non relancé : le tour 5 le refera)
-- Agents lancés : oui (2026-10-13 — bugs, design, vérificateur)
-- Rapport précédent : docs/tests/rapports/tour3.md
-- À tester en priorité : les corrections des lots 9 à 14 (tour 3), et tout ce
-  que le passage bugs du tour 3 n'a pas pu voir (il s'est arrêté sans rapport).
-- Dernière mise à jour : 2026-10-14, tour 4 en correction.
+- Tour : 5
+- Phase : tester
+- Agents lancés : oui (2026-10-14 — bugs, design, vérificateur)
+- Rapport précédent : docs/tests/rapports/tour4.md
+- À tester en priorité : les corrections des lots 15 à 21 (tour 4). Le
+  vérificateur du tour 4 s'est arrêté sans rapport : ses contrôles de R1 à R6
+  sont à refaire en entier.
+- Dernière mise à jour : 2026-10-14, tour 4 corrigé (lots 15 à 21), tour 5 lancé.
 
 ## Recommandations (vérifiées par l'agent `verificateur` à chaque tour)
 
@@ -28,3 +29,4 @@ Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 | 1 | rapports/tour1.md | 2 bloquants, 4 majeurs, 14 mineurs, 9 suggestions | 1–6 |
 | 2 | rapports/tour2.md | 1 bloquant, 2 majeurs, 15 mineurs, 7 suggestions | 7–8 |
 | 3 | rapports/tour3.md | vérificateur : R2b ✅, R1/R2 ⚠️, R3/R5 ❌ ; design : 1 bloquant, 4 majeurs, 19 mineurs, 8 suggestions ; bugs : sans rapport (limite de session) | 9–14 |
+| 4 | rapports/tour4.md | bugs : 1 bloquant, 5 majeurs, 13 mineurs, 7 suggestions ; design : 0 bloquant, 2 majeurs, 16 mineurs, 6 suggestions ; vérificateur : sans rapport (limite de session) | 15–21 |
