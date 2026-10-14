@@ -55,6 +55,7 @@
     <button class="bouton principal" id="lancer" {% if not vue.peut_lancer %}disabled{% endif %}
             hx-post="/app/inventaires/{{ id }}/lancer" hx-include=".quantite-attente" {{ cible | safe }}
             hx-trigger="click throttle:1s" hx-disabled-elt="this"
-            hx-confirm="Lancer l'analyse de {{ vue.bouteilles | length }} bouteille(s) ? Leurs photos ne pourront plus être modifiées.">Lancer l'analyse</button>
+            {% set exemplaires = vue.bouteilles | map(attribute="groupe") | sum(attribute="quantite") %}
+            hx-confirm="Lancer l'analyse de {{ vue.bouteilles | length }} bouteille(s){% if exemplaires > vue.bouteilles | length %} ({{ exemplaires }} exemplaires){% endif %} ? Leurs photos ne pourront plus être modifiées.">Lancer l'analyse</button>
   </nav>
 </section>

@@ -366,6 +366,7 @@ class ChampRelecture:
     a_verifier: bool  # doute précis du modèle sur ce champ
     lue: str | None  # la lecture du modèle, en clair ; None pour une colonne expert
     peut_revenir: bool  # corrigé, et différent de la lecture du modèle
+    avertissement: str = ""  # saisie acceptée mais inhabituelle (millésime, T4-DS4)
 
     @property
     def origine_en_clair(self) -> str:
@@ -485,6 +486,19 @@ def _champ(colonne: Colonne, courantes: Bouteille, modele: Bouteille, corrige: b
         a_verifier=douteux and not expert,
         lue=None if expert else en_clair(colonne, lue),
         peut_revenir=corrige and not expert and lue != valeur,
+        avertissement=_millesime_inhabituel(colonne.cle, valeur),
+    )
+
+
+def _millesime_inhabituel(cle: str, valeur: Any) -> str:
+    """« 20152009 » tapé au doigt : accepté (jamais deviné à la place de l'expert),
+    mais signalé (T4-DS4)."""
+    import re
+
+    if cle != "millesime" or valeur in (None, "") or est_abstention(valeur):
+        return ""
+    return "" if re.fullmatch(r"(1[6-9]|20)\d\d|NM", str(valeur).strip(), re.IGNORECASE) else (
+        "Inhabituel : 4 chiffres (ex. 2015) ou NM attendus."
     )
 
 

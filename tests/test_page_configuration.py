@@ -376,3 +376,17 @@ def test_ajouter_une_colonne_la_place_avant_a_verifier_et_l_identifiant_suit_le_
     champs[f"c{i}_v0_libelle"] = "Cave Martin"
     verifiee = agir(client, dict(champs, confirmer_consignes="1"), "verifier")
     assert 'name="confirmer_consignes" value="1" checked' in verifiee.text
+
+
+def test_revenir_a_une_ancienne_version(client, configs):
+    """T4-DS5 : une ancienne version redevient la configuration, comme une NOUVELLE version."""
+    champs = formulaire(ouvrir(client))
+    agir(client, dict(champs, c1_nom="Nombre"), "enregistrer")  # version 3
+    champs = formulaire(ouvrir(client))
+    agir(client, dict(champs, c1_nom="Nb"), "enregistrer")  # version 4 : la 3 n'est plus active
+    page = ouvrir(client)
+    assert "revenir à cette version" in page and "active" in page
+    numero = page.split(f"/app/configuration/{NOM}/revenir/")[1].split('"')[0]
+    retour = client.post(f"/app/configuration/{NOM}/revenir/{numero}", follow_redirects=False)
+    assert retour.status_code == 303 and "enregistree=5" in retour.headers["location"]
+    assert charger_config(configs / CONFIG_TEST.name).colonne("quantite").nom == "Nombre"  # la version 3 revenue

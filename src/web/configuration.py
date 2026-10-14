@@ -196,6 +196,22 @@ def agir(request: Request, nom: str, base: SessionBase, champs: Formulaire):
     return RedirectResponse(cible, status_code=303)
 
 
+@routeur.post("/app/configuration/{nom}/revenir/{numero}")
+def revenir(request: Request, nom: str, numero: int, base: SessionBase):
+    """Une ancienne version redevient la configuration : enregistrée comme une
+    NOUVELLE version (l'historique ne se réécrit pas, T4-DS5)."""
+    active = config_du_fichier(request.app.state.configs, nom)
+    _nom_fichier, texte = exporter_version(base, request.app.state.configs, active.config.maison, numero)
+    try:
+        enregistree = importer(base, request.app.state.configs, texte, f"version {numero}")
+    except ConfigInchangee as refus:
+        return _afficher(request, base, nom, edition(active), info=str(refus))
+    except ConfigInvalide as refus:
+        return _afficher(request, base, nom, edition(active), 422, erreur=" ; ".join(refus.erreurs))
+    return RedirectResponse(f"/app/configuration/{enregistree.fichier.stem}?enregistree={enregistree.version}",
+                            status_code=303)
+
+
 @routeur.get("/app/configuration/{nom}/export")
 def exporter(request: Request, nom: str, base: SessionBase, numero: Annotated[int | None, Query()] = None):
     active = config_du_fichier(request.app.state.configs, nom)

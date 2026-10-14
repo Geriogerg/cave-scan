@@ -138,3 +138,10 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 4 | T4-D14 (signalements) | mineur | « Signalées : 1 » après levée | Corrigé : « Photos signalées : 1 (signalements levés compris) » | lot 20 |
 | 4 | T4-B21 | suggestion | Une ligne d'aide sur « Vérifier » | Écarté : l'utilisateur a demandé de retirer ces lignes (0b54815) | — |
 | 4 | T4-B18 | mineur | Excel : bouteille validée encore jaune / « À vérifier » | À trancher par l'utilisateur (choix n°8 de choix_a_trancher.md) : touche la règle d'export 0055 | — |
+| 4 | T4-DS1 | suggestion | Glisser-déposer au bureau | Corrigé : photos glissées sur une carte de la galerie | lot 21 |
+| 4 | T4-DS2 | suggestion | Focus sur « Nom de la vente » | Corrigé | lot 21 |
+| 4 | T4-DS3 | suggestion | Bouteilles / exemplaires | Corrigé : au suivi et dans la confirmation du lancement ; test | lot 21 |
+| 4 | T4-DS4 | suggestion | Millésime inhabituel | Corrigé : accepté, signalé « Inhabituel : 4 chiffres ou NM » ; test | lot 21 |
+| 4 | T4-DS5 (2e partie) | suggestion | Version active, revenir à une version | Corrigé : « active » marquée ; « revenir à cette version » (nouvelle version, confirmée) ; test | lot 21 |
+| 4 | T4-DS6 | suggestion | Relecture à l'ordinateur : vignettes coupées | Corrigé : photo moins haute | lot 21 |
+| 4 | T4-B19 (ligne d'envoi) | mineur | Nom coupé sur la ligne de reprise | Corrigé | lot 21 |

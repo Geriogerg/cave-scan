@@ -3,7 +3,8 @@
 {% block fil %}<a class="fil" href="/app">Inventaires</a>{% endblock %}
 {% block contenu %}
 <h1>{{ inventaire.nom }}</h1>
-<p class="aide">{{ inventaire.bouteilles | length }} bouteille(s)</p>
+{% set exemplaires = inventaire.bouteilles | sum(attribute="quantite") %}
+<p class="aide">{{ inventaire.bouteilles | length }} bouteille(s){% if exemplaires > inventaire.bouteilles | length %} ({{ exemplaires }} exemplaires){% endif %}</p>
 {% if inventaire.archive_le %}
   <div class="message info">Inventaire archivé.
     <form method="post" action="/app/inventaires/{{ inventaire.id }}/desarchiver" class="en-ligne"><button class="lien">Sortir des archives</button></form></div>

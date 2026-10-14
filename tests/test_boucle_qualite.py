@@ -265,3 +265,20 @@ def test_un_numero_demesure_dans_l_adresse_est_une_page_introuvable(api):
     """T4-B14 : plus de 19 chiffres : 404 en français, pas une erreur 500."""
     reponse = api.get("/app/inventaires/99999999999999999999/suivi")
     assert reponse.status_code == 404 and "n&#39;existe pas" in reponse.text
+
+
+def test_suggestions_du_tour_4(api, dossier_photos):
+    """T4-DS4 : un millésime inhabituel est accepté mais signalé ; T4-DS3 : le suivi
+    distingue bouteilles et exemplaires."""
+    inventaire_id = envoyer(api, dossier_photos).json()["id"]
+    extraire_en_arriere_plan(api, inventaire_id, FixtureExtractor(charges(), charger_config(CONFIG_TEST)))
+    premiere = api.get(f"/inventaires/{inventaire_id}/bouteilles").json()["bouteilles"][0]["id"]
+    reponse = api.post(f"/app/inventaires/{inventaire_id}/relecture/{premiere}/champ/millesime",
+                       data={"millesime": "20152009"}, headers={"HX-Request": "true", **AUTEUR})
+    assert reponse.status_code == 200 and "Inhabituel" in reponse.text
+    normal = api.post(f"/app/inventaires/{inventaire_id}/relecture/{premiere}/champ/millesime",
+                      data={"millesime": "2015"}, headers={"HX-Request": "true", **AUTEUR})
+    assert "Inhabituel" not in normal.text
+
+    api.put(f"/inventaires/{inventaire_id}/bouteilles/{premiere}/quantite", json={"quantite": 3}, headers=AUTEUR)
+    assert "8 exemplaires" in api.get(f"/app/inventaires/{inventaire_id}/suivi").text

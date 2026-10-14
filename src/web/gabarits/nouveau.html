@@ -6,7 +6,7 @@
 <form method="post" action="/app/nouveau" class="formulaire" id="formulaire-nouveau">
   <label for="nom">Nom de la vente</label>
   <input id="nom" name="nom" type="text" required maxlength="200" value="{{ nom or '' }}"
-         placeholder="Vente de printemps — cave Dupont" autocomplete="off">
+         placeholder="Vente de printemps — cave Dupont" autocomplete="off" autofocus>
 
   {% if not configuree %}<p class="message attention">Aucune configuration pour l'instant.
     <a class="bouton petit" href="/app/configuration">Créer la configuration</a></p>{% endif %}

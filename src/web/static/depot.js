@@ -321,6 +321,20 @@
       });
       etiquette.appendChild(choix);
       actions.appendChild(etiquette);
+      // Au bureau : glisser des photos sur la carte les ajoute à cette bouteille (T4-DS1).
+      carte.addEventListener("dragover", function (evenement) {
+        if (nombrePhotos(bouteille) >= maximum) return;
+        evenement.preventDefault();
+        carte.classList.add("survol-depot");
+      });
+      carte.addEventListener("dragleave", function () { carte.classList.remove("survol-depot"); });
+      carte.addEventListener("drop", function (evenement) {
+        evenement.preventDefault();
+        carte.classList.remove("survol-depot");
+        Array.prototype.slice.call(evenement.dataTransfer.files || []).forEach(function (fichier) {
+          ajouter(bouteille, fichier, false);
+        });
+      });
 
       var quantite = document.createElement("label");
       quantite.className = "quantite-galerie";

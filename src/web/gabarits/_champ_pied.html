@@ -8,6 +8,7 @@
             hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/champ/{{ c.cle }}/revenir"
             hx-target="#champ-{{ c.cle }}" hx-swap="outerHTML" hx-sync="#fiche:queue all">Revenir à la valeur du modèle</button>
   {% endif %}
+  {% if c.avertissement %}<span class="etat-champ attention">{{ c.avertissement }}</span>{% endif %}
   {% if etat == "enregistre" %}
     <span class="etat-champ ok">Enregistré</span>
   {% elif etat == "refuse" %}
