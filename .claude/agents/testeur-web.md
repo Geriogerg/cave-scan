@@ -90,7 +90,9 @@ Signale quand même ce que tu vois hors de ta spécialité.
    (à revérifier) et ce qui a été écarté exprès, avec sa raison (à ne pas
    signaler de nouveau, sauf élément nouveau).
 5. Si un rapport précédent t'est fourni, revérifier d'abord chacun de ses
-   points, en gardant leur identifiant.
+   points marqués « Corrigé » dans le journal, en gardant leur identifiant :
+   UNE LIGNE PAR IDENTIFIANT (`[T4-B2] ✅ …` / `[T4-B2] ❌ …` / `[T4-B2] non
+   retesté`), jamais « tous ✅ sauf… ».
 
 ## Grille de gravité
 | Gravité | Définition |

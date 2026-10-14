@@ -27,7 +27,9 @@ SEULE source de vérité : ne rien supposer de la conversation. Après chaque
   (date) ». Puis attendre leurs notifications (sous `/loop` : réveil de
   secours à 30 min).
 - Rapports reçus : les fusionner dans `docs/tests/rapports/tourN.md`
-  (identifiants TN-B…, TN-D… et TN-R… pour le vérificateur) ; reporter les
+  (identifiants TN-B…, TN-D… et TN-R… pour le vérificateur), avec une section
+  « Points du tour précédent » qui reprend CHAQUE id « Corrigé » du journal,
+  un par ligne, ✅ ou ❌ (critère R1) ; reporter les
   verdicts dans la colonne « Statut » des recommandations ; reporter l'avis
   P12 dans `docs/tests/choix_a_trancher.md` ; passer en phase « corriger ».
 - Agents marqués lancés, mais aucun rapport disponible (nouvelle session,
@@ -57,7 +59,10 @@ fluidité).
 - Une proposition du testeur qui dégraderait autre chose : l'écarter, raison
   écrite.
 - Tenir `docs/tests/journal.md` à jour (corrigé / écarté, commit) et, si un
-  comportement change, la doc (README, règles) et `decisions.md`.
+  comportement change, la doc (README, règles) et `decisions.md` : une ligne
+  par choix tranché pendant le tour, au plus tard au commit du dernier lot.
+- Dans un message de commit, ne citer « test » que pour les points réellement
+  couverts par un test ajouté.
 - Les directives (`testeur-web.md`, `parcours.md`, ce fichier) peuvent être
   améliorées si un tour montre qu'elles sont floues ou incomplètes ; toute
   fonction nouvelle entre dans les parcours.
