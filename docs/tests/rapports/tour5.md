@@ -82,3 +82,65 @@ R1 ⚠️ · R2 ✅ · R2b ✅ · R3 ✅ · R4 ⏳ · R5 ✅ · R6 ⏳ (pas prê
 - **T5-R9** Sans test : T4-B4 (404 en relecture, contrainte 5), T4-B5 (coupure
   réseau), T4-DS1, T4-DS2.
 - **T5-R10** Choix n°7 ni traité ni tranché (décision de l'utilisateur).
+
+## Testeur bugs (Sonnet)
+
+0 bloquant, 3 majeurs, 9 mineurs, 3 suggestions. Parcours : P1 ✅ P2 ✅ P3 ⚠️
+P4 ⚠️ P5 ✅ P6 ❌ P7 ✅ P8 ❌ P9 ✅ P10 ✅ P11 ✅. Écran moyen ≈ 107 ms (le plus
+lent : Configuration, 295 ms) ; Excel de 60 bouteilles 546 ms ; aucune erreur
+JavaScript ; aucun défilement horizontal ni cible < 40 px sur 12 écrans au
+téléphone (mesure faite AVANT toute capture : une capture `full_page` fait
+perdre `pointer: coarse` à Playwright).
+
+### Points du tour précédent (revérifiés id par id)
+
+- [T4-D1] ✅ · [T3-D5 / T4-B6] ✅ · [T4-D2] ✅ · [T4-D6] ✅ · [T4-D11] ✅
+- [T3-D2 / T4-B11] ✅ · [T4-B1] ✅ · [T4-B2] ✅ · [T4-B3 / T4-D12] ✅
+- [T4-B4] ✅ (inventaire mis à la corbeille ailleurs) · [T4-B5] ✅ (Vérifier,
+  configuration, relecture)
+- [T4-B7] ✅ · [T4-D5] ✅ (alignement : T5-B12) · [T4-D10] ✅ · [T4-B16] ✅
+- [T4-D14] ⚠️ reste « photo(s) » / « bouteille(s) » au dépôt et à Vérifier
+- [T4-D8] ✅ · [T4-D9 / T4-B15] ⚠️ galerie : doublon hors de la carte (T5-B7)
+- [T4-B8] ✅ · [T4-B9] ✅ · [T4-D13 / T4-B23] ✅
+- [T4-D3 / T4-D4 / T4-B24] ✅ avec réserve : clavier simulé (500 px de haut),
+  le champ actif dépasse de ~12 px sous « Valider » ; à 420 px, plus aucun
+  champ touchable
+- [T4-B17] ✅ · [T4-B10] ⚠️ nouvelle colonne : identifiant figé (T5-B8)
+- [T4-B12] ✅ · [T4-D7] ✅ · [T4-B22 / T4-DS5] ✅ · [T4-B25] ✅ · [T4-B13] ✅
+- [T4-B14] ✅ · [T4-D16 / T4-B19] ✅ · [T4-D15] ✅ · [T4-B20] ✅
+- [T4-DS1] ✅ · [T4-DS2] ✅ · [T4-DS3] ✅ · [T4-DS4] ✅ · [T4-DS6] ✅
+- Non re-signalés : T4-B18 (choix n° 8), T4-B21 (écarté).
+
+### Nouveaux points
+
+- **T5-B1** MAJEUR — Valider pendant une (ré)analyse : « statut « a_extraire » »
+  montré ; bandeau « la page se mettra à jour toute seule » pendant une pause ;
+  « Réanalyse » pour une première analyse ; « Note du modèle : Extraction sans
+  résultat » fabriquée. Proposé : Valider grisé avec la raison, bandeau juste.
+- **T5-B2** MAJEUR — Configuration sans « À vérifier » : avertissement permanent
+  avec clé interne et « decisions.md 0170 ». Retrait de « Qté », « N° »,
+  « Domaine » sans avertissement.
+- **T5-B3** MAJEUR — Refus de configuration en jargon (« photos_max_par_bouteille »,
+  « contrat Bouteille », « noyau canonique », « modele_best_effort ») ; plusieurs
+  phrases pour une cause.
+- **T5-B4** mineur — Quantité de plus de 4 300 chiffres : 500 (Vérifier,
+  Séparer, photos au plus de la configuration).
+- **T5-B5** mineur — Vérifier sur une vente lancée ou close : page vide et
+  muette.
+- **T5-B6** mineur — Galerie : « Ajouter une bouteille » répété crée plusieurs
+  cartes vides « Bouteille 4 ».
+- **T5-B7** mineur — Galerie : « déjà dans la bouteille 1 » seulement en bas.
+- **T5-B8** mineur — Nouvelle colonne : identifiant figé au premier « Vérifier ».
+- **T5-B9** mineur — Import sans colonnes : onze phrases pour une cause.
+- **T5-B10** mineur — Nom d'inventaire sans limite côté serveur (5 000
+  caractères, caractère NUL).
+- **T5-B11** mineur — Deux onglets sur le même dépôt : photos de deux bouteilles
+  fondues en une (rien de perdu).
+- **T5-B12** mineur — Vérifier : refus de quantité qui redit le numéro et casse
+  l'alignement de la carte.
+- **T5-B13** suggestion — Appui ignoré dans les 500 ms : aucun signe.
+- **T5-B14** suggestion — Dépôt : barre de progression pleine visible après la
+  fin des envois.
+- **T5-B15** suggestion — Après « Réanalyser », aucune annonce de fin.
+
+Avis P12 : inchangé (choix 1 à 6 aident ou sont acceptables ; 7 non retesté).
