@@ -45,6 +45,7 @@ from src.extract.schema import (
     est_abstention,
 )
 from src.normalize.normalize import normalize
+from src.textes import accord
 from src.services.extraction import (
     charger_bouteille,
     derniere_extraction_reussie,
@@ -793,18 +794,19 @@ def valider_inventaire(session: Session, inventaire_id: int, auteur: str) -> int
     raisons = []
     if en_erreur:
         raisons.append(
-            f"{len(en_erreur)} bouteille(s) en erreur ({_positions(en_erreur)}) : les réanalyser, ou "
+            f"{accord(len(en_erreur), 'bouteille', 'bouteilles')} en erreur ({_positions(en_erreur)}) : les réanalyser, ou "
             f"saisir leurs champs obligatoires à la main pour les valider"
         )
     if pas_extraites:
-        raisons.append(f"{len(pas_extraites)} bouteille(s) pas encore extraite(s) ({_positions(pas_extraites)})")
+        raisons.append(f"{accord(len(pas_extraites), 'bouteille pas encore analysée', 'bouteilles pas encore analysées')} "
+                       f"({_positions(pas_extraites)})")
     if signalees:
         raisons.append(
-            f"{len(signalees)} bouteille(s) avec un problème de photos signalé ({_positions(signalees)})"
+            f"{accord(len(signalees), 'bouteille', 'bouteilles')} avec un problème de photos signalé ({_positions(signalees)})"
         )
     if a_relire:
         raisons.append(
-            f"{len(a_relire)} bouteille(s) à relire ({_positions(a_relire)}) : chaque bouteille se "
+            f"{accord(len(a_relire), 'bouteille', 'bouteilles')} à relire ({_positions(a_relire)}) : chaque bouteille se "
             f"valide une par une, depuis l'écran de relecture"
         )
     if raisons:

@@ -456,6 +456,8 @@ def test_au_telephone_un_seul_appui_valide_meme_depuis_un_champ(application, ord
         page.locator("#saisie-domaine").fill("Domaine du doigt")
         page.tap("#valider")  # UN appui, le champ ayant encore le focus
         sur_la_bouteille(page, b[1])
+        # Format et millésime vides (extracteur factice) : la suivante le dit (0183, T6-R5).
+        page.wait_for_function("document.getElementById('messages').textContent.includes('Excel')", timeout=5_000)
         statut = httpx.get(f"{application}/inventaires/{inventaire_id}/bouteilles/{b[0]}").json()["statut"]
         assert statut == "validee"
     finally:

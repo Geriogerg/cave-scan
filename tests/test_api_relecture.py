@@ -103,5 +103,5 @@ def test_recapitulatif(api, inventaire):
 
 def test_valider_l_inventaire_ne_valide_rien(api, inventaire):
     refus = api.post(f"/inventaires/{inventaire}/valider", headers=AUTEUR)
-    verifier_erreur(refus, 409, "validation_refusee", "6 bouteille(s) à relire")
+    verifier_erreur(refus, 409, "validation_refusee", "6 bouteilles à relire")
     assert api.get(f"/inventaires/{inventaire}").json()["progression"]["par_statut"]["validee"] == 0

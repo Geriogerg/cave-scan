@@ -525,8 +525,16 @@ def test_plusieurs_configurations_sans_designation_l_outil_n_en_choisit_aucune(c
     refus = client.post("/app/nouveau", data={"nom": "Vente"}, follow_redirects=False)
     assert refus.status_code == 422 and "Plusieurs configurations" in refus.text
     assert client.post("/app/configuration/creer", follow_redirects=False).status_code == 409
+    importe = client.post("/app/configuration/importer",  # un fichier de plus ne lève pas l'ambiguïté (T6-R4)
+                          files={"fichier": ("autre.json", json.dumps(brut).encode("utf-8"), "application/json")})
+    assert importe.status_code == 409 and "Plusieurs configurations" in importe.text
     monkeypatch.setenv("CAVE_SCAN_CONFIGS", str(configs))
     assert run_v0.main(["--dry-run", "--sortie", str(tmp_path / "x.xlsx")]) == 2
+    import mesurer_reduction
+
+    photos = tmp_path / "photos"
+    photos.mkdir()
+    assert mesurer_reduction.main(["--photos", str(photos), "--backend", "factice"]) == 2
 
     monkeypatch.setenv("CAVE_SCAN_MAISON", charger_config(CONFIG_TEST).maison)
     assert client.get("/app/configuration", follow_redirects=False).status_code == 303

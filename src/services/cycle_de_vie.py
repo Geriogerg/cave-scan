@@ -30,6 +30,7 @@ from src.services.depot import groupes_en_attente
 from src.services.extraction import charger_bouteille
 from src.services.inventaires import actualiser_statut, charger_inventaire, nom_de_vente, verifier_modifiable
 from src.services.relecture import auteur_valide
+from src.textes import accord
 
 
 class CycleRefuse(ValueError):
@@ -73,10 +74,12 @@ class Bilan:
         """Pourquoi l'Excel (ou la clôture) attend, en clair."""
         raisons = []
         if self.pas_analysees:
-            raisons.append(f"{len(self.pas_analysees)} bouteille(s) encore en cours d'analyse")
+            raisons.append(accord(len(self.pas_analysees), "bouteille encore en cours d'analyse",
+                                  "bouteilles encore en cours d'analyse"))
         if self.en_attente:
             raisons.append(
-                f"{self.en_attente} bouteille(s) ajoutée(s) pas encore lancée(s) : lancez leur analyse ou retirez-les"
+                accord(self.en_attente, "bouteille ajoutée pas encore lancée : lancez son analyse ou retirez-la",
+                       "bouteilles ajoutées pas encore lancées : lancez leur analyse ou retirez-les")
             )
         return " ; ".join(raisons)
 
@@ -84,7 +87,7 @@ class Bilan:
         """L'avertissement de la clôture : ce qui part sans avoir été validé."""
         morceaux = []
         if self.non_validees:
-            morceaux.append(f"{self.non_validees} bouteille(s) non validée(s)")
+            morceaux.append(accord(self.non_validees, "bouteille non validée", "bouteilles non validées"))
         if self.en_erreur:
             morceaux.append(f"{self.en_erreur} en erreur d'analyse")
         return ", ".join(morceaux)

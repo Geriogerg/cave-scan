@@ -192,3 +192,8 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 6 | T6-B5 | mineur | « Bouteille suivante » sans photo : sans effet visible | Corrigé : grisé, avec sa raison ; test navigateur | lot 32 |
 | 6 | T6-B7 | mineur | « Leurs photos » pour 1 ; Ctrl+Entrée au téléphone ; « doute du modèle » sans lecture | Corrigé ; tests | lot 32 |
 | 6 | T6-D4 / T6-B7 (d) | mineur | Dépôt : quantité refusée effacée, rangée cassée | Corrigé : saisie gardée, raison sous la rangée ; test navigateur | lot 32 |
+| 6 | T6-B6 / T6-D6 / T6-R7 | mineur | « (s) » restants (Clore, Séparer, historique, refus, photos) | Corrigé : un seul accord (`src/textes.py`) pour les écrans et les messages des services ; la ligne de commande garde ses « (s) » (outil de développeur) | lot 33 |
+| 6 | T6-D5 / T6-B10 (1re partie) | mineur | Clôture : succès en jaune, message en double | Corrigé : le bandeau seul ; le texte jaune reste pour le renvoi depuis le dépôt | lot 33 |
+| 6 | T6-D9 | mineur | Guillemets séparés de leur mot | Corrigé : espaces insécables (suivi en pause, configuration) | lot 33 |
+| 6 | T6-R4 | réserve | Choix n° 7 : import et mesurer_reduction.py sans test ; phrase maladroite | Corrigé : tests ; « En ligne de commande, --maison la désigne aussi. » Le nom du réglage reste dans le bandeau : seul l'installateur peut agir | lot 33 |
+| 6 | T6-R5 | réserve | Choix n° 8 : pas de test de l'avis à l'écran ; test qui se saute en silence | Corrigé : le test tactile vérifie l'avis ; plus de saut silencieux | lot 33 |

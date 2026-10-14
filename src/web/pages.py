@@ -43,6 +43,7 @@ from src.services.envoi import TAILLE_MAX_OCTETS, EnvoiRefuse, config_de_la_mais
 from src.services.inventaires import charger_inventaire, lister_inventaires
 from src.services.pilotage import avancement, reprendre
 from src.services.relecture import CorrectionRefusee, quantite_valide
+from src.textes import accord
 
 DOSSIER = Path(__file__).resolve().parent
 
@@ -85,7 +86,7 @@ def _horodatage(valeur: datetime | None) -> str:
 
 
 gabarits.env.filters["duree"] = _duree
-gabarits.env.filters["accord"] = lambda nombre, singulier, pluriel: f"{nombre} {pluriel if nombre > 1 else singulier}"
+gabarits.env.filters["accord"] = accord
 gabarits.env.filters["date"] = _date
 gabarits.env.filters["horodatage"] = _horodatage
 gabarits.env.globals["auteur_des_ecrans"] = auteur_des_ecrans
@@ -162,7 +163,7 @@ def depot(request: Request, inventaire_id: int, base: SessionBase):
     """Le dépôt d'un brouillon, ou l'ajout de bouteilles à un inventaire lancé —
     pas à un inventaire clos (lecture seule, 0168)."""
     if charger_inventaire(base, inventaire_id).clos_le is not None:
-        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=clos", status_code=303)
+        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=deja_clos", status_code=303)
     vue = apercu(base, inventaire_id)
     # Clé -> photos déjà reçues (leurs identifiants : la page montre leurs
     # miniatures) et numéro : un autre appareil voit aussi ces bouteilles (T2-D1).
@@ -191,7 +192,7 @@ def verifier(request: Request, inventaire_id: int, base: SessionBase):
     # Déjà lancée (retour arrière après « Lancer ») ou close : rien à vérifier ici,
     # le suivi le dit au lieu d'une page vide (T5-B5).
     if vue.inventaire.clos_le is not None:
-        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=clos", status_code=303)
+        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=deja_clos", status_code=303)
     if vue.inventaire.statut != "brouillon" and not vue.bouteilles:
         return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=deja_lancee", status_code=303)
     return page(request, "verifier.html", vue=vue)
@@ -292,7 +293,7 @@ def suivi(request: Request, inventaire_id: int, base: SessionBase, fait: str | N
     return page(
         request, "suivi.html", inventaire=inventaire, etat=avancement(base, inventaire_id),
         en_attente=apercu(base, inventaire_id).bouteilles, fait=MESSAGES.get(fait or ""),
-        fait_attention=fait in ("excel_refuse", "nom_vide", "clos", "deja_lancee"),  # pas un succès (T4-D6)
+        fait_attention=fait in ("excel_refuse", "nom_vide", "deja_clos", "deja_lancee"),  # pas un succès (T4-D6)
     )
 
 

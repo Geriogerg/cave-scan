@@ -15,6 +15,7 @@ from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse, Response
 
 from src.api.dependances import AuteurEcran, SessionBase
+from src.textes import accord
 from src.services.cycle_de_vie import (
     archiver,
     bilan,
@@ -42,7 +43,7 @@ MESSAGES = {
     "excel_refuse": "L'Excel n'est pas encore disponible : chaque bouteille doit d'abord avoir sa ligne (voir ci-dessous).",
     "corbeille": "Inventaire mis à la corbeille.",
     "deja_lancee": "Analyse déjà lancée : plus rien à vérifier. Suivez-la ici.",
-    "clos": "Inventaire clos : ses photos ne se modifient plus (rouvrez-le pour en ajouter).",
+    "deja_clos": "Inventaire clos : ses photos ne se modifient plus (rouvrez-le pour en ajouter).",
 }
 
 
@@ -127,7 +128,7 @@ def confirmer_la_cloture(request: Request, inventaire_id: int, base: SessionBase
         return page(request, "erreur.html", 409,
                     message=f"L'inventaire ne peut pas encore être clos : {etat.ce_qui_manque()}.")
     explications = [
-        f"{etat.total} bouteille(s), dont {etat.validees} validée(s).",
+        f"{accord(etat.total, 'bouteille', 'bouteilles')}, dont {accord(etat.validees, 'validée', 'validées')}.",
         "Ensuite : lecture seule. L'Excel reste téléchargeable ; l'inventaire peut être rouvert.",
     ]
     if etat.ce_qui_n_est_pas_valide():

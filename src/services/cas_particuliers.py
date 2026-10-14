@@ -20,6 +20,7 @@ from src.config.maison import COLONNE_QUANTITE
 from src.donnees.modeles import Correction, EvenementBouteille, FicheBouteille
 from src.services.extraction import charger_bouteille
 from src.services.inventaires import actualiser_statut, config_figee, verifier_modifiable
+from src.textes import accord
 from src.services.relecture import (
     auteur_valide,
     champs_corrigeables,
@@ -152,7 +153,7 @@ def separer(session: Session, bouteille_id: int, quantite: Any, auteur: str) -> 
     nombre = quantite_valide(quantite)
     if nombre >= source.quantite:
         raise ActionRefusee(
-            f"{_nom(source)} compte {source.quantite} exemplaire(s) : on peut en séparer "
+            f"{_nom(source)} compte {accord(source.quantite, 'exemplaire', 'exemplaires')} : on peut en séparer "
             f"{source.quantite - 1} au plus. Indiquez d'abord la quantité totale, puis séparez."
         )
     inventaire = source.inventaire

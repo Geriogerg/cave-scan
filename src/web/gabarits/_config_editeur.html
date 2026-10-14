@@ -50,7 +50,7 @@
             <button class="bouton petit" type="submit" name="action" value="descendre-{{ i }}" {% if loop.last %}disabled{% endif %} aria-label="Descendre la colonne {{ d.nom }}">↓</button>
             <button class="bouton petit danger" type="submit" name="action" value="supprimer-{{ i }}"
                     hx-post="{{ adresse }}" hx-target="#editeur" hx-swap="outerHTML"
-                    hx-confirm="Retirer la colonne « {{ d.nom or 'nouvelle' }} » de l'Excel ? (Rien n'est enregistré avant « Enregistrer ».)">Retirer</button>
+                    hx-confirm="Retirer la colonne « {{ d.nom or 'nouvelle' }} » de l'Excel ? (Rien n'est enregistré avant « Enregistrer ».)">Retirer</button>
           </span>
         </div>
 
@@ -135,7 +135,7 @@
           {% endfor %}
           </tbody>
         </table>
-        <p class="aide">« Non déterminable » est toujours proposé.
+        <p class="aide">« Non déterminable » est toujours proposé.
           <button class="lien" type="submit" name="action" value="ajouter_valeur-{{ i }}">Ajouter une valeur</button></p>
         {% else %}
         <input type="hidden" name="c{{ i }}_nb_valeurs" value="0">
@@ -172,7 +172,7 @@
 {{ regles_fixes[1] }}</pre>
       </details>
       <textarea name="consignes" id="consignes" rows="10">{{ consignes }}</textarea>
-      <p class="aide">Gardez tels quels les mots entre « » et en MAJUSCULES : l'outil les attend.</p>
+      <p class="aide">Gardez tels quels les mots entre « » et en MAJUSCULES : l'outil les attend.</p>
       {% for a in avertissements if a.startswith("Consignes générales") %}<p class="message attention">{{ a }}</p>{% endfor %}
       {% if erreur_consignes %}<p class="message alerte" role="alert" id="refus-consignes">{{ erreur_consignes }}</p>{% endif %}
       <p class="consignes-actions">

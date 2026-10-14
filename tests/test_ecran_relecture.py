@@ -353,7 +353,7 @@ def test_valider_une_bouteille_au_format_vide_le_dit_sans_bloquer(api, inventair
         if champs_restes_vides(base, bouteille_id):
             break
     else:
-        pytest.skip("aucune bouteille au format ou au millésime vide dans les fixtures")
+        raise AssertionError("les fixtures n'ont plus de bouteille au format ou au millésime vide : ce test ne prouverait plus rien")
     texte = ouvrir(api, inventaire, bouteille_id)
     reponse = api.post(f"/app/inventaires/{inventaire}/relecture/{bouteille_id}/valider", data=formulaire(texte), headers=HX)
     assert reponse.status_code == 204
@@ -370,7 +370,7 @@ def test_l_avis_de_la_derniere_bouteille_s_affiche_au_recapitulatif(api, inventa
     toutes = ids(base, inventaire)
     vide = next((b for b in toutes if champs_restes_vides(base, b)), None)
     if vide is None:
-        pytest.skip("aucune bouteille au format ou au millésime vide dans les fixtures")
+        raise AssertionError("les fixtures n'ont plus de bouteille au format ou au millésime vide : ce test ne prouverait plus rien")
     for autre in toutes:
         if autre != vide:
             texte = ouvrir(api, inventaire, autre)

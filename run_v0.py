@@ -71,7 +71,7 @@ def config_par_defaut() -> Path:
 
     concurrentes = configurations_en_concurrence(dossier_configs())
     if concurrentes:  # l'outil ne choisit pas (0182) : --maison, ou une seule configuration
-        raise Arret(message_plusieurs_configurations(concurrentes) + " Ou indiquez-la avec --maison.")
+        raise Arret(message_plusieurs_configurations(concurrentes) + " En ligne de commande, --maison la désigne aussi.")
     active = config_de_l_instance(dossier_configs())
     return active.fichier if active is not None else CONFIG_DEFAUT
 SORTIE_DEFAUT = RACINE / "out" / "listing_auto.xlsx"

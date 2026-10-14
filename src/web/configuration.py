@@ -150,8 +150,8 @@ def ouvrir(request: Request, nom: str, base: SessionBase, enregistree: Annotated
     fait = None
     if creee:
         fait = (
-            "Configuration créée avec les colonnes de base. Ajoutez vos colonnes (« Ajouter une colonne », en bas), "
-            "donnez-leur un nom, une description et, pour une liste, ses valeurs ; puis « Enregistrer »."
+            "Configuration créée avec les colonnes de base. Ajoutez vos colonnes (« Ajouter une colonne », en bas), "
+            "donnez-leur un nom, une description et, pour une liste, ses valeurs ; puis « Enregistrer »."
         )
     if enregistree is not None:
         fait = (
@@ -179,7 +179,7 @@ def agir(request: Request, nom: str, base: SessionBase, champs: Formulaire):
     if consignes_modifiees(active, brut) and champs.get("confirmer_consignes") != "1":
         return _afficher(
             request, base, nom, edition(active, brut), 422,
-            erreur_consignes="Rien n'a été enregistré : cochez « Je confirme modifier les consignes » pour "
+            erreur_consignes="Rien n'a été enregistré : cochez « Je confirme modifier les consignes » pour "
                              "enregistrer des consignes modifiées.",
         )
     version_vue = champs.get("version_vue", "")

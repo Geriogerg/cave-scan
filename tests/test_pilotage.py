@@ -74,7 +74,7 @@ def test_valider_l_inventaire_ne_valide_aucune_bouteille_a_la_place_de_l_expert(
     qu'une bouteille n'a pas été validée une par une, c'est refusé, avec ce qui
     reste à faire ; une fois toutes validées, l'inventaire l'est."""
     extraire_inventaire(session, inventaire_id, ExtracteurScenario(), stockage)
-    with pytest.raises(ValidationRefusee, match=r"6 bouteille\(s\) à relire"):
+    with pytest.raises(ValidationRefusee, match="6 bouteilles à relire"):
         valider_inventaire(session, inventaire_id, "expert")
     assert avancement(session, inventaire_id).par_statut["validee"] == 0  # rien validé à sa place
 
@@ -87,7 +87,7 @@ def test_valider_l_inventaire_ne_valide_aucune_bouteille_a_la_place_de_l_expert(
 
 def test_valider_l_inventaire_refuse_avec_un_message_pour_l_expert(session, inventaire_id, stockage):
     extraire_inventaire(session, inventaire_id, ExtracteurScenario({4: "passagere"}), stockage)
-    with pytest.raises(ValidationRefusee, match=r"1 bouteille\(s\) en erreur \(n°4\)"):
+    with pytest.raises(ValidationRefusee, match=r"1 bouteille en erreur \(n°4\)"):
         valider_inventaire(session, inventaire_id, "expert")
     assert avancement(session, inventaire_id).par_statut["validee"] == 0  # rien de validé
 

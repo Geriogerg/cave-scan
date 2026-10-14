@@ -18,6 +18,7 @@ sous-dossiers sans photo sont ignorés.
 """
 
 from __future__ import annotations
+from src.textes import accord
 
 import hashlib
 import re
@@ -118,7 +119,7 @@ def _photos_du_sous_dossier(dossier: Path) -> list[Path]:
         perdues = [c.name for c in profond.rglob("*") if c.suffix.lower() in EXTENSIONS_IMAGE | EXTENSIONS_NON_LUES]
         if perdues:
             raise PhotosInvalides(
-                f"Photos rangées trop profond ({dossier.name}/{profond.name}/ : {len(perdues)} photo(s)). "
+                f"Photos rangées trop profond ({dossier.name}/{profond.name}/ : {accord(len(perdues), 'photo', 'photos')}). "
                 f"Un sous-dossier par bouteille, ses photos directement dedans : sinon elles ne "
                 f"seraient jamais lues."
             )
@@ -135,7 +136,7 @@ def _refuser_les_formats_non_lus(dossier: Path, fichiers: list[Path]) -> None:
         return
     apercu = ", ".join(non_lues[:5]) + (f" (+{len(non_lues) - 5})" if len(non_lues) > 5 else "")
     raise PhotosInvalides(
-        f"{len(non_lues)} photo(s) dans un format non lu par la chaîne ({dossier.name}) : {apercu}. "
+        f"{accord(len(non_lues), 'photo', 'photos')} dans un format non lu par la chaîne ({dossier.name}) : {apercu}. "
         f"Formats lus : {', '.join(sorted(EXTENSIONS_IMAGE))}. Elles ne sont pas ignorées en "
         f"silence : une bouteille perdrait une photo. Les convertir en JPEG ou PNG."
     )
@@ -157,7 +158,7 @@ def _refuser_les_heic_illisibles(images: list[Path]) -> None:
             illisibles.append(image.name)
     if illisibles:
         raise PhotosInvalides(
-            f"{len(illisibles)} photo(s) HEIC illisible(s) : {', '.join(illisibles[:5])}. "
+            f"{accord(len(illisibles), 'photo HEIC illisible', 'photos HEIC illisibles')} : {', '.join(illisibles[:5])}. "
             f"Fichier abîmé ou incomplet : la recopier depuis le téléphone, ou l'exporter en JPEG."
         )
 

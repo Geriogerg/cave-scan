@@ -181,9 +181,9 @@ def test_la_config_avertit_s_il_manque_la_colonne_a_verifier(tmp_path):
 def test_l_api_et_le_recapitulatif_disent_pourquoi_l_excel_attend(api, dossier_photos):
     inventaire_id = envoyer(api, dossier_photos).json()["id"]
     refus = api.get(f"/inventaires/{inventaire_id}/export")
-    verifier_erreur(refus, 409, "export_refuse", "6 bouteille(s) encore en cours d'analyse")
+    verifier_erreur(refus, 409, "export_refuse", "6 bouteilles encore en cours d'analyse")
     recap = api.get(f"/app/inventaires/{inventaire_id}/recapitulatif").text
-    assert "Excel — il reste 6 bouteille(s)" in recap
+    assert "Excel — il reste 6 bouteilles" in recap
     assert "Télécharger l'Excel" not in recap
 
     extraire_en_arriere_plan(api, inventaire_id, FixtureExtractor(charges(), charger_config(CONFIG_TEST)))

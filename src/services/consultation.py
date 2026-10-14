@@ -27,6 +27,7 @@ from src.services.cycle_de_vie import bilan
 from src.services.extraction import BouteilleIntrouvable, extractions_de
 from src.services.inventaires import charger_inventaire, config_figee
 from src.services.pilotage import Avancement, avancement
+from src.textes import accord
 from src.services.relecture import (
     extraction_qui_fait_foi,
     CHAMP_STATUT,
@@ -594,9 +595,9 @@ def _historique(session: Session, bouteille: FicheBouteille, config: ConfigMaiso
         texte = LIBELLES_EVENEMENT.get(evenement.type, evenement.type)
         detail = evenement.detail or {}
         if evenement.type == "separation" and "nouvelle" in detail:
-            texte = f"{detail['quantite']} exemplaire(s) séparé(s) vers {detail['nouvelle']}"
+            texte = f"{accord(detail['quantite'], 'exemplaire séparé', 'exemplaires séparés')} vers {detail['nouvelle']}"
         elif evenement.type == "separation" and "source" in detail:
-            texte = f"née de la séparation de {detail['source']} ({detail['quantite']} exemplaire(s))"
+            texte = f"née de la séparation de {detail['source']} ({accord(detail['quantite'], 'exemplaire', 'exemplaires')})"
         elif evenement.type == "signalement_paire" and detail.get("motif"):
             texte = f"{texte} : {detail['motif']}"
         lignes.append(LigneHistorique(evenement.cree_le, evenement.auteur, texte))

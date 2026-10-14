@@ -1337,7 +1337,14 @@ un renvoi d'une ligne à leur place.
   la mise en page entre l'appui et le relâchement, et le navigateur n'envoyait
   alors aucun clic (T6-B1). Pendant la saisie, les vignettes sont effacées
   mais gardent leur place — écarté : les retirer de la mise en page (la
-  validation restait perdue). Une bouteille que le modèle
+  validation restait perdue).
+
+- 0192 — Accords et guillemets (tour 6, lot 33). Un seul accord, `src/textes.py`
+  (`accord`), pour les écrans (filtre) et les messages des services qui
+  atteignent l'expert ; la ligne de commande garde ses « (s) » (outil de
+  développeur). Les guillemets « » qui se séparaient de leur mot en fin de
+  ligne prennent des espaces insécables. La clôture n'affiche plus un message
+  en double : le bandeau « Inventaire clos le … » suffit. Une bouteille que le modèle
   n'a pas lue n'affiche aucun « doute du modèle ». Au dépôt, une quantité
   refusée reste dans son champ, comme sur Vérifier.
 

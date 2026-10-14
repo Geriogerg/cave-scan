@@ -65,7 +65,7 @@ def test_la_corbeille_demande_confirmation_et_se_restaure(api, extrait):
 
 def test_clore_avertit_de_ce_qui_n_est_pas_valide_puis_lecture_seule(api, extrait):
     confirmation = api.get(f"/app/inventaires/{extrait}/clore").text
-    assert "6 bouteille(s) non validée(s)" in confirmation and "Clore l&#39;inventaire quand même" in confirmation
+    assert "6 bouteilles non validées" in confirmation and "Clore l&#39;inventaire quand même" in confirmation
     api.post(f"/app/inventaires/{extrait}/clore")
     suivi = api.get(f"/app/inventaires/{extrait}/suivi").text
     assert "lecture seule" in suivi and "Rouvrir" in suivi and "Ajouter des bouteilles" not in suivi

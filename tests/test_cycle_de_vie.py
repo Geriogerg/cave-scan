@@ -129,7 +129,7 @@ def test_clore_sans_tout_valider_est_permis_et_note_ce_qui_reste(session, extrai
     valider(session, bouteilles(session, extrait)[0].id, EXPERT)
     etat = clore(session, extrait, EXPERT)
     assert (etat.validees, etat.non_validees) == (1, 5)
-    assert etat.ce_qui_n_est_pas_valide() == "5 bouteille(s) non validée(s)"
+    assert etat.ce_qui_n_est_pas_valide() == "5 bouteilles non validées"
     (evenement,) = evenements_d_inventaire(session, extrait)
     assert evenement.type == "cloture" and evenement.detail == {
         "bouteilles": 6, "validees": 1, "non_validees": 5, "en_erreur": 0,
