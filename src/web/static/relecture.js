@@ -74,18 +74,24 @@
   }
 
   (function confirmerLaValidation() {
-    var position = null;
-    try { position = sessionStorage.getItem("cave-scan-validee"); sessionStorage.removeItem("cave-scan-validee"); } catch (e) { return; }
+    var position = null, avis = null;
+    try {
+      position = sessionStorage.getItem("cave-scan-validee");
+      avis = sessionStorage.getItem("cave-scan-validee-avis");
+      sessionStorage.removeItem("cave-scan-validee");
+      sessionStorage.removeItem("cave-scan-validee-avis");
+    } catch (e) { return; }
     if (position === null) return;
     var zone = document.getElementById("messages");
     var message = document.createElement("p");
-    message.className = "message ok";
+    var court = position ? "Bouteille n°" + position + " validée." : "Bouteille validée.";
+    message.className = avis ? "message attention" : "message ok";
     message.setAttribute("role", "status");
-    message.textContent = position ? "Bouteille n°" + position + " validée." : "Bouteille validée.";
+    message.textContent = avis || court;
     zone.appendChild(message);
     var haut = document.getElementById("indicateur");  // en haut : visible même au téléphone
     if (haut) {
-      haut.textContent = message.textContent;
+      haut.textContent = court;
       haut.className = "indicateur ok";
       setTimeout(function () { afficherIndicateur(); }, 4000);
     }
@@ -199,7 +205,11 @@
         validationAcceptee = true;
         // La bouteille suivante le dira (T2-D11) — sans toucher à son adresse,
         // qui doit rester celle qu'on a préchargée.
-        try { sessionStorage.setItem("cave-scan-validee", racine.dataset.position || ""); } catch (e) { /* stockage refusé */ }
+        var avis = evenement.detail.xhr.getResponseHeader("X-Avis-Validation");  // format, millésime vides (0183)
+        try {
+          sessionStorage.setItem("cave-scan-validee", racine.dataset.position || "");
+          if (avis) sessionStorage.setItem("cave-scan-validee-avis", decodeURIComponent(avis));
+        } catch (e) { /* stockage refusé */ }
       }
     }
   });

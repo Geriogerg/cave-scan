@@ -133,6 +133,8 @@ def test_parcours_complet_et_excel_identique_a_la_ligne_de_commande(api, dossier
     monkeypatch.setattr(run_v0, "_extracteur", lambda *a: FixtureExtractor(charges(), charger_config(CONFIG_TEST)))
     assert run_v0.main(["--photos", str(dossier_photos), "--base", str(base_cli), "--sortie", str(tmp_path / "x.xlsx")]) == 0
     assert cli_inventaire.main(["corriger", "1", "1", "millesime", "2001", "--auteur", "Expert test", "--base", str(base_cli)]) == 0
+    for position in range(1, 7):  # validées des deux côtés : une validée n'est jamais surlignée (0183)
+        assert cli_inventaire.main(["valider", "1", str(position), "--auteur", "Expert test", "--base", str(base_cli)]) == 0
     assert cli_inventaire.main(["exporter", "1", "--sortie", str(sortie_cli), "--base", str(base_cli)]) == 0
 
     assert contenu_excel(export.content) == contenu_excel(sortie_cli)

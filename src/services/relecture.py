@@ -716,6 +716,32 @@ def _ajouter_temps(bouteille: FicheBouteille, temps_ms: int | None) -> None:
     bouteille.temps_relecture_ms = (bouteille.temps_relecture_ms or 0) + temps
 
 
+def champs_restes_vides(session: Session, bouteille_id: int) -> list[str]:
+    """Le format et le millésime restés vides (abstention) : l'Excel les laissera
+    vides, sans surlignage une fois la bouteille validée. L'écran le dit à la
+    validation (decisions.md 0183). Les noms sont ceux des colonnes de la maison."""
+    from src.export.excel_writer import valeur_stockee
+
+    bouteille = charger_bouteille(session, bouteille_id)
+    config = config_figee(bouteille.inventaire)
+    courantes = valeurs_courantes(session, bouteille_id)
+    vides = []
+    for cle in ("format", "millesime"):
+        colonne = config.colonne(cle)
+        if colonne is None:
+            continue
+        valeur = valeur_stockee(courantes, colonne)
+        if valeur in (None, "") or est_abstention(valeur):
+            vides.append(colonne.nom)
+    return vides
+
+
+def avis_de_validation(position: int, vides: list[str]) -> str:
+    if len(vides) > 1:
+        return f"Bouteille n°{position} validée — {' et '.join(vides)} vides : ils resteront vides dans l'Excel."
+    return f"Bouteille n°{position} validée — {vides[0]} vide : il restera vide dans l'Excel."
+
+
 def valider_en_relecture(
     session: Session,
     bouteille_id: int,

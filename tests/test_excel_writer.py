@@ -293,3 +293,27 @@ def test_a_verifier_liste_les_champs_par_leur_nom_de_colonne(tmp_path, config):
     attendu = f"{config.colonne('millesime').nom}, {config.colonne('format').nom}"
     assert attendu == "Millésime, Format"
     assert cellule(feuille, config, "a_verifier").value == attendu
+
+
+def test_une_bouteille_validee_n_est_jamais_surlignee_mais_sa_case_reste_vide(tmp_path, config):
+    """Décision n° 8 (0183) : validée = relue par l'expert. Sa ligne n'est plus
+    surlignée et « À vérifier » est vide ; l'abstention reste une case VIDE
+    (jamais devinée). La même bouteille, non validée, reste surlignée."""
+    from src.export.excel_writer import EtatLigne
+
+    colonne = next(c for c in config.colonnes_modele if c.type == "liste")
+    validee, a_relire_encore = bouteille_complete(config), bouteille_complete(config)
+    for bouteille, identifiant in ((validee, "B-VALIDEE"), (a_relire_encore, "B-A-RELIRE")):
+        bouteille.id = identifiant
+        poser(bouteille, colonne, NON_DETERMINABLE)
+        bouteille.champs_a_verifier.append(colonne.cle)
+
+    chemin = ecrire_excel([validee, a_relire_encore], config, tmp_path / "listing.xlsx",
+                          {"B-VALIDEE": EtatLigne(relue=True)})
+    feuille = load_workbook(chemin).active
+    assert not surlignee(feuille, 2) and surlignee(feuille, 3)
+    assert cellule(feuille, config, colonne.cle, 2).value is None
+    if config.colonne("a_verifier") is not None:
+        assert cellule(feuille, config, "a_verifier", 2).value is None
+        assert cellule(feuille, config, "a_verifier", 3).value
+

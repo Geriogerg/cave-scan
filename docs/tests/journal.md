@@ -178,3 +178,4 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 5 | T3-D2 (reste) | mineur | Alerte d'exemple loin des consignes | Corrigé : aussi sous les consignes ; test | lot 28 |
 | 5 | T5-DS3 | suggestion | Version reprise sans origine | Corrigé : « (reprise de la version N) » ; test | lot 28 |
 | 5 | Choix n° 7 (décision) | décision | Plusieurs configurations : la première par ordre alphabétique, en silence | Appliqué (option A, 0182) : aucune choisie sans `CAVE_SCAN_MAISON` ; bandeau rouge sur Configuration et Nouvel inventaire, création et import refusés, ligne de commande arrêtée avec la raison ; test | lot 29 |
+| 5 | Choix n° 8 (décision) | décision | Bouteille validée encore surlignée dans l'Excel (T4-B18) | Appliqué (option A, 0183) : validée = jamais surlignée, « À vérifier » vide, case d'abstention vide ; la validation d'une bouteille au format ou millésime vide le dit sur la suivante, sans bloquer ; tests | lot 30 |

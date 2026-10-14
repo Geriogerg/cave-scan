@@ -340,3 +340,24 @@ def test_une_bouteille_d_un_autre_inventaire_est_introuvable(api, inventaire, do
     etrangere = ids(base, autre)[0]
     reponse = api.get(f"/app/inventaires/{inventaire}/relecture/{etrangere}")
     assert reponse.status_code == 404 and "Impossible d'afficher cette page" in reponse.text
+
+
+def test_valider_une_bouteille_au_format_vide_le_dit_sans_bloquer(api, inventaire, base):
+    """Décision n° 8 (0183) : format ou millésime vide à la validation : la
+    validation se fait, et la bouteille suivante le dit."""
+    from urllib.parse import unquote
+
+    from src.services.relecture import champs_restes_vides
+
+    for bouteille_id in ids(base, inventaire):
+        if champs_restes_vides(base, bouteille_id):
+            break
+    else:
+        pytest.skip("aucune bouteille au format ou au millésime vide dans les fixtures")
+    texte = ouvrir(api, inventaire, bouteille_id)
+    reponse = api.post(f"/app/inventaires/{inventaire}/relecture/{bouteille_id}/valider", data=formulaire(texte), headers=HX)
+    assert reponse.status_code == 204
+    avis = unquote(reponse.headers["X-Avis-Validation"])
+    assert "validée" in avis and "dans l'Excel" in avis
+    assert api.get(f"/inventaires/{inventaire}/bouteilles/{bouteille_id}").json()["statut"] == "validee"
+

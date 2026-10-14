@@ -163,7 +163,13 @@ def valeur_affichee_ligne(
             return MENTION_SAISIE_MANUELLE
         # Les doutes du modèle, par le nom de colonne de la maison (« État
         # étiquette »), jamais par la clé interne (rapport du testeur, T1-M2).
-        champs = dict.fromkeys((noms or {}).get(c, c) for bouteille in groupe for c in bouteille.champs_a_verifier)
+        # Une bouteille validée a été relue par l'expert : plus rien à vérifier (0183).
+        champs = dict.fromkeys(
+            (noms or {}).get(c, c)
+            for bouteille, etat in zip(groupe, lignes, strict=True)
+            if not etat.relue
+            for c in bouteille.champs_a_verifier
+        )
         return ", ".join(champs) or None
     if colonne.cle == COLONNE_RELUE:
         return "oui" if lignes and all(etat.relue for etat in lignes) else None
@@ -183,7 +189,8 @@ def valeur_affichee_ligne(
 
 
 def a_relire(bouteille: Bouteille, config: ConfigMaison) -> bool:
-    """La ligne doit-elle être surlignée ? (decisions.md 0055)
+    """La ligne doit-elle être surlignée ? (decisions.md 0055 ; jamais pour une
+    bouteille validée : `ecrire_excel` en tient compte, 0183)
 
     Oui si une case lue par le modèle est vide pour cause d'abstention, si un
     code sort du vocabulaire de la maison, ou si le modèle a signalé un doute
@@ -239,8 +246,12 @@ def ecrire_excel(
 
     noms = {c.cle: c.nom for c in config.colonnes}
     for numero_ligne, groupe in enumerate(regrouper(bouteilles, config, etats), start=2):
-        # Une ligne regroupée est à relire dès qu'une de ses bouteilles l'est.
-        surligner = any(a_relire(bouteille, config) for bouteille in groupe)
+        # Une ligne regroupée est à relire dès qu'une de ses bouteilles l'est —
+        # une bouteille validée, jamais : l'expert l'a relue (decisions.md 0183).
+        surligner = any(
+            a_relire(bouteille, config) and not (etats or {}).get(bouteille.id, SANS_ETAT).relue
+            for bouteille in groupe
+        )
         en_erreur = any((etats or {}).get(bouteille.id, SANS_ETAT).erreur for bouteille in groupe)
         for index, colonne in enumerate(config.colonnes, start=1):
             valeur = valeur_affichee_ligne(groupe, colonne, etats, noms)

@@ -15,6 +15,8 @@ signalée, modification faite ailleurs) sont tous vérifiés par le serveur.
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Request
@@ -44,6 +46,8 @@ from src.services.relecture import (
     ajouter_temps_de_relecture,
     corriger_en_relecture,
     revenir_a_la_valeur_du_modele,
+    avis_de_validation,
+    champs_restes_vides,
     valider_en_relecture,
 )
 from src.web.pages import ERREURS_DE_SERVICE, page
@@ -223,7 +227,11 @@ def valider(request: Request, inventaire_id: int, bouteille_id: int,
     except ERREURS_DE_SERVICE as refus:
         return _refus_de_validation(request, base, inventaire_id, bouteille_id, filtre, 409, str(refus))
     prochaine = prochaine_a_relire(etats_de_relecture(base, inventaire_id), position, filtre)
-    return _redirection(request, adresse(inventaire_id, prochaine, filtre))
+    reponse = _redirection(request, adresse(inventaire_id, prochaine, filtre))
+    vides = champs_restes_vides(base, bouteille_id)
+    if vides:  # la bouteille suivante le dit, sans bloquer (decisions.md 0183)
+        reponse.headers["X-Avis-Validation"] = quote(avis_de_validation(position, vides))
+    return reponse
 
 
 def _refus_de_validation(request, base, inventaire_id, bouteille_id, filtre, statut, message, refus=None, changements=None):
