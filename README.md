@@ -310,7 +310,8 @@ Les corrections faites à l'écran sont signées « Expert », ou du nom indiqu�
 Chaque maison de vente a sa propre installation de l'application, avec sa
 configuration : les pages ne parlent jamais de « maison ». La configuration est
 le fichier de `config/maisons/` (s'il y en a plusieurs, `CAVE_SCAN_MAISON` dans
-`.env` désigne le bon).
+`.env` désigne le bon ; sans lui, l'outil n'en prend aucun et le dit en rouge,
+decisions.md 0182).
 
 Depuis l'accueil, **Configuration** : les colonnes de votre Excel. Sans
 configuration, « Créer la configuration » part des colonnes de base, sans aucun

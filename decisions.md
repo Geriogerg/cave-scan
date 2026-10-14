@@ -1151,6 +1151,9 @@ un renvoi d'une ligne à leur place.
   par sa config JSON (contrainte 6) — écarté : supprimer la notion de maison des
   données (migration sans bénéfice, et les inventaires passés y sont liés).
 
+  (Le choix « à défaut, la première par nom de fichier » est remplacé par
+  0182 : sans désignation, aucune.)
+
 - 0172 — La configuration se crée à la main, sans JSON (demande de
   l'utilisateur, 2026-10-13) : sans configuration, la page propose « Créer la
   configuration », qui part des colonnes de base (N°, quantité, domaine,
@@ -1277,6 +1280,47 @@ un renvoi d'une ligne à leur place.
   rapide (jamais de fusion avec conflit, jamais de push) : maintenant pour
   tout ce qui est fait, puis à la fin de chaque tour corrigé et à l'arrêt de
   la boucle, toujours avec la suite complète verte.
+
+- 0185 — Saisies démesurées et noms de vente (boucle qualité, tour 5, lot 22).
+  Une quantité n'est convertie qu'à 6 chiffres ASCII au plus (`quantite_valide`,
+  partagée par Vérifier, le lancement, la relecture et Séparer) : au-delà, ou
+  « ² », un refus en clair, jamais une erreur serveur ; la saisie citée est
+  coupée à 20 caractères. Le nom d'une vente est borné à 200 caractères côté
+  serveur aussi, les caractères de contrôle remplacés par une espace
+  (`nom_de_vente`). Des consignes égales au texte d'origine (au blanc près)
+  sont les consignes d'origine — écarté : refuser les caractères de contrôle
+  (un collage depuis un tableur en contient).
+
+- 0186 — Relecture pendant une analyse (tour 5, lot 23). Tant que le modèle n'a
+  pas lu une bouteille, « Valider » est grisé avec sa raison (Ctrl+Entrée la
+  dit) ; le bandeau dit « en pause » ou « pas encore lancée » quand rien ne
+  bougera seul ; aucune « Note du modèle » n'est fabriquée. La fin de la
+  lecture recharge la page avec « Le modèle a lu la bouteille ». Le bouton
+  Valider est atténué pendant son délai de garde de 500 ms (0176). Vérifier
+  sans rien en attente renvoie au suivi, avec la raison.
+
+- 0187 — Configuration en clair (tour 5, lot 24). Les refus emploient les mots
+  de la page (types, sources, « Photos au plus par bouteille ») ; un
+  identifiant déjà pris est la seule cause dite pour sa colonne ; un fichier
+  sans colonne : un seul refus. Avertissements (sans bloquer) pour une
+  configuration sans « À vérifier », sans quantité, sans « N° » ou sans une
+  colonne du noyau. L'identifiant d'une nouvelle colonne suit son nom jusqu'à
+  l'enregistrement. Libellés des types et sources : une seule source
+  (`maison.py`).
+
+- 0188 — Dépôt (tour 5, lots 25 et 26). « Ajouter une bouteille » montre la
+  carte vide existante au lieu d'en créer une seconde ; une photo déjà choisie
+  le dit dans sa carte ; la barre de progression disparaît une fois tout
+  envoyé ; deux onglets sur le même dépôt se signalent (BroadcastChannel) ;
+  les bouteilles faites en galerie se voient en mode appareil photo ; une photo
+  lâchée hors d'une carte est refusée en clair. Accords singulier / pluriel au
+  lieu de « (s) » (filtre `accord`) — écarté : une clé de bouteille par onglet
+  (une photo gardée pour la reprise ne retrouverait plus sa bouteille).
+
+- 0189 — Relecture au téléphone et récapitulatif (tour 5, lot 27). Au
+  téléphone : navigation sur une ligne (mots courts), photo à 26 % de
+  l'écran, vignettes sur une rangée, pour lire le premier champ sans
+  défiler. Inventaire clos : « Télécharger l'Excel » est l'action principale.
 
 ---
 
