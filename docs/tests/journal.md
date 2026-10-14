@@ -118,3 +118,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 4 | T4-D14 (partie) | mineur | Vérifier vide dit trois fois la même chose ; dépôt vide « 0 photo(s) » ; « photo(s) » | Corrigé : un seul message ; « Aucune photo reçue pour l'instant » ; accord singulier / pluriel | lot 17 |
 | 4 | T4-D8 | mineur | Galerie : ordre des photos faux | Corrigé : photos déjà reçues d'abord | lot 17 |
 | 4 | T4-D9 / T4-B15 | mineur | Dépôt : gestes sans retour | Corrigé : pas de « Retirer » sur l'unique carte vide ; quantité 0 / abc refusée sous le champ ; photo choisie deux fois : « déjà dans la bouteille N » | lot 17 |
+| 4 | T4-B8 | mineur | « 3 / 6 … 7 / 6 » après un retrait | Corrigé : place parmi les bouteilles présentes ; test | lot 18 |
+| 4 | T4-B9 | mineur | Remise à relire : bouton « Déjà validée » | Corrigé : le bouton redevient « Valider » ; test | lot 18 |
+| 4 | T4-D13 / T4-B23 | mineur | Collage coupé à 1 000 en silence | Corrigé : compteur au-delà de 900, collage coupé annoncé | lot 18 |
+| 4 | T4-D3 | mineur | Téléphone, clavier : champ sous la photo | Corrigé : marge de défilement, vignettes masquées pendant la saisie | lot 18 |
+| 4 | T4-D4 / T4-B24 | mineur | Téléphone : aucun champ au premier écran ; confirmation cachée | Corrigé : en-tête de relecture resserré (compteurs détaillés au récapitulatif) ; « Bouteille n°X validée » aussi dans l'indicateur du haut | lot 18 |
+| 4 | T4-B17 | mineur | Durée allongée par la réanalyse d'une bouteille séparée | Corrigé : seules les bouteilles lues au lancement comptent | lot 18 |

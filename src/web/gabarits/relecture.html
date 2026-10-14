@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set f = fiche %}{% set b = f.bouteille %}{% set i = f.inventaire.id %}
-{% block titre %}Bouteille {{ b.position }} / {{ f.compteurs.total }} — {{ f.inventaire.nom }}{% endblock %}
+{% block titre %}Bouteille {{ f.rang }} / {{ f.compteurs.total }} — {{ f.inventaire.nom }}{% endblock %}
 {% block classe %}relecture{% endblock %}
 {% block tete %}
   {#- Photos de la bouteille suivante, chargées d'avance : passer à la suivante est immédiat. #}
@@ -15,7 +15,7 @@
 {% endblock %}
 {% block contenu %}
 <div class="barre-relecture">
-  <div class="position" title="Position dans l'inventaire"><strong>{{ b.position }}</strong> / {{ f.compteurs.total }}</div>
+  <div class="position" title="Bouteille n°{{ b.position }} de l'inventaire"><strong>{{ f.rang }}</strong> / {{ f.compteurs.total }}</div>
   {% include "_compteurs.html" %}
   <nav class="navigation-relecture" aria-label="Navigation entre les bouteilles">
     {% if adresse_precedente %}

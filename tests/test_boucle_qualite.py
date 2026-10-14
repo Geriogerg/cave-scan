@@ -243,3 +243,19 @@ def test_les_ecrans_ne_sont_jamais_servis_depuis_le_cache(api, dossier_photos):
     """T4-B3 : « retour arrière » = page rechargée, à jour."""
     inventaire_id = envoyer(api, dossier_photos).json()["id"]
     assert api.get(f"/app/inventaires/{inventaire_id}/suivi").headers["cache-control"] == "no-store"
+
+
+def test_relecture_position_et_bouton_apres_remise_a_relire(api, dossier_photos):
+    """T4-B8 : après un retrait, « 2 / 5 » et non « 3 / 5 » ; T4-B9 : une bouteille
+    validée puis corrigée retrouve « Valider et passer à la suivante »."""
+    inventaire_id = envoyer(api, dossier_photos).json()["id"]
+    extraire_en_arriere_plan(api, inventaire_id, FixtureExtractor(charges(), charger_config(CONFIG_TEST)))
+    ids = [b["id"] for b in api.get(f"/inventaires/{inventaire_id}/bouteilles").json()["bouteilles"]]
+    api.post(f"/app/inventaires/{inventaire_id}/relecture/{ids[1]}/retirer", headers=AUTEUR)
+    page = api.get(f"/app/inventaires/{inventaire_id}/relecture/{ids[2]}").text
+    assert "<strong>2</strong> / 5" in page
+
+    api.post(f"/inventaires/{inventaire_id}/bouteilles/{ids[0]}/valider", json={}, headers=AUTEUR)
+    reponse = api.post(f"/app/inventaires/{inventaire_id}/relecture/{ids[0]}/champ/millesime",
+                       data={"millesime": "1999"}, headers={"HX-Request": "true", **AUTEUR})
+    assert 'id="valider" hx-swap-oob="true"' in reponse.text and "Valider et passer à la suivante" in reponse.text

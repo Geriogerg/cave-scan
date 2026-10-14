@@ -114,9 +114,12 @@ def avancement(session: Session, inventaire_id: int) -> Avancement:
         if not restantes:  # terminée : la durée s'arrête à la dernière lecture (T1-m1)
             # La PREMIÈRE lecture de chaque bouteille : une réanalyse demandée des
             # minutes plus tard n'allonge pas la durée de l'analyse (T2-4).
+            # Une bouteille née d'une séparation n'a pas été lue au lancement : sa
+            # première lecture propre serait une réanalyse (T4-B17).
+            lues_au_lancement = [b.id for b in inventaire.bouteilles if b.separee_de_id is None]
             premieres = (
                 select(func.min(Extraction.cree_le).label("lue_le"))
-                .where(Extraction.bouteille_id.in_(ids), Extraction.cree_le >= inventaire.extraction_lancee_le)
+                .where(Extraction.bouteille_id.in_(lues_au_lancement), Extraction.cree_le >= inventaire.extraction_lancee_le)
                 .group_by(Extraction.bouteille_id)
                 .subquery()
             )

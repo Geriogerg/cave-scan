@@ -281,6 +281,7 @@ fieldset.champs { border: none; padding: 0; margin: 0; min-width: 0; }
 input.saisie::placeholder { color: var(--texte-doux); }
 .champ-pied { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 0.84rem; color: var(--texte-doux); min-height: 1.2em; }
 .champ-pied .lien { min-height: 0; font-size: 0.84rem; padding: 0; }
+.compte-texte { font-size: 0.8rem; color: var(--attention); align-self: flex-end; }
 .etat-champ.ok { color: var(--ok); }
 .etat-champ.refuse, .etat-champ.conflit { color: var(--alerte); font-weight: 600; }
 .champ[data-etat="envoi"] .champ-pied::after { content: "Enregistrement…"; color: var(--attention); }
@@ -323,7 +324,13 @@ input.saisie::placeholder { color: var(--texte-doux); }
   .photos { position: sticky; top: 0; z-index: 6; background: var(--fond); padding-bottom: 6px; }  /* au-dessus de « Valider » (T3-D13) */
   .visionneuse { height: 30vh; min-height: 180px; }
   .champs { gap: 2px; }
-  .champ { padding: 4px 6px; }
+  .champ { padding: 4px 6px; scroll-margin-top: calc(30vh + 24px); }  /* jamais sous la photo collée (T4-D3) */
+  .relecture-grille:has(.saisie:focus) .commandes-photo { display: none; }  /* saisie : la photo, sans vignettes */
+  /* Premier écran : la navigation tient sur une ligne, les compteurs détaillés
+     restent au récapitulatif (T4-D4, T4-B24). */
+  .barre-relecture { gap: 6px 10px; padding: 4px 0 8px; margin-bottom: 8px; }
+  .barre-relecture .avancement { display: none; }
+  .navigation-relecture { gap: 4px 10px; font-size: 0.9rem; }
   .fiche-relecture { padding-bottom: 72px; }  /* Valider ne recouvre pas le dernier champ */
 }
 /* Sans clavier (téléphone, tablette), les touches ne veulent rien dire (T1-m7). */

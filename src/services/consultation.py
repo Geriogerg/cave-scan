@@ -403,6 +403,7 @@ class FicheRelecture:
     fusionnee_avec: list[str]  # identifiants avec lesquels l'export la fusionnera
     regroupement: list[str]  # noms des colonnes de regroupement de la maison
     filtre: bool
+    rang: int = 0  # place parmi les bouteilles présentes (une retirée ne compte plus, T4-B8)
 
 
 def fiche_de_relecture(
@@ -439,6 +440,7 @@ def fiche_de_relecture(
         en_attente=bouteille.statut in ("a_extraire", "en_cours"),
         historique=_historique(session, bouteille, config),
         compteurs=compter(etats),
+        rang=next((n for n, e in enumerate(etats, start=1) if e.id == bouteille.id), bouteille.position),
         precedente_id=precedente,
         suivante_id=suivante,
         a_precharger=_photos_de(session, suivante),

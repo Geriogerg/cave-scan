@@ -17,6 +17,8 @@
     {% include "_historique.html" %}
   {% endwith %}
   {% if remise_a_relire %}
+    <button type="submit" class="bouton principal" id="valider" hx-swap-oob="true">Valider et passer à la suivante
+      <kbd>Ctrl+Entrée</kbd></button>
     <div id="messages" hx-swap-oob="innerHTML">
       <p class="message attention">Cette bouteille était validée : cette modification la remet à relire.</p>
     </div>

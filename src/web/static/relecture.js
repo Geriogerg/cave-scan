@@ -83,7 +83,41 @@
     message.setAttribute("role", "status");
     message.textContent = position ? "Bouteille n°" + position + " validée." : "Bouteille validée.";
     zone.appendChild(message);
+    var haut = document.getElementById("indicateur");  // en haut : visible même au téléphone
+    if (haut) {
+      haut.textContent = message.textContent;
+      haut.className = "indicateur ok";
+      setTimeout(function () { afficherIndicateur(); }, 4000);
+    }
   })();
+
+  // Au-delà de 900 caractères, un compteur ; un collage coupé à la limite est
+  // annoncé (T4-D13 : jamais coupé en silence).
+  fiche.addEventListener("input", function (evenement) {
+    var saisie = evenement.target;
+    if (!saisie.maxLength || saisie.maxLength < 0) return;
+    var compte = saisie.parentNode.querySelector(".compte-texte");
+    if (saisie.value.length >= 900) {
+      if (!compte) {
+        compte = document.createElement("span");
+        compte.className = "compte-texte";
+        saisie.insertAdjacentElement("afterend", compte);
+      }
+      compte.textContent = saisie.value.length + " / " + saisie.maxLength + " caractères";
+    } else if (compte) {
+      compte.remove();
+    }
+  });
+  fiche.addEventListener("paste", function (evenement) {
+    var saisie = evenement.target;
+    if (!saisie.maxLength || saisie.maxLength < 0 || !evenement.clipboardData) return;
+    var colle = evenement.clipboardData.getData("text").length;
+    var place = saisie.maxLength - (saisie.value.length - (saisie.selectionEnd - saisie.selectionStart));
+    if (colle > place) {
+      annoncer("« " + nomDe(cleDe(saisie)) + " » : le texte collé est coupé à " + saisie.maxLength
+        + " caractères (" + (colle - place) + " de trop).");
+    }
+  });
 
   function annoncer(texte) {
     var zone = document.getElementById("messages");
