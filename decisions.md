@@ -1242,6 +1242,39 @@ un renvoi d'une ligne à leur place.
   le champ — écarté : la refuser ou la corriger (l'expert peut avoir raison,
   et l'outil ne devine jamais à sa place).
 
+- 0181 — Choix de la boucle qualité confirmés par l'utilisateur (2026-10-14,
+  docs/tests/choix_a_trancher.md n° 1 à 6) : quantité plafonnée à 100 000 ;
+  texte libre à 1 000 caractères ; photo collée en haut pendant la saisie au
+  téléphone ; colonnes de la configuration repliées ; barre « Annuler /
+  Vérifier / Enregistrer » masquée tant que rien n'est modifié ; dépôt ouvert
+  en mode galerie à l'ordinateur.
+
+- 0182 — Plusieurs configurations dans le dossier, aucune désignée : l'outil
+  ne choisit plus (décision de l'utilisateur, 2026-10-14, choix n° 7). Sans
+  `CAVE_SCAN_MAISON`, un dossier qui contient plusieurs configurations valides
+  n'en donne aucune : un bandeau rouge « Plusieurs configurations trouvées »
+  le dit sur Configuration et Nouvel inventaire (aucune création possible),
+  et la ligne de commande s'arrête avec la même raison. Remplace « la
+  première par nom de fichier » (0171, 0174) — écarté : la première par ordre
+  alphabétique (un ancien fichier déposé à côté changeait la configuration en
+  silence : 9 colonnes devenaient 16).
+
+- 0183 — Bouteille validée : jamais surlignée dans l'Excel (décision de
+  l'utilisateur, 2026-10-14, choix n° 8). « Validée » veut dire relue par
+  l'expert : sa ligne n'est plus surlignée et sa colonne « À vérifier » est
+  vide, même si une case est restée vide pour abstention (la case reste VIDE :
+  jamais devinée, contrainte 1). En échange, valider une bouteille dont le
+  format ou le millésime est vide demande une seconde validation, avec la
+  raison (« ils resteront vides dans l'Excel »). Modifie 0055 pour les
+  bouteilles validées ; inchangé pour les autres — écarté : garder le jaune
+  après validation (l'expert ne pouvait pas dire « rien à lire ici »).
+
+- 0184 — Fusion de la branche de la boucle qualité autorisée (décision de
+  l'utilisateur, 2026-10-14, R6) : `boucle-qualite` avance `main` en avance
+  rapide (jamais de fusion avec conflit, jamais de push) : maintenant pour
+  tout ce qui est fait, puis à la fin de chaque tour corrigé et à l'arrêt de
+  la boucle, toujours avec la suite complète verte.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

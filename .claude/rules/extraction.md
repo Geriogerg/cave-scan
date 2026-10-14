@@ -43,7 +43,8 @@ paths:
   d'étiquette est normal).
 - Noyau canonique (domaine, appellation, millésime, format) toujours extrait,
   quelle que soit la config ; la config ne change que l'affichage.
-- À l'export, `non_lisible` / `non_determinable` = case vide + ligne surlignée.
+- À l'export, `non_lisible` / `non_determinable` = case vide + ligne surlignée,
+  sauf une bouteille validée par l'expert : jamais surlignée (decisions.md 0183).
 
 ## Extracteur
 - Protocol `Extractor` : `run_v0`, le worker et les tests dépendent du

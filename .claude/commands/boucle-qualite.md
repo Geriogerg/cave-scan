@@ -70,8 +70,12 @@ fluidité).
   pas ✅ (colonne « Qui la fait » = boucle), comme les autres points. Celles
   qui attendent l'utilisateur (⏳) : ne PAS les trancher à sa place ; les
   préparer (R4 : `choix_a_trancher.md`) et les laisser en attente.
-- La boucle ne fusionne JAMAIS la branche (R6) : elle dit seulement si elle
-  est prête.
+- Fusion (R6, autorisée par l'utilisateur le 2026-10-14, decisions.md 0184) :
+  `main` avance en avance rapide sur `boucle-qualite` à la fin de chaque tour
+  corrigé et à l'arrêt, avec la suite complète verte ; jamais de fusion avec
+  conflit, jamais de push.
+- Décisions de l'utilisateur notées dans `choix_a_trancher.md` : les appliquer
+  comme les autres points (un lot, des tests).
 - Tous les points du tour corrigés ou écartés : tour + 1, phase « tester »,
   agents « non ».
 
