@@ -29,7 +29,9 @@ SEULE source de vérité : ne rien supposer de la conversation. Après chaque
 - Rapports reçus : les fusionner dans `docs/tests/rapports/tourN.md`
   (identifiants TN-B…, TN-D… et TN-R… pour le vérificateur), avec une section
   « Points du tour précédent » qui reprend CHAQUE id « Corrigé » du journal,
-  un par ligne, ✅ ou ❌ (critère R1) ; reporter les
+  un par ligne, avec UNE marque consolidée (la pire des testeurs ; un id non
+  retesté par les testeurs est marqué par le vérificateur ou dit « non
+  retestable », avec sa raison) (critère R1) ; reporter les
   verdicts dans la colonne « Statut » des recommandations ; un écart à une
   décision de l'utilisateur (P12) est un point à corriger comme les autres ;
   passer en phase « corriger ».

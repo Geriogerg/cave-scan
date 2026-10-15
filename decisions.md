@@ -1322,6 +1322,15 @@ un renvoi d'une ligne à leur place.
   l'écran, vignettes sur une rangée, pour lire le premier champ sans
   défiler. Inventaire clos : « Télécharger l'Excel » est l'action principale.
 
+- 0189 bis — Configuration : refus menant à leur colonne (tour 5, lot 28).
+  Chaque refus qui cite une colonne est un lien vers elle ; la colonne ajoutée
+  est mise en vue, son nom prêt à taper (cherchée après le « settle »
+  d'HTMX, qui garde un instant les attributs de l'ancien élément de même id) ;
+  les aperçus ouverts le restent après « Vérifier » ; l'alerte d'exemple de
+  réponse se répète sous les consignes ; une version reprise d'une autre le
+  dit (« reprise de la version N », par comparaison des contenus au numéro de
+  version près).
+
 - 0190 — L'avis de validation va avec sa bouteille (tour 6, lot 31). Vers la
   bouteille suivante : en-tête lu par la page, rangé avec le numéro de
   l'inventaire, jamais affiché dans un autre. Vers le récapitulatif (dernière
@@ -1337,7 +1346,9 @@ un renvoi d'une ligne à leur place.
   la mise en page entre l'appui et le relâchement, et le navigateur n'envoyait
   alors aucun clic (T6-B1). Pendant la saisie, les vignettes sont effacées
   mais gardent leur place — écarté : les retirer de la mise en page (la
-  validation restait perdue).
+  validation restait perdue). Une bouteille que le modèle n'a pas lue
+  n'affiche aucun « doute du modèle ». Au dépôt, une quantité refusée reste
+  dans son champ, comme sur Vérifier.
 
 - 0192 — Accords et guillemets (tour 6, lot 33). Un seul accord, `src/textes.py`
   (`accord`), pour les écrans (filtre) et les messages des services qui
@@ -1355,9 +1366,7 @@ un renvoi d'une ligne à leur place.
 
 - 0194 — Clôture et valeurs de liste (tour 6, lot 35). La confirmation de
   clôture nomme les bouteilles non validées (12 au plus, puis « et N autres ») ;
-  « Ajouter une valeur » met le curseur dans la nouvelle ligne. Une bouteille que le modèle
-  n'a pas lue n'affiche aucun « doute du modèle ». Au dépôt, une quantité
-  refusée reste dans son champ, comme sur Vérifier.
+  « Ajouter une valeur » met le curseur dans la nouvelle ligne.
 
 ---
 

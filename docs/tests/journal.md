@@ -205,3 +205,8 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 6 | T6-S4 | suggestion | « bouteilles identiques » seul sur sa ligne | Corrigé : dans le libellé « Quantité (bouteilles identiques) » ; test | lot 34 |
 | 6 | T6-B10 (2e partie) | suggestion | Clôture sans la liste des non validées | Corrigé : numéros listés (12 au plus) ; test | lot 35 |
 | 6 | T6-B9 | suggestion | « Ajouter une valeur » sans focus | Corrigé : curseur dans le libellé de la nouvelle ligne ; test navigateur | lot 35 |
+| 6 | T6-R1 | réserve | Ids en plusieurs lignes : une seule marque ; statut R1 périmé | Corrigé : règle « pire marque » dans le critère R1 ; statut mis à jour | 7263ca7 |
+| 6 | T6-R2 | réserve | decisions.md sans ligne pour les lots 22 à 28 | Corrigé : 0185 à 0189, et 0189 bis pour le lot 28 (oubli relevé en T7-R2) | 7263ca7, tour 7 |
+| 6 | T6-R3 | réserve | Historique sans le tour 5 | Corrigé | 7263ca7 |
+| 6 | T6-R6 | réserve | 0171 non annoté ; README imprécis | Corrigé | 7263ca7 |
+| 6 | T6-D10 | mineur | Vérifier : « réessayez » sans effet si la même quantité est retapée | Corrigé par le texte, pas par le comportement : « elle partira avec « Lancer l'analyse », ou réessayez » (rien n'est perdu : le lancement emporte la saisie) | lot 31 |
