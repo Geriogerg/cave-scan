@@ -868,7 +868,10 @@
     var total = file.length;
     var termines = compter("ok") + compter("deja") + compter("refusee");
     var parties = [];
-    if (compter("ok")) parties.push(accord(compter("ok"), "envoyée", "envoyées"));
+    if (compter("ok")) parties.push(accord(compter("ok"), "envoyée", "envoyées") + " à l'instant");
+    // Les photos déjà reçues comptent aussi : rien ne semble perdu après un rechargement (T9-D7).
+    var recues = toutes().reduce(function (somme, b) { return somme + (b.recues || 0); }, 0);
+    if (recues) parties.unshift(accord(recues, "photo reçue", "photos reçues") + " en tout");
     if (compter("deja")) parties.push(accord(compter("deja"), "déjà reçue", "déjà reçues"));
     if (compter("refusee")) parties.push(accord(compter("refusee"), "refusée", "refusées") + " — voir la raison");
     if (total - termines) parties.push((total - termines) + " en cours");

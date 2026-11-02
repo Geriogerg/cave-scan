@@ -254,3 +254,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 9 | T9-D5 | mineur | Conflit : phrase coupée par les boutons | Corrigé : phrase d'abord, boutons dessous | lot 41 |
 | 9 | T9-D9 | mineur | Aide des raccourcis : « ( Maj + Tab » | Corrigé | lot 41 |
 | 9 | T9-D10 | mineur | Versions : interligne irrégulier | Corrigé : même hauteur | lot 41 |
+| 9 | T9-D2 | mineur | Alerte d'exemple absente au refus « sans cocher », puis en double | Corrigé : dès le refus, une seule fois sous les consignes ; test | lot 42 |
+| 9 | T9-D6 | mineur | Nom de colonne déjà pris dit en identifiants | Corrigé : « une colonne « X » existe déjà » ; test | lot 42 |
+| 9 | T9-D7 | mineur | Résumé du dépôt sans les photos d'avant le rechargement | Corrigé : « N photos reçues en tout · M envoyées à l'instant » | lot 42 |
+| 9 | T9-D8 | mineur | Configuration au téléphone : boutons renvoyés à la ligne | Corrigé : nom seul sur sa ligne, même forme pour toutes | lot 42 |
+| 9 | T9-S1 | suggestion | Motif du signalement absent du bandeau | Corrigé | lot 42 |
+| 9 | T9-S2 | suggestion | « Créer la configuration » en deux clics | Corrigé : un clic depuis Nouvel inventaire ; test adapté | lot 42 |

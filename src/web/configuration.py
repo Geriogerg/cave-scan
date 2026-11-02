@@ -177,8 +177,8 @@ def agir(request: Request, nom: str, base: SessionBase, champs: Formulaire):
     # Garde-fou des consignes générales (decisions.md 0173) : les modifier
     # demande une confirmation explicite, vérifiée ici, côté serveur.
     if consignes_modifiees(active, brut) and champs.get("confirmer_consignes") != "1":
-        return _afficher(
-            request, base, nom, edition(active, brut), 422,
+        return _afficher(  # vérifiée : l'alerte d'exemple de réponse se voit avant d'enregistrer (T9-D2)
+            request, base, nom, edition(active, brut, verifier=True), 422,
             erreur_consignes="Rien n'a été enregistré : cochez « Je confirme modifier les consignes » pour "
                              "enregistrer des consignes modifiées.",
         )

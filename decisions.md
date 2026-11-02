@@ -1412,6 +1412,13 @@ un renvoi d'une ligne à leur place.
   boutons dessous ; les compteurs disent « en cours d'analyse » ; un champ mis
   en vue ne passe jamais sous une barre fixe (marge de défilement générale).
 
+- 0201 — Configuration, dépôt, signalement (tour 9, lot 42). Le refus « sans
+  cocher » des consignes montre déjà l'alerte d'exemple de réponse, affichée
+  une seule fois, sous les consignes ; deux colonnes au même nom se disent avec
+  des noms ; le résumé du dépôt compte aussi les photos reçues avant un
+  rechargement ; le motif d'un signalement s'affiche dans son bandeau ;
+  « Créer la configuration » crée en un clic depuis Nouvel inventaire.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

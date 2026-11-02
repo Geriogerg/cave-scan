@@ -408,6 +408,7 @@ class FicheRelecture:
     regroupement: list[str]  # noms des colonnes de regroupement de la maison
     filtre: bool
     rang: int = 0  # place parmi les bouteilles présentes (une retirée ne compte plus, T4-B8)
+    motif_signalement: str = ""  # le motif du dernier signalement de photos (T9-S1)
     attente: Attente | None = None  # en attente du modèle : en pause ? déjà lue ?
 
 
@@ -417,6 +418,12 @@ class Attente:
 
     arretee: str  # "" si l'analyse tourne ; sinon son état (« en pause »…) : rien ne bougera seul
     deja_essayee: bool  # une lecture a déjà été tentée : c'est une réanalyse
+
+
+def _motif_signalement(session: Session, bouteille: FicheBouteille) -> str:
+    signalements = [e for e in evenements_de(session, bouteille.id) if e.type == "signalement_paire"]
+    detail = signalements[-1].detail if signalements else None
+    return (detail or {}).get("motif", "") if isinstance(detail, dict) else ""
 
 
 def attente_de(bouteille: FicheBouteille) -> Attente | None:
@@ -465,6 +472,7 @@ def fiche_de_relecture(
         obligatoires=[config.colonne(cle).nom for cle in champs_obligatoires(config)],
         en_attente=bouteille.statut in ("a_extraire", "en_cours"),
         attente=attente_de(bouteille),
+        motif_signalement=_motif_signalement(session, bouteille) if bouteille.paire_signalee else "",
         historique=_historique(session, bouteille, config),
         compteurs=compter(etats),
         rang=next((n for n, e in enumerate(etats, start=1) if e.id == bouteille.id), bouteille.position),

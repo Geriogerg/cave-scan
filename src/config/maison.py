@@ -325,10 +325,17 @@ def _valider(brut: Any, chemin: Path) -> ConfigMaison:
             cle = entree.get("cle") if isinstance(entree, dict) else None
             if isinstance(cle, str) and cle in premieres:
                 # Un identifiant déjà pris : c'est LA cause ; ses autres refus en découleraient (T5-B3).
-                erreurs.append(
-                    f"colonne n°{index + 1} « {entree.get('nom') or cle} » : identifiant « {cle} » déjà pris "
-                    f"par la colonne « {premieres[cle]} » — changez son nom (ou son identifiant)."
-                )
+                nom_entree = entree.get("nom") or cle
+                if plier(str(nom_entree)) == plier(premieres[cle]):  # même nom : le dire avec des noms (T9-D6)
+                    erreurs.append(
+                        f"colonne n°{index + 1} « {nom_entree} » : une colonne « {premieres[cle]} » existe déjà — "
+                        f"donnez un autre nom à celle-ci."
+                    )
+                else:
+                    erreurs.append(
+                        f"colonne n°{index + 1} « {nom_entree} » : identifiant « {cle} » déjà pris "
+                        f"par la colonne « {premieres[cle]} » — changez son nom (ou son identifiant)."
+                    )
                 continue
             colonne = _valider_colonne(entree, index, erreurs)
             if colonne is not None:

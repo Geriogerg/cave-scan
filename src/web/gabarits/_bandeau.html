@@ -16,7 +16,7 @@
   {% endif %}
   {% if b.paire_signalee %}
     <div class="message alerte">
-      Problème de photos signalé : cette bouteille ne peut pas être validée.
+      Problème de photos signalé{% if f.motif_signalement %} ({{ f.motif_signalement }}){% endif %} : cette bouteille ne peut pas être validée.
       <form class="en-ligne" method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/lever-signalement" data-action>
         {% include "_filtre_cache.html" %}
         <button class="lien">Lever le signalement</button>

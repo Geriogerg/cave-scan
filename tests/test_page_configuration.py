@@ -272,7 +272,7 @@ def test_creer_la_configuration_a_la_main_sans_json(tmp_path):
         page = client.get("/app/configuration").text
         assert "Créer la configuration" in page and "Aucune configuration" in page
         nouveau = client.get("/app/nouveau").text
-        assert 'href="/app/configuration">Créer la configuration' in nouveau  # T3-D10 : on la crée, depuis là
+        assert 'form="creer-configuration">Créer la configuration' in nouveau  # T3-D10 : on la crée, depuis là
         assert 'form="formulaire-nouveau" disabled' in nouveau
 
         creee = client.post("/app/configuration/creer", follow_redirects=False)
@@ -435,6 +435,8 @@ def test_une_nouvelle_colonne_au_nom_deja_pris_n_a_qu_un_refus(client):
     refus = agir(client, champs, "verifier").text
     assert refus.count("déjà pris") == 1 and "toujours lu par le modèle" not in refus
     assert "Colonne « Domaine » : identifiant" in refus and "colonne « Domaine / Château »" in refus
+    champs[f"c{i}_nom"] = "Couleur"  # même nom et même identifiant qu'une colonne : dit avec des noms (T9-D6)
+    assert "existe déjà" in agir(client, champs, "verifier").text
 
 
 def test_l_identifiant_d_une_nouvelle_colonne_suit_son_nom_jusqu_a_l_enregistrement(client, configs):
@@ -538,3 +540,15 @@ def test_plusieurs_configurations_sans_designation_l_outil_n_en_choisit_aucune(c
 
     monkeypatch.setenv("CAVE_SCAN_MAISON", charger_config(CONFIG_TEST).maison)
     assert client.get("/app/configuration", follow_redirects=False).status_code == 303
+
+
+def test_l_alerte_d_exemple_se_voit_des_le_refus_sans_cocher_et_une_fois(client):
+    """T9-D2 : consignes avec un exemple, « Enregistrer » sans cocher : l'alerte est
+    déjà là, et une seule fois."""
+    from src.extract.consignes import CONSIGNES_MODIFIABLES
+
+    champs = formulaire(ouvrir(client))
+    champs["consignes"] = CONSIGNES_MODIFIABLES + "\nPar exemple, réponds « Château Margaux 1990 »."
+    refus = agir(client, champs, "enregistrer").text
+    assert refus.count("Consignes générales :") == 1
+

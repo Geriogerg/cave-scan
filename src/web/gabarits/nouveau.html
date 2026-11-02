@@ -10,9 +10,10 @@
 
   {% if plusieurs %}<p class="message alerte" role="alert">{{ plusieurs }}</p>
   {% elif not configuree %}<p class="message attention">Aucune configuration pour l'instant.
-    <a class="bouton petit" href="/app/configuration">Créer la configuration</a></p>{% endif %}
+    <button class="bouton petit" type="submit" form="creer-configuration">Créer la configuration</button></p>{% endif %}
 
 </form>
+{% if not configuree and not plusieurs %}<form method="post" action="/app/configuration/creer" id="creer-configuration"></form>{% endif %}
 {% endblock %}
 {% block actions %}
 <nav class="barre-actions">

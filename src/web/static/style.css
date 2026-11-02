@@ -424,6 +424,9 @@ textarea {
 .colonne-tete strong { cursor: pointer; }
 .tout-ouvrir { margin: 4px 0 8px; color: var(--texte-doux); }
 .colonne-boutons { margin-left: auto; display: flex; gap: 6px; }
+@media (max-width: 640px) {
+  .colonne-tete strong { flex-basis: 100%; }  /* nom seul, puis badges et boutons : même forme pour toutes (T9-D8) */
+}
 .colonne-champs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 14px; }
 .colonne-champs input[type="text"], .colonne-champs select { width: 100%; min-width: 0; }
 .colonne-champs label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 0.95rem; }

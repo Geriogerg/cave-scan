@@ -15,7 +15,8 @@
     </div>
   {% endif %}
   {% set avertissements = vue.avertissements if vue.verifiee else config.avertissements %}
-  {% for a in avertissements %}<p class="message attention">{{ a }}</p>{% endfor %}
+  {#- Celles des consignes s'affichent sous les consignes, une seule fois (T9-D2). #}
+  {% for a in avertissements if not a.startswith("Consignes générales") %}<p class="message attention">{{ a }}</p>{% endfor %}
 
   <form id="config" method="post" action="{{ adresse }}" class="formulaire-config" data-config
         hx-post="{{ adresse }}" hx-target="#editeur" hx-swap="outerHTML">
