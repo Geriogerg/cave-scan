@@ -452,10 +452,16 @@ def test_au_telephone_un_seul_appui_valide_meme_depuis_un_champ(application, ord
         assert hauteur_nav < 60, hauteur_nav  # première bouteille : « ← » inactif court aussi
 
         page.wait_for_timeout(700)  # passé le délai de garde de l'affichage
+        vignettes = "document.querySelector('.commandes-photo').getBoundingClientRect().height"
+        hauteur_avant = page.evaluate(vignettes)
         page.locator("#saisie-domaine").tap()
         page.locator("#saisie-domaine").fill("Domaine du doigt")
+        assert page.evaluate(vignettes) == hauteur_avant  # la place des vignettes est gardée (0191, T7-R4)
+        envois = []
+        page.on("request", lambda r: envois.append(r.url) if r.method == "POST" and "/champ/" in r.url else None)
         page.tap("#valider")  # UN appui, le champ ayant encore le focus
         sur_la_bouteille(page, b[1])
+        assert envois == [], envois  # le champ part avec la validation, pas derrière elle (T7-B2)
         # Format et millésime vides (extracteur factice) : la suivante le dit (0183, T6-R5).
         page.wait_for_function("document.getElementById('messages').textContent.includes('Excel')", timeout=5_000)
         statut = httpx.get(f"{application}/inventaires/{inventaire_id}/bouteilles/{b[0]}").json()["statut"]
@@ -478,3 +484,17 @@ def test_un_refus_de_validation_corrige_disparait(application, ordinateur, tmp_p
     page.locator("#saisie-quantite").fill("2")
     page.keyboard.press("Escape")  # quitte le champ : il s'enregistre
     page.wait_for_function("!document.querySelector('#messages [data-refus-validation]')", timeout=10_000)
+
+
+def test_une_confirmation_rangee_pour_une_autre_vente_ne_s_affiche_pas(application, ordinateur, tmp_path):
+    """T7-B1 : « Bouteille n°3 validée » rangée par une autre vente (validée en
+    dernier, récapitulatif, puis une autre vente ouverte) : rien ici."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 2)
+    premiere = ids(application, inventaire_id)[0]
+    page = ordinateur.new_page()
+    page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{premiere}")
+    sur_la_bouteille(page, premiere)
+    page.evaluate("sessionStorage.setItem('cave-scan-validee', JSON.stringify({inventaire: '999', position: '3'}))")
+    page.reload()
+    sur_la_bouteille(page, premiere)
+    assert "validée" not in page.inner_text("#messages")

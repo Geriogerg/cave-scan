@@ -210,3 +210,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 6 | T6-R3 | réserve | Historique sans le tour 5 | Corrigé | 7263ca7 |
 | 6 | T6-R6 | réserve | 0171 non annoté ; README imprécis | Corrigé | 7263ca7 |
 | 6 | T6-D10 | mineur | Vérifier : « réessayez » sans effet si la même quantité est retapée | Corrigé par le texte, pas par le comportement : « elle partira avec « Lancer l'analyse », ou réessayez » (rien n'est perdu : le lancement emporte la saisie) | lot 31 |
+| 7 | T7-B1 / T7-D1 | mineur | « Bouteille n°X validée » dans une autre vente | Corrigé : rangée avec son inventaire ; test navigateur | lot 36 |
+| 7 | T7-B2 / T7-D9 | mineur | Champ renvoyé après une validation tactile (409) | Corrigé : la validation partie emporte les champs, aucun envoi derrière elle ; test navigateur | lot 36 |
+| 7 | T7-D4 | mineur | « Autres actions » / « Historique » sans ▶ au toucher | Corrigé | lot 36 |
+| 7 | T7-D8 | mineur | Récapitulatif d'un inventaire clos : « reprendre la relecture » | Corrigé : « consulter les bouteilles » | lot 36 |
+| 7 | T7-D10 | mineur | « Valider » flottant sur les derniers champs | Corrigé : bande pleine, marge de défilement | lot 36 |
+| 7 | T7-R4 | réserve | Place des vignettes (T6-B1) sans test | Corrigé : le test tactile la mesure | lot 36 |

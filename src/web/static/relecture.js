@@ -81,7 +81,11 @@
       sessionStorage.removeItem("cave-scan-validee");
       sessionStorage.removeItem("cave-scan-validee-avis");
     } catch (e) { return; }
-    if (position === null) return;
+    // Rangée pour un autre inventaire (validée en dernier, puis une autre vente
+    // ouverte) : rien à dire ici (T7-B1).
+    try { position = position ? JSON.parse(position) : null; } catch (e) { position = null; }
+    if (!position || position.inventaire !== racine.dataset.inventaire) return;
+    position = position.position;
     var zone = document.getElementById("messages");
     var message = document.createElement("p");
     var court = position ? "Bouteille n°" + position + " validée." : "Bouteille validée.";
@@ -172,6 +176,7 @@
   // un double appui ne valide jamais la bouteille d'après sans l'avoir vue (T4-B2).
   window.addEventListener("pageshow", function (evenement) { if (evenement.persisted) location.reload(); });
   var validationAcceptee = false;
+  var validationEnvoyee = false;
   var afficheeLe = Date.now();
   var DELAI_APRES_AFFICHAGE_MS = 500;
   // Le délai se voit : le bouton s'éclaire à la fin (T5-B13).
@@ -210,6 +215,11 @@
     if (/\/valider$/.test(chemin)
         && (validationAcceptee || (parAppui && Date.now() - afficheeLe < DELAI_APRES_AFFICHAGE_MS))) {
       evenement.preventDefault();
+      validationEnvoyee = validationAcceptee;  // retenue : rien n'est parti
+      return;
+    }
+    if (/\/champ\//.test(chemin) && (validationEnvoyee || validationAcceptee)) {
+      evenement.preventDefault();  // déjà dans la validation en cours (T7-B2)
       return;
     }
     var cle = cleDe(evenement.detail.elt);
@@ -230,7 +240,7 @@
         // qui doit rester celle qu'on a préchargée.
         var avis = evenement.detail.xhr.getResponseHeader("X-Avis-Validation");  // format, millésime vides (0183)
         try {
-          sessionStorage.setItem("cave-scan-validee", racine.dataset.position || "");
+          sessionStorage.setItem("cave-scan-validee", JSON.stringify({ inventaire: racine.dataset.inventaire, position: racine.dataset.position || "" }));
           if (avis) sessionStorage.setItem("cave-scan-validee-avis", JSON.stringify({ inventaire: racine.dataset.inventaire, texte: decodeURIComponent(avis) }));
         } catch (e) { /* stockage refusé */ }
       }
@@ -282,6 +292,7 @@
   });
 
   function apresValidation(statut) {
+    if (statut !== 204) validationEnvoyee = false;  // refusée ou pas partie : les champs repartent seuls
     if (statut === 0) {
       var geste = window.matchMedia && window.matchMedia("(pointer: coarse)").matches ? "touchez de nouveau « Valider »" : "réessayez avec Ctrl+Entrée";
       annoncer("La validation n'a pas pu être envoyée (connexion interrompue ?). Rien n'est perdu : " + geste + ".");
@@ -395,6 +406,7 @@
     // la dit, au lieu d'un refus du serveur (T5-B1).
     var bouton = document.getElementById("valider");
     if (bouton && bouton.disabled && bouton.title) { annoncer(bouton.title); return; }
+    validationEnvoyee = true;  // les champs partent avec elle : pas de second envoi (T7-B2)
     fiche.requestSubmit();  // tout le formulaire part : rien de ce qui est affiché n'est perdu
   }
 

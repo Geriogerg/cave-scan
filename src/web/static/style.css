@@ -307,8 +307,9 @@ input.saisie::placeholder { color: var(--texte-doux); }
 /* Valider reste à portée, sans défiler (T1-m7, T1-m8). */
 .actions-fiche {
   display: flex; justify-content: flex-end; padding: 10px 0; position: sticky; bottom: 0; z-index: 5;
-  background: linear-gradient(to bottom, rgba(250, 250, 248, 0), var(--fond) 30%);
+  background: var(--fond); border-top: 1px solid var(--bordure);  /* bande pleine : aucun champ dessous (T7-D10) */
 }
+.champs .champ { scroll-margin-bottom: 80px; }  /* Tab : le champ actif jamais sous « Valider » (T7-D10) */
 .autres-actions summary, .historique summary { cursor: pointer; color: var(--texte-doux); padding: 6px 0; }
 .liste-actions { display: flex; flex-direction: column; gap: 10px; padding: 6px 0; }
 .liste-actions form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -387,7 +388,7 @@ input[type="file"] { min-height: 44px; font: inherit; }
   .quantite-depot .bouton { min-width: 44px; }
   /* Liens et petits boutons : 44 px à toucher (T3-D20). */
   .navigation-relecture a, .navigation-relecture .lien, #lien-original, .restes a,
-  .autres-actions summary, .historique summary { display: inline-flex; align-items: center; min-height: 44px; }
+  .autres-actions summary, .historique summary { display: list-item; padding-block: 12px; }  /* ▶ gardé (T7-D4) */
   .colonne-boutons .bouton { min-width: 44px; }
   .case input, .colonne-champs .case input { width: 28px; height: 28px; }
 }

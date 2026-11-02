@@ -13,7 +13,7 @@
     <ul class="restes">
       {% if r.restantes %}
         <li><strong>{{ r.restantes | length }}</strong> à relire —
-          <a href="/app/inventaires/{{ i }}/relecture">reprendre la relecture</a></li>
+          <a href="/app/inventaires/{{ i }}/relecture">{{ "consulter les bouteilles" if r.inventaire.clos_le else "reprendre la relecture" }}</a></li>
       {% endif %}
       {% if r.en_erreur %}
         <li><strong>{{ r.en_erreur | length }}</strong> en erreur d'analyse :
@@ -67,7 +67,7 @@
     {% else %}
       <a class="bouton principal" href="/app/inventaires/{{ i }}/excel">Télécharger l'Excel</a>
     {% endif %}
-    {% if not r.termine %}<a class="bouton" href="/app/inventaires/{{ i }}/relecture">Reprendre la relecture</a>{% endif %}
+    {% if not r.termine %}<a class="bouton" href="/app/inventaires/{{ i }}/relecture">{{ "Consulter les bouteilles" if r.inventaire.clos_le else "Reprendre la relecture" }}</a>{% endif %}
     {% if r.termine and not r.inventaire.clos_le %}<a class="bouton" href="/app/inventaires/{{ i }}/clore">Clore l'inventaire</a>{% endif %}
   </nav>
 {% endblock %}

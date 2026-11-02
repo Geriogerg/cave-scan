@@ -1368,6 +1368,13 @@ un renvoi d'une ligne à leur place.
   clôture nomme les bouteilles non validées (12 au plus, puis « et N autres ») ;
   « Ajouter une valeur » met le curseur dans la nouvelle ligne.
 
+- 0195 — Relecture (tour 7, lot 36). La confirmation « Bouteille n°X validée »
+  est rangée avec son inventaire, comme l'avis (0190) : jamais affichée dans
+  une autre vente. Une validation partie emporte les champs : aucun envoi de
+  champ ne la suit (plus de 409 inutile). La barre de « Valider » est une bande
+  pleine : aucun champ dessous. Inventaire clos : le récapitulatif dit
+  « consulter les bouteilles ».
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
