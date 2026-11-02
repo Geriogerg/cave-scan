@@ -498,3 +498,25 @@ def test_une_confirmation_rangee_pour_une_autre_vente_ne_s_affiche_pas(applicati
     page.reload()
     sur_la_bouteille(page, premiere)
     assert "validée" not in page.inner_text("#messages")
+
+
+def test_au_telephone_pas_de_puces_et_le_champ_actif_reste_visible(application, ordinateur, tmp_path):
+    """T8-D1 : aucune puce sur les liens de navigation au toucher ; T8-D2 : un champ
+    atteint au clavier n'est jamais sous la bande « Valider »."""
+    inventaire_id = inventaire_extrait(application, tmp_path, 2)
+    premiere = ids(application, inventaire_id)[0]
+    telephone = ordinateur.browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    try:
+        page = telephone.new_page()
+        page.goto(f"{application}/app/inventaires/{inventaire_id}/relecture/{premiere}")
+        sur_la_bouteille(page, premiere)
+        affichages = page.evaluate("[...document.querySelectorAll('.navigation-relecture a')].map(a => getComputedStyle(a).display)")
+        assert "list-item" not in affichages, affichages
+        derniere = page.locator(".champs .saisie").last
+        derniere.focus()
+        page.wait_for_timeout(300)
+        bas = page.evaluate("document.activeElement.getBoundingClientRect().bottom")
+        bande = page.evaluate("document.querySelector('.actions-fiche').getBoundingClientRect().top")
+        assert bas <= bande, (bas, bande)
+    finally:
+        telephone.close()

@@ -22,13 +22,13 @@
 {% endif %}
 {% include "_progression.html" %}
 
-<details class="gestion">
+<details class="gestion"{% if renommage_refuse %} open{% endif %}>
   <summary>Gérer l'inventaire</summary>
   <div class="gestion-contenu">
     {% if not inventaire.clos_le %}
     <form method="post" action="/app/inventaires/{{ inventaire.id }}/renommer" class="formulaire-en-ligne">
       <label for="nouveau-nom">Nom</label>
-      <input id="nouveau-nom" name="nom" type="text" value="{{ inventaire.nom }}" maxlength="200" required>
+      <input id="nouveau-nom" name="nom" type="text" value="{{ inventaire.nom }}" maxlength="200" required{% if renommage_refuse %} autofocus{% endif %}>
       <button class="bouton petit" type="submit">Renommer</button>
     </form>
     {% endif %}

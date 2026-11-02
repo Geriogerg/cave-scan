@@ -14,7 +14,13 @@
 
   function montrerLaBarre() {
     var barre = document.querySelector(".barre-config");
-    if (barre) barre.removeAttribute("data-sans-modification");
+    if (!barre || !barre.hasAttribute("data-sans-modification")) return;
+    barre.removeAttribute("data-sans-modification");
+    // Elle apparaît en bas : le champ qu'on tape remonte au-dessus d'elle (T8-D3).
+    var actif = document.activeElement;
+    if (actif && actif.getBoundingClientRect && actif.getBoundingClientRect().bottom > barre.getBoundingClientRect().top) {
+      window.scrollBy({ top: actif.getBoundingClientRect().bottom - barre.getBoundingClientRect().top + 16 });
+    }
   }
   // Masquée au chargement par le script seulement : sans JavaScript, elle reste là.
   var barreInitiale = document.querySelector(".barre-config");

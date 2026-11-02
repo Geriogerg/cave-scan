@@ -233,3 +233,10 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 7 | T7-R3 | réserve | Ids du tour 6 sans ligne propre au journal | Corrigé : lignes T6-R1, R2, R3, R6, T6-D10 | 005b909 |
 | 7 | T7-R6 | réserve | Critère R6 différent de 0184 | Corrigé : aligné sur 0184 | 005b909 |
 | 8 | T8-R3 | suggestion | Dépôt : « Quantité invalide » pour une quantité vide (lecture du code) | Écarté : ce chemin reçoit un entier (formulaire typé), une saisie vide n'y arrive pas ; l'écran refuse la saisie vide avant l'envoi | — |
+| 8 | T8-D1 | mineur (régression lot 36) | Puces sur les liens au toucher | Corrigé : `list-item` réservé aux volets ; test navigateur | lot 39 |
+| 8 | T8-D2 | mineur | Champ atteint par Tab sous la bande « Valider » | Corrigé : marge de défilement sur la saisie ; test navigateur | lot 39 |
+| 8 | T8-D3 | mineur (régression lot 38) | Barre de configuration sur le champ tapé | Corrigé : le champ remonte quand la barre apparaît | lot 39 |
+| 8 | T8-D4 | mineur | h2 plus grands que le h1 | Corrigé | lot 39 |
+| 8 | T8-B2 | mineur | Avertissement « autre onglet » qui reste | Corrigé : retiré à la fermeture ; test navigateur | lot 39 |
+| 8 | T8-D5 | mineur | Renommage vide : volet refermé | Corrigé : volet ouvert, curseur dans le champ ; test | lot 39 |
+| 8 | T8-B1 | mineur | Séparer refusé à l'adresse du POST | Écarté : déjà écarté en T4-B20, sans élément nouveau | — |

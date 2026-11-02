@@ -57,11 +57,17 @@
   // iraient dans les mêmes bouteilles. Chacun le dit (T5-B11).
   try {
     var canal = new BroadcastChannel(CLE_ETAT);
+    var autres = {};  // les autres onglets ouverts sur ce dépôt (T8-B2)
+    var moi = String(Date.now()) + Math.random();
     canal.onmessage = function (evenement) {
-      if (evenement.data === "ouvert") canal.postMessage("deja-ouvert");
-      autreOnglet.hidden = false;
+      var message = evenement.data || {};
+      if (message.type === "ouvert") canal.postMessage({ type: "deja-ouvert", de: moi });
+      if (message.type === "ferme") delete autres[message.de];
+      else autres[message.de] = true;
+      autreOnglet.hidden = !Object.keys(autres).length;
     };
-    canal.postMessage("ouvert");
+    canal.postMessage({ type: "ouvert", de: moi });
+    window.addEventListener("pagehide", function () { canal.postMessage({ type: "ferme", de: moi }); });
   } catch (e) { /* navigateur sans BroadcastChannel : rien à signaler */ }
 
   function lireEtat() {

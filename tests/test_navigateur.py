@@ -456,3 +456,21 @@ def test_configuration_la_valeur_ajoutee_est_prete_a_saisir(application, telepho
     page.locator(f'#colonne-{index} button[value="ajouter_valeur-{index}"]').click()
     page.wait_for_function("/_libelle$/.test(document.activeElement.name || '')", timeout=10_000)
 
+
+
+def test_l_avertissement_autre_onglet_disparait_quand_il_se_ferme(application, telephone):
+    """T8-B2 : deux onglets sur le même dépôt, l'un se ferme : l'autre ne le dit plus."""
+    ordinateur = telephone.browser.new_context(viewport={"width": 1440, "height": 900})
+    try:
+        page = ordinateur.new_page()
+        page.goto(f"{application}/app/nouveau")
+        page.get_by_label("Nom de la vente").fill("Vente deux onglets")
+        page.get_by_role("button", name="Créer et ajouter les photos").click()
+        page.wait_for_url("**/depot")
+        autre = ordinateur.new_page()
+        autre.goto(page.url)
+        page.wait_for_selector("#autre-onglet", state="visible", timeout=5_000)
+        autre.close(run_before_unload=True)
+        page.wait_for_selector("#autre-onglet", state="hidden", timeout=5_000)
+    finally:
+        ordinateur.close()

@@ -1390,6 +1390,14 @@ un renvoi d'une ligne à leur place.
   Écarté : T7-S2 (curseur sur « Ajouter ses photos » de la nouvelle carte : le
   choix de fichier est un champ masqué derrière son libellé, déjà mis en vue).
 
+- 0198 — Barres fixes et champs (tour 8, lot 39). Une barre fixe en bas
+  (« Valider », configuration) ne cache jamais le champ actif : marge de
+  défilement sur la saisie elle-même, et la barre de configuration fait
+  remonter le champ tapé quand elle apparaît. Le ▶ des volets au toucher ne
+  met plus de puces sur les liens. Les h2 restent sous le h1. L'avertissement
+  « dépôt ouvert dans un autre onglet » disparaît quand l'autre onglet se
+  ferme. Un renommage refusé garde le volet « Gérer l'inventaire » ouvert.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

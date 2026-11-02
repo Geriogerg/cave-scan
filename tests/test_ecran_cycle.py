@@ -158,3 +158,9 @@ def test_la_cloture_nomme_les_bouteilles_non_validees(api, extrait):
     confirmation = api.get(f"/app/inventaires/{extrait}/clore").text
     assert "Non validées : n°1, n°2" in confirmation
 
+
+def test_renommer_vide_garde_le_volet_ouvert(api, extrait):
+    """T8-D5 : le refus d'un nom vide garde « Gérer l'inventaire » ouvert, le curseur dans le champ."""
+    retour = api.post(f"/app/inventaires/{extrait}/renommer", data={"nom": "  "}, follow_redirects=True).text
+    assert '<details class="gestion" open>' in retour and "autofocus" in retour.split('id="nouveau-nom"')[1].split(">")[0]
+

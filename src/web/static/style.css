@@ -32,6 +32,7 @@ a { color: var(--accent); }  /* une seule couleur de lien, partout (T1-m14) */
 .fil { color: var(--texte-doux); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .contenu { max-width: 860px; margin: 0 auto; padding: 16px 16px calc(var(--barre) + 24px); }
 h1 { font-size: 1.45rem; margin: 4px 0 12px; }
+h2 { font-size: 1.15rem; margin: 20px 0 8px; }  /* sous le titre de la page (T8-D4) */
 /* Un nom de vente ou un texte sans espace se coupe au lieu d'élargir la page (T4-B13). */
 h1, .carte-titre, .fil, .message, .liste-historique li, .chiffres-recap dd, td { overflow-wrap: anywhere; }
 .aide { color: var(--texte-doux); margin: 4px 0 14px; }
@@ -313,7 +314,10 @@ input.saisie::placeholder { color: var(--texte-doux); }
   display: flex; justify-content: flex-end; padding: 10px 0; position: sticky; bottom: 0; z-index: 5;
   background: var(--fond); border-top: 1px solid var(--bordure);  /* bande pleine : aucun champ dessous (T7-D10) */
 }
-.champs .champ { scroll-margin-bottom: 80px; }  /* Tab : le champ actif jamais sous « Valider » (T7-D10) */
+/* Tab : le champ actif jamais sous « Valider » — le navigateur fait défiler la saisie
+   elle-même, pas son conteneur (T7-D10, T8-D2). */
+body.relecture { scroll-padding-bottom: 96px; }
+.champs .saisie { scroll-margin-bottom: 96px; }
 .autres-actions summary, .historique summary { cursor: pointer; color: var(--texte-doux); padding: 6px 0; }
 .liste-actions { display: flex; flex-direction: column; gap: 10px; padding: 6px 0; }
 .liste-actions form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -391,8 +395,8 @@ input[type="file"] { min-height: 44px; font: inherit; }
   .contenu a:not(.bouton):not(.carte) { padding-block: 10px; }
   .quantite-depot .bouton { min-width: 44px; }
   /* Liens et petits boutons : 44 px à toucher (T3-D20). */
-  .navigation-relecture a, .navigation-relecture .lien, #lien-original, .restes a,
-  .autres-actions summary, .historique summary { display: list-item; padding-block: 12px; }  /* ▶ gardé (T7-D4) */
+  .navigation-relecture a, .navigation-relecture .lien, #lien-original, .restes a { display: inline-flex; align-items: center; min-height: 44px; }
+  .autres-actions summary, .historique summary { display: list-item; padding-block: 12px; }  /* ▶ gardé (T7-D4), sans puces ailleurs (T8-D1) */
   .colonne-boutons .bouton { min-width: 44px; }
   .case input, .colonne-champs .case input { width: 28px; height: 28px; }
 }
@@ -444,7 +448,9 @@ textarea {
 .case.a-cocher { outline: 2px solid var(--alerte); outline-offset: 4px; border-radius: 6px; }
 .liste-versions { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .liste-versions li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; }  /* sans « · » orphelin (T5-D4) */
-/* Même barre que les autres écrans : fixe en bas, pleine largeur (T7-D11). */
+/* Même barre que les autres écrans : fixe en bas, pleine largeur (T7-D11) ; le défilement
+   garde le champ actif au-dessus d'elle (T8-D3). */
+html:has(.barre-config:not([data-sans-modification])) { scroll-padding-bottom: 96px; }
 .barre-config[data-sans-modification] { display: none; }
 @media (max-width: 719px) {
   .barre-actions .bouton { font-size: 0.92rem; overflow-wrap: anywhere; }  /* jamais coupé (T6-D1) */
