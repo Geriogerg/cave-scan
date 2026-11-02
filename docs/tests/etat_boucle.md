@@ -2,12 +2,14 @@
 
 Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 
-- Tour : 9
-- Phase : corriger
-- Agents lancés : rapports reçus (bugs, design, vérificateur)
-- Rapport du tour : docs/tests/rapports/tour9.md
-- À corriger : T9-D1 à T9-D10, T9-S1, T9-S2 (T9-B1 écarté ; T9-R1 à R4 faits).
-- Dernière mise à jour : 2026-11-02, rapports du tour 9 reçus, phase corriger.
+- Tour : 10
+- Phase : tester
+- Agents lancés : oui (2026-11-02 — bugs, design, vérificateur)
+- Rapport précédent : docs/tests/rapports/tour9.md
+- À tester en priorité : les corrections des lots 41 et 42 (tour 9) ;
+  revérifier id par id chaque point « Corrigé » du tour 9 (journal.md).
+- Dernière mise à jour : 2026-11-02, tour 9 corrigé (lots 41 et 42), `main`
+  avancé, tour 10 lancé.
 
 ## Recommandations (vérifiées par l'agent `verificateur` à chaque tour)
 
@@ -32,3 +34,4 @@ Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 | 6 | rapports/tour6.md | bugs : 0 bloquant, 1 majeur, 7 mineurs, 2 suggestions ; design : 0 bloquant, 1 majeur, 11 mineurs, 4 suggestions ; vérificateur : R1 à R6 ✅ | 31–35 |
 | 7 | rapports/tour7.md | bugs : 0 bloquant, 0 majeur, 3 mineurs, 1 suggestion ; design : 0 bloquant, 0 majeur, 12 mineurs, 3 suggestions ; vérificateur : R1 ⚠️, R2 à R6 ✅ | 36–38 |
 | 8 | rapports/tour8.md | bugs : 0 bloquant, 0 majeur, 2 mineurs, 1 suggestion ; design : 0 bloquant, 0 majeur, 7 mineurs, 2 suggestions ; vérificateur : R1 ⚠️, R2 à R6 ✅ | 39–40 |
+| 9 | rapports/tour9.md | bugs : 0 bloquant, 0 majeur, 0 mineur, 1 suggestion ; design : 0 bloquant, 0 majeur, 10 mineurs, 2 suggestions ; vérificateur : R1 ❌ (corrigé : verifier_r1.py), R2 à R6 ✅ | 41–42 |
