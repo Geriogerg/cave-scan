@@ -228,3 +228,8 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 7 | T7-S3 | suggestion | « 1 à 10 » seul sous son libellé | Corrigé : dans le libellé | lot 38 |
 | 7 | T7-D11 | mineur | Barre de configuration différente des autres | Corrigé : fixe en bas, pleine largeur | lot 38 |
 | 7 | T7-S2 | suggestion | Galerie : curseur sur « Ajouter ses photos » | Écarté : le choix de fichier est un champ masqué derrière son libellé ; la carte est déjà mise en vue | — |
+| 7 | T7-R1 | réserve | tour6.md : ids sans marque, pas de marque consolidée | Corrigé : ligne « Marque consolidée » dans tour7.md, ids écrits en entier (T8-R1) ; règle dans boucle-qualite.md | 005b909, tour 8 |
+| 7 | T7-R2 | réserve | decisions.md : lot 28 sans ligne ; 0194 mal découpée | Corrigé : 0189 bis ; 0194 et 0191 réparées | 005b909 |
+| 7 | T7-R3 | réserve | Ids du tour 6 sans ligne propre au journal | Corrigé : lignes T6-R1, R2, R3, R6, T6-D10 | 005b909 |
+| 7 | T7-R6 | réserve | Critère R6 différent de 0184 | Corrigé : aligné sur 0184 | 005b909 |
+| 8 | T8-R3 | suggestion | Dépôt : « Quantité invalide » pour une quantité vide (lecture du code) | Écarté : ce chemin reçoit un entier (formulaire typé), une saisie vide n'y arrive pas ; l'écran refuse la saisie vide avant l'envoi | — |
