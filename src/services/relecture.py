@@ -509,6 +509,8 @@ def quantite_valide(valeur: Any) -> int:
     absurde (4 400 chiffres, « ² ») est refusée en clair, jamais convertie : au-delà
     de 4 300 chiffres, Python refuse la conversion (T5-B4)."""
     texte = str(valeur).strip()
+    if not texte and not isinstance(valeur, bool):
+        raise CorrectionRefusee("Quantité vide : indiquez un nombre de bouteilles (1 ou plus).")  # T7-B4
     if isinstance(valeur, bool) or not (texte.isascii() and texte.isdigit()):
         raise CorrectionRefusee(f"Quantité invalide (« {extrait(texte)} ») : indiquez un nombre de bouteilles (1 ou plus).")
     chiffres = texte.lstrip("0")

@@ -146,6 +146,7 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 .vignette-depot.reessai { border-color: var(--attention); }
 .vignette-depot.deja { width: auto; padding: 0 8px; background: none; color: var(--texte-doux); border-style: dotted; }
 .quantite-depot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.quantite-depot > span:first-child { flex-basis: 100%; }  /* libellé au-dessus, « − champ + » ensemble (T7-D2) */
 .quantite-depot input { width: 6em; text-align: center; }  /* 6 chiffres lisibles (T3-D8) */
 .precedentes { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .precedente { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--texte-doux); }
@@ -186,6 +187,9 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
   padding: 0; border-radius: 50%; font-size: 0.95rem; line-height: 1; background: rgba(255, 255, 255, 0.9);
 }
 .attente-photos .retirer-photo::before { content: ""; position: absolute; inset: -6px; }
+@media (pointer: coarse) {
+  .attente-photos .vignette-actions .retirer-photo { width: 40px; height: 40px; min-height: 40px; }  /* T7-B3 */
+}
 .attente-titre { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .quantite-attente { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .quantite-attente label { white-space: nowrap; }

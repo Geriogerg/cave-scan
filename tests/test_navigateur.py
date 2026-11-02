@@ -336,10 +336,9 @@ def test_une_coupure_reseau_sur_verifier_est_signalee(application, telephone, tm
     quantite = page.get_by_label("Quantité de la bouteille 1")
     quantite.fill("2")
     quantite.press("Enter")
-    page.wait_for_selector("#erreur-serveur", timeout=10_000)
-    assert "Connexion interrompue" in page.inner_text("#erreur-serveur")
-    # T5-D2 : dans la carte aussi, et la saisie reste dans le champ.
-    page.wait_for_selector(".carte-attente .non-enregistree", timeout=5_000)
+    # T5-D2, T7-D6 : la carte le dit (et seule elle), la saisie reste dans le champ.
+    page.wait_for_selector(".carte-attente .non-enregistree", timeout=10_000)
+    assert "connexion interrompue" in page.inner_text(".carte-attente .non-enregistree")
     assert quantite.input_value() == "2"
 
 

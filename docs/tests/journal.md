@@ -216,3 +216,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 7 | T7-D8 | mineur | Récapitulatif d'un inventaire clos : « reprendre la relecture » | Corrigé : « consulter les bouteilles » | lot 36 |
 | 7 | T7-D10 | mineur | « Valider » flottant sur les derniers champs | Corrigé : bande pleine, marge de défilement | lot 36 |
 | 7 | T7-R4 | réserve | Place des vignettes (T6-B1) sans test | Corrigé : le test tactile la mesure | lot 36 |
+| 7 | T7-D2 | mineur (régression lot 34) | Dépôt : rangée « − champ + » cassée | Corrigé : libellé au-dessus, « − champ + » ensemble | lot 37 |
+| 7 | T7-D3 | mineur | Quantité refusée n'empêche pas « Bouteille suivante » | Corrigé : passage arrêté, champ mis en vue | lot 37 |
+| 7 | T7-S1 | suggestion | Raison de « Bouteille suivante » grisée invisible au toucher | Corrigé : dite sous le bouton | lot 37 |
+| 7 | T7-B3 / T7-D5 | mineur | ✕ de 32 px au toucher | Corrigé : 40 px au toucher | lot 37 |
+| 7 | T7-D6 | mineur | Bandeau de coupure qui reste ; contradiction avec la carte | Corrigé : la carte seule le dit ; bandeau retiré dès qu'une réponse arrive ; test adapté | lot 37 |
+| 7 | T7-B4 | suggestion | « Quantité invalide («  ») » | Corrigé : « Quantité vide » ; test | lot 37 |

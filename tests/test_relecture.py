@@ -153,7 +153,7 @@ def test_quantite_entier_superieur_ou_egal_a_un(session, inventaire_id, saisie, 
 
 @pytest.mark.parametrize("saisie", [0, -1, 2.5, "cinq", "", True, None])
 def test_quantite_invalide_refusee(session, inventaire_id, saisie):
-    with pytest.raises(CorrectionRefusee, match="Quantité invalide"):
+    with pytest.raises(CorrectionRefusee, match="Quantité (invalide|vide)"):
         corriger(session, bouteille(session, inventaire_id).id, "quantite", saisie, "expert")
 
 

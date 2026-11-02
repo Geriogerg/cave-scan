@@ -234,6 +234,13 @@
       afficherResume("Prenez au moins une photo de cette bouteille avant de passer à la suivante.");
       return;
     }
+    // Une quantité refusée n'est pas enregistrée : on ne passe pas sans la corriger (T7-D3).
+    var refusQuantite = document.querySelector(".refus-quantite");
+    if (refusQuantite && refusQuantite.textContent) {
+      champQuantite.focus();
+      refusQuantite.scrollIntoView({ block: "center" });
+      return;
+    }
     etat.precedentes.unshift(etat.enCours);
     etat.enCours = nouvelleBouteille();
     sauver();
@@ -263,6 +270,9 @@
     suivanteBouton.classList.toggle("inactif", !nombre);
     suivanteBouton.setAttribute("aria-disabled", nombre ? "false" : "true");
     suivanteBouton.title = nombre ? "" : "Prenez d'abord une photo de cette bouteille";
+    var raison = document.getElementById("raison-suivante");  // visible aussi au toucher (T7-S1)
+    raison.textContent = nombre ? "" : "Prenez d'abord une photo de cette bouteille.";
+    raison.hidden = !!nombre;
     camera.disabled = plein;
     afficherVignettes(vignettesEnCours, bouteille);
 

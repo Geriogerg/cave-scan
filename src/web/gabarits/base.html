@@ -38,19 +38,28 @@
     ["htmx:sendError", "htmx:timeout"].forEach(function (nom) {
       document.addEventListener(nom, function (e) {
         if (document.getElementById("indicateur")) return;
-        signaler("Connexion interrompue : l'action n'a pas été faite. Vérifiez le réseau et réessayez.");
         // Une quantité de « Vérifier » : le champ garde la saisie, la carte dit qu'elle
-        // n'est pas enregistrée (T5-D2).
+        // n'est pas enregistrée (T5-D2) — et seule elle le dit (T7-D6).
         var formulaire = e.target && e.target.closest ? e.target.closest(".quantite-attente") : null;
+        if (!formulaire) {
+          signaler("Connexion interrompue : l'action n'a pas été faite. Vérifiez le réseau et réessayez.");
+          var zone = document.getElementById("erreur-serveur");
+          if (zone) zone.dataset.reseau = "1";
+        }
         var tete = formulaire ? formulaire.parentNode : null;
         if (tete && !tete.parentNode.querySelector(".non-enregistree")) {
           var avis = document.createElement("p");
           avis.className = "alerte-texte refus-carte non-enregistree";
           avis.setAttribute("role", "alert");
-          avis.textContent = "Pas enregistrée (connexion interrompue) : elle partira avec « Lancer l'analyse », ou réessayez.";
+          avis.textContent = "Pas enregistrée (connexion interrompue) : elle partira avec « Lancer l'analyse », ou réessayez.";
           tete.insertAdjacentElement("afterend", avis);
         }
       });
+    });
+    /* Le réseau revenu (une réponse arrive) : le bandeau de coupure n'a plus lieu d'être (T7-D6). */
+    document.addEventListener("htmx:afterRequest", function (e) {
+      var zone = document.getElementById("erreur-serveur");
+      if (zone && zone.dataset.reseau && e.detail.xhr && e.detail.xhr.status) zone.remove();
     });
     /* Un formulaire classique (créer, rouvrir, corbeille…) ne part qu'une fois :
        un double appui ne crée pas deux inventaires (T4-B7). */

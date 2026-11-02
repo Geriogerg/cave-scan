@@ -1375,6 +1375,14 @@ un renvoi d'une ligne à leur place.
   pleine : aucun champ dessous. Inventaire clos : le récapitulatif dit
   « consulter les bouteilles ».
 
+- 0196 — Dépôt et Vérifier (tour 7, lot 37). Au dépôt, « − champ + » restent
+  ensemble sous leur libellé ; « Bouteille suivante » dit sa raison sous le
+  bouton quand il est grisé, et ne passe pas tant qu'une quantité est
+  refusée. Sur Vérifier, une coupure pendant l'envoi d'une quantité se dit
+  dans sa carte seulement, et un bandeau de coupure disparaît dès qu'une
+  réponse arrive. Au toucher, le ✕ fait 40 px. Une quantité effacée : « Quantité
+  vide ».
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

@@ -433,3 +433,13 @@ def test_finitions_du_tour_6(api, dossier_photos):
     assert signaler.index('name="motif"') < signaler.index("<button")
     assert "(bouteilles identiques)" in api.get(f"/app/inventaires/{inventaire_id}/depot").text
 
+
+def test_une_quantite_vide_le_dit_sans_guillemets_vides():
+    """T7-B4 : quantité effacée : « Quantité vide », pas « Quantité invalide («  ») »."""
+    import pytest
+
+    from src.services.relecture import CorrectionRefusee, quantite_valide
+
+    with pytest.raises(CorrectionRefusee, match="Quantité vide"):
+        quantite_valide("  ")
+
