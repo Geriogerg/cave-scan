@@ -390,3 +390,13 @@ def test_une_bouteille_pas_encore_lue_n_affiche_aucun_doute(api, dossier_photos,
     texte = ouvrir(api, inventaire_id, ids(base, inventaire_id)[0])
     assert "doute du modèle" not in texte
 
+
+
+def test_les_compteurs_disent_en_cours_d_analyse(api, dossier_photos, base):
+    """T9-D3 : une bouteille pas encore lue est « en cours d'analyse », pas « sautée »."""
+    inventaire_id = envoyer(api, dossier_photos).json()["id"]
+    api.post(f"/inventaires/{inventaire_id}/lancer")
+    api.post(f"/inventaires/{inventaire_id}/annuler")
+    texte = ouvrir(api, inventaire_id, ids(base, inventaire_id)[0])
+    assert "en cours d&#39;analyse" in texte or "en cours d'analyse" in texte
+    assert "sautée" not in texte

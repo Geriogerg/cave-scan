@@ -6,6 +6,6 @@
     {%- if c.a_verifier %} (dont {{ c.a_verifier }} avec un doute){% endif %}
     {%- if c.en_erreur %} · <span class="alerte-texte">{{ c.en_erreur }} en erreur</span>{% endif %}
     {%- if c.signalees %} · {{ c.signalees | accord("signalée", "signalées") }}{% endif %}
-    {%- if c.pas_encore_extraites %} · {{ c.pas_encore_extraites | accord("pas encore analysée, sautée", "pas encore analysées, sautées") }} pour l'instant{% endif %}
+    {%- if c.pas_encore_extraites %} · {{ c.pas_encore_extraites | accord("en cours d'analyse", "en cours d'analyse") }}{% endif %}
   </span>
 </div>

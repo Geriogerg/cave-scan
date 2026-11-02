@@ -6,12 +6,12 @@
   <div class="message alerte" role="alert" data-conflit>
     <p>Cette bouteille a été modifiée ailleurs depuis que vous l'avez ouverte (autre onglet ?) :</p>
     <ul>{% for changement in changements %}<li>{{ changement }}</li>{% endfor %}</ul>
-    <p>Rien n'a été enregistré.
+    <p>Rien n'a été enregistré ; l'historique garde toutes les corrections.</p>
+    <p class="actions-conflit">
       <a class="bouton petit" href="" data-recharger>Recharger la bouteille</a>
       <button type="button" class="bouton petit" hx-post="/app/inventaires/{{ i }}/relecture/{{ b.id }}/valider"
               hx-include="#fiche" hx-vals='{"_forcer": "1"}' hx-target="#messages" hx-swap="innerHTML"
-              hx-sync="#fiche:queue all">Valider quand même</button>
-      — l'historique garde toutes les corrections.</p>
+              hx-sync="#fiche:queue all">Valider quand même</button></p>
   </div>
 {% else %}
   <p class="message alerte" role="alert" data-refus-validation>{{ message }}</p>

@@ -28,7 +28,7 @@
     {% if not inventaire.clos_le %}
     <form method="post" action="/app/inventaires/{{ inventaire.id }}/renommer" class="formulaire-en-ligne">
       <label for="nouveau-nom">Nom</label>
-      <input id="nouveau-nom" name="nom" type="text" value="{{ inventaire.nom }}" maxlength="200" required{% if renommage_refuse %} autofocus{% endif %}>
+      <input id="nouveau-nom" name="nom" type="text" value="{{ inventaire.nom }}" maxlength="200" required{% if renommage_refuse %} autofocus onfocus="this.form.scrollIntoView({block: 'nearest'})"{% endif %}>
       <button class="bouton petit" type="submit">Renommer</button>
     </form>
     {% endif %}

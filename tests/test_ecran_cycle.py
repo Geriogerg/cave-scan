@@ -156,7 +156,7 @@ def test_clos_l_excel_est_l_action_principale_et_aucune_correction_se_dit(api, e
 def test_la_cloture_nomme_les_bouteilles_non_validees(api, extrait):
     """T6-B10 : avant de clore, les numéros des bouteilles non validées."""
     confirmation = api.get(f"/app/inventaires/{extrait}/clore").text
-    assert "Non validées : n°1, n°2" in confirmation
+    assert "(n°1, n°2" in confirmation and confirmation.count("n°1,") == 1  # une seule fois (T9-D1)
 
 
 def test_renommer_vide_garde_le_volet_ouvert(api, extrait):

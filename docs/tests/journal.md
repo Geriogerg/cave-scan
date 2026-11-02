@@ -248,3 +248,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 8 | T8-R1 | réserve | Journal sans ligne pour T7-R1, R2, R3, R6 ; ids abrégés dans tour7.md | Corrigé : lignes ajoutées, ids écrits en entier | a3282b2 |
 | 8 | T8-R2 | réserve | Statut R1 périmé | Corrigé ; critère R1 désormais exécutable (`docs/tests/verifier_r1.py`, T9-R3) | a3282b2, tour 9 |
 | 9 | T9-B1 | suggestion | Appui sur « Valider » dans les 500 ms de garde ignoré sans rien dire | Écarté : le rejouer validerait la bouteille suivante sans l'avoir vue (T4-B2, 0176) ; le bouton atténué signale déjà la garde (T5-B13) | — |
+| 9 | T9-D1 | mineur | Clore : encadré dans une puce, information trois fois | Corrigé : un encadré hors liste, avec les numéros ; test | lot 41 |
+| 9 | T9-D3 | mineur | Compteurs : « sautée pour l'instant », saut de mise en page | Corrigé : « en cours d'analyse » (plus court) ; test | lot 41 |
+| 9 | T9-D4 | mineur | Renommage refusé au téléphone : bouton sous la barre | Corrigé : formulaire mis en vue au-dessus de la barre | lot 41 |
+| 9 | T9-D5 | mineur | Conflit : phrase coupée par les boutons | Corrigé : phrase d'abord, boutons dessous | lot 41 |
+| 9 | T9-D9 | mineur | Aide des raccourcis : « ( Maj + Tab » | Corrigé | lot 41 |
+| 9 | T9-D10 | mineur | Versions : interligne irrégulier | Corrigé : même hauteur | lot 41 |

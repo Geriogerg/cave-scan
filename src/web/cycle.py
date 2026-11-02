@@ -135,15 +135,17 @@ def confirmer_la_cloture(request: Request, inventaire_id: int, base: SessionBase
         f"{accord(etat.total, 'bouteille', 'bouteilles')}, dont {accord(etat.validees, 'validée', 'validées')}.",
         "Ensuite : lecture seule. L'Excel reste téléchargeable ; l'inventaire peut être rouvert.",
     ]
+    avertissement = None  # un encadré, hors de la liste, avec les numéros (T6-B10, T9-D1)
     if etat.ce_qui_n_est_pas_valide():
-        explications.insert(1, f"Attention : {etat.ce_qui_n_est_pas_valide()}. Les valider n'est pas obligatoire.")
-    if etat.positions_non_validees:  # lesquelles (T6-B10)
-        premieres = ", ".join(f"n°{p}" for p in etat.positions_non_validees[:12])
-        reste = len(etat.positions_non_validees) - 12
-        explications.insert(2, f"Non validées : {premieres}" + (f" et {reste} autres." if reste > 0 else "."))
+        lesquelles = ""
+        if etat.positions_non_validees:
+            lesquelles = " (" + ", ".join(f"n°{p}" for p in etat.positions_non_validees[:12])
+            reste = len(etat.positions_non_validees) - 12
+            lesquelles += (f" et {reste} autres" if reste > 0 else "") + ")"
+        avertissement = f"Attention : {etat.ce_qui_n_est_pas_valide()}{lesquelles}. Les valider n'est pas obligatoire."
     return page(
         request, "confirmation.html", inventaire=inventaire, action="clore",
-        titre=f"Clore « {inventaire.nom} » ?", explications=explications,
+        titre=f"Clore « {inventaire.nom} » ?", explications=explications, avertissement=avertissement,
         bouton="Clore l'inventaire" + (" quand même" if etat.ce_qui_n_est_pas_valide() else ""), danger=False,
     )
 

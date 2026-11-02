@@ -1406,6 +1406,12 @@ un renvoi d'une ligne à leur place.
   colonne nommée comme un champ toujours lu) — l'outil changerait en silence une
   source que l'expert a choisie ; le refus dit déjà quoi choisir (0187).
 
+- 0200 — Confirmations et compteurs (tour 9, lot 41). La clôture dit les
+  bouteilles non validées une seule fois, dans un encadré hors de la liste,
+  avec leurs numéros ; un conflit à la validation met sa phrase d'abord et ses
+  boutons dessous ; les compteurs disent « en cours d'analyse » ; un champ mis
+  en vue ne passe jamais sous une barre fixe (marge de défilement générale).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)
