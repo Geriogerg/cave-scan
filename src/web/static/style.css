@@ -444,7 +444,7 @@ textarea {
 .case.a-cocher { outline: 2px solid var(--alerte); outline-offset: 4px; border-radius: 6px; }
 .liste-versions { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .liste-versions li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; }  /* sans « · » orphelin (T5-D4) */
-.editeur-config .barre-actions { position: sticky; margin: 16px -16px 0; }
+/* Même barre que les autres écrans : fixe en bas, pleine largeur (T7-D11). */
 .barre-config[data-sans-modification] { display: none; }
 @media (max-width: 719px) {
   .barre-actions .bouton { font-size: 0.92rem; overflow-wrap: anywhere; }  /* jamais coupé (T6-D1) */

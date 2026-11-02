@@ -151,6 +151,11 @@ def separer(session: Session, bouteille_id: int, quantite: Any, auteur: str) -> 
             f"{_nom(source)} : seule une bouteille déjà analysée peut être séparée."
         )
     nombre = quantite_valide(quantite)
+    if source.quantite <= 1:  # rien à séparer : pas de « 0 au plus » (T7-D12)
+        raise ActionRefusee(
+            f"{_nom(source)} : une seule bouteille, rien à séparer. Indiquez d'abord la quantité totale "
+            f"(par exemple 6), puis séparez."
+        )
     if nombre >= source.quantite:
         raise ActionRefusee(
             f"{_nom(source)} compte {accord(source.quantite, 'exemplaire', 'exemplaires')} : on peut en séparer "

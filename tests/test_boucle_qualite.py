@@ -443,3 +443,19 @@ def test_une_quantite_vide_le_dit_sans_guillemets_vides():
     with pytest.raises(CorrectionRefusee, match="Quantité vide"):
         quantite_valide("  ")
 
+
+def test_separer_une_bouteille_unique_le_dit_simplement(session, nom_maison, dossier_photos, stockage):
+    """T7-D12 : quantité 1 : « une seule bouteille, rien à séparer », pas « 0 au plus »."""
+    import pytest
+
+    from src.services.cas_particuliers import separer
+    from src.services.cycle_de_vie import CycleRefuse  # noqa: F401
+    from src.services.extraction import extraire_inventaire
+
+    cree = creer_inventaire(session, nom_maison, CONFIG_TEST, dossier_photos, "Cave", stockage)
+    extraire_inventaire(session, cree.inventaire_id, ExtracteurScenario(), stockage)
+    premiere = charger_inventaire(session, cree.inventaire_id).bouteilles[0]
+    with pytest.raises(Exception, match="rien à séparer") as refus:
+        separer(session, premiere.id, 1, "Expert test")
+    assert "0 au plus" not in str(refus.value)
+

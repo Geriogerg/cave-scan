@@ -17,7 +17,7 @@
 {% if en_attente %}
   <p class="message attention">
     {{ en_attente | length | accord("bouteille ajoutée, pas encore lancée", "bouteilles ajoutées, pas encore lancées") }} :
-    <a href="/app/inventaires/{{ inventaire.id }}/verifier">les vérifier et lancer leur analyse</a>.
+    <a href="/app/inventaires/{{ inventaire.id }}/verifier">{{ "les vérifier et lancer leur analyse" if en_attente | length > 1 else "la vérifier et lancer son analyse" }}</a>.
   </p>
 {% endif %}
 {% include "_progression.html" %}

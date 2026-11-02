@@ -222,3 +222,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 7 | T7-B3 / T7-D5 | mineur | ✕ de 32 px au toucher | Corrigé : 40 px au toucher | lot 37 |
 | 7 | T7-D6 | mineur | Bandeau de coupure qui reste ; contradiction avec la carte | Corrigé : la carte seule le dit ; bandeau retiré dès qu'une réponse arrive ; test adapté | lot 37 |
 | 7 | T7-B4 | suggestion | « Quantité invalide («  ») » | Corrigé : « Quantité vide » ; test | lot 37 |
+| 7 | T7-D7 | mineur | « 1 bouteille ajoutée… : les vérifier » | Corrigé : « la vérifier et lancer son analyse » | lot 38 |
+| 7 | T7-D12 | mineur | Séparer : « 0 au plus » | Corrigé : « une seule bouteille, rien à séparer » ; test | lot 38 |
+| 7 | T7-R5 | réserve | Guillemets à espaces ordinaires dans les scripts | Corrigé : une fonction par script met des insécables | lot 38 |
+| 7 | T7-S3 | suggestion | « 1 à 10 » seul sous son libellé | Corrigé : dans le libellé | lot 38 |
+| 7 | T7-D11 | mineur | Barre de configuration différente des autres | Corrigé : fixe en bas, pleine largeur | lot 38 |
+| 7 | T7-S2 | suggestion | Galerie : curseur sur « Ajouter ses photos » | Écarté : le choix de fichier est un champ masqué derrière son libellé ; la carte est déjà mise en vue | — |

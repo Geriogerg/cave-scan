@@ -444,7 +444,7 @@
       refus.setAttribute("role", "alert");
       messages.forEach(function (message) {
         var ligne = document.createElement("li");
-        ligne.textContent = message;
+        ligne.textContent = insecables(message);
         refus.appendChild(ligne);
       });
       conteneur.insertAdjacentElement("afterend", refus);
@@ -854,7 +854,11 @@
     afficherResume();
   }
 
+  // « X » : espaces insécables, le guillemet ne se sépare jamais de son mot (T6-D9, T7-R5).
+  function insecables(texte) { return String(texte).replace(/« /g, "«\u00a0").replace(/ »/g, "\u00a0»"); }
+
   function afficherResume(message) {
+    if (message) message = insecables(message);
     var total = file.length;
     var termines = compter("ok") + compter("deja") + compter("refusee");
     var parties = [];

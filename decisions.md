@@ -1383,6 +1383,13 @@ un renvoi d'une ligne à leur place.
   réponse arrive. Au toucher, le ✕ fait 40 px. Une quantité effacée : « Quantité
   vide ».
 
+- 0197 — Finitions (tour 7, lot 38). Les messages écrits par les scripts
+  mettent des espaces insécables dans « » (une seule fonction par script) ;
+  la barre « Annuler / Vérifier / Enregistrer » est fixe en bas, comme sur
+  les autres écrans ; Séparer une bouteille unique dit « rien à séparer ».
+  Écarté : T7-S2 (curseur sur « Ajouter ses photos » de la nouvelle carte : le
+  choix de fichier est un champ masqué derrière son libellé, déjà mis en vue).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

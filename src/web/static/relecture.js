@@ -132,7 +132,11 @@
     }
   });
 
+  // « X » : espaces insécables, le guillemet ne se sépare jamais de son mot (T6-D9, T7-R5).
+  function insecables(texte) { return String(texte).replace(/« /g, "«\u00a0").replace(/ »/g, "\u00a0»"); }
+
   function annoncer(texte) {
+    texte = insecables(texte);
     var zone = document.getElementById("messages");
     zone.innerHTML = "";
     var message = document.createElement("p");
