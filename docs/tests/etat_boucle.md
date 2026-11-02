@@ -2,12 +2,14 @@
 
 Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 
-- Tour : 7
-- Phase : corriger
-- Agents lancés : rapports reçus (vérificateur ; bugs et design relancés après une limite de session)
-- Rapport du tour : docs/tests/rapports/tour7.md
-- À corriger : T7-B1 à B4, T7-D1 à D12, T7-S1 à S3, T7-R4, T7-R5.
-- Dernière mise à jour : 2026-11-02, rapports du tour 7 reçus, phase corriger.
+- Tour : 8
+- Phase : tester
+- Agents lancés : oui (2026-11-02 — bugs, design, vérificateur)
+- Rapport précédent : docs/tests/rapports/tour7.md
+- À tester en priorité : les corrections des lots 36 à 38 (tour 7) ;
+  revérifier id par id chaque point « Corrigé » du tour 7 (journal.md).
+- Dernière mise à jour : 2026-11-02, tour 7 corrigé (lots 36 à 38), `main`
+  avancé, tour 8 lancé.
 
 ## Recommandations (vérifiées par l'agent `verificateur` à chaque tour)
 
@@ -30,3 +32,4 @@ Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 | 4 | rapports/tour4.md | bugs : 1 bloquant, 5 majeurs, 13 mineurs, 7 suggestions ; design : 0 bloquant, 2 majeurs, 16 mineurs, 6 suggestions ; vérificateur : sans rapport (limite de session) | 15–21 |
 | 5 | rapports/tour5.md | bugs : 0 bloquant, 3 majeurs, 9 mineurs, 3 suggestions ; design : 0 bloquant, 0 majeur, 9 mineurs, 3 suggestions ; vérificateur : R1 ⚠️, R2/R3/R5 ✅ | 22–30 |
 | 6 | rapports/tour6.md | bugs : 0 bloquant, 1 majeur, 7 mineurs, 2 suggestions ; design : 0 bloquant, 1 majeur, 11 mineurs, 4 suggestions ; vérificateur : R1 à R6 ✅ | 31–35 |
+| 7 | rapports/tour7.md | bugs : 0 bloquant, 0 majeur, 3 mineurs, 1 suggestion ; design : 0 bloquant, 0 majeur, 12 mineurs, 3 suggestions ; vérificateur : R1 ⚠️, R2 à R6 ✅ | 36–38 |
