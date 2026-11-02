@@ -36,3 +36,36 @@ R1 ❌ · R2 ✅ · R2b ✅ · R3 ✅ · R4 ✅ · R5 ✅ · R6 ✅ (HEAD bef120
   rouverts en T8-D1 à D3, retestés ✅ ci-dessus.
 - **T9-R3** — Critère R1 à rendre exécutable : fait (`docs/tests/verifier_r1.py`).
 - **T9-R4** — Suites d'environ 8 min : toujours lancées en arrière-plan.
+
+## Testeur design (Opus)
+
+0 bloquant, 0 majeur, 10 mineurs, 2 suggestions. Écrans ≈ 57 ms ; Ctrl+Entrée
+vers la suivante 94 à 126 ms ; aucun 500, aucune erreur JavaScript, aucun
+débordement, aucun message technique.
+
+### Points du tour précédent
+
+- [T8-D1] ✅ · [T8-D2] ✅ · [T8-D3] ✅ · [T8-D4] ✅ · [T8-B2] ✅ · [T8-D5] ✅
+  (téléphone : T9-D4) · [T8-B3] ✅ · [T8-D6] ✅ · [T8-D7] ✅ · [T8-S1] ✅ (puce
+  orpheline : T9-D1)
+
+### Nouveaux points
+
+- **T9-D1** mineur — Clore : encadré dans une puce, information dite trois fois.
+- **T9-D2** mineur — Alerte « exemple de réponse » absente au refus « sans
+  cocher », puis affichée deux fois.
+- **T9-D3** mineur — Réanalyser : compteurs sur deux lignes (saut de 15 px),
+  « sautée pour l'instant » trompeur.
+- **T9-D4** mineur — Téléphone : après un renommage refusé, « Renommer » sous la
+  barre fixe.
+- **T9-D5** mineur — Conflit à la validation : phrase coupée par les boutons.
+- **T9-D6** mineur — Nom de colonne déjà pris : refus dit en termes
+  d'identifiant.
+- **T9-D7** mineur — Dépôt après rechargement : le résumé ne compte que la séance.
+- **T9-D8** mineur — Configuration au téléphone : badge « toujours lue » qui
+  renvoie les boutons à la ligne.
+- **T9-D9** mineur — Aide des raccourcis : « ( Maj + Tab : précédent) ».
+- **T9-D10** mineur — « Versions enregistrées » : interligne irrégulier.
+- **T9-S1** suggestion — Motif du signalement dans le bandeau.
+- **T9-S2** suggestion — « Créer la configuration » en un clic depuis Nouvel
+  inventaire.
