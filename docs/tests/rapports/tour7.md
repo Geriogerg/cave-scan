@@ -67,8 +67,9 @@ aucune erreur JavaScript, aucun défilement horizontal.
 
 T6-X1 ❌ · T6-D2/B3 ❌ en partie (taille) · T6-D4 ❌ · T6-D6/B6 ❌ en partie ·
 T6-S4 ❌ · T6-B1 ✅ (effet de bord à corriger) · tous les autres ids vus : ✅.
-Non retestables par l'écran : T6-R1, T6-R2, T6-R3, T6-R5, T6-R6 (vérifiés
-par le vérificateur dans le code et les tests). T6-B7 : ✅, sauf sa partie (d),
+Réserves documentaires : [T6-R1] non retestable · [T6-R2] non retestable ·
+[T6-R3] non retestable · [T6-R5] non retestable · [T6-R6] non retestable (par
+l'écran ; vérifiés par le vérificateur dans le code et les tests). T6-B7 : ✅, sauf sa partie (d),
 liée à T6-D4 ❌ (pire marque : ❌ en partie).
 
 ### Nouveaux points

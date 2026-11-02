@@ -260,3 +260,7 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 9 | T9-D8 | mineur | Configuration au téléphone : boutons renvoyés à la ligne | Corrigé : nom seul sur sa ligne, même forme pour toutes | lot 42 |
 | 9 | T9-S1 | suggestion | Motif du signalement absent du bandeau | Corrigé | lot 42 |
 | 9 | T9-S2 | suggestion | « Créer la configuration » en deux clics | Corrigé : un clic depuis Nouvel inventaire ; test adapté | lot 42 |
+| 9 | T9-R1 | réserve | tour8.md sans marque pour T7-R1, R2, R3, R6 ; tour7.md abrégé | Corrigé | fff9f07 |
+| 9 | T9-R2 | réserve | T7-D4, D10, D11 « Corrigé » mais ❌ au tour 8 | Corrigé : rouverts en T8-D1 à D3, ✅ au tour 9 | fff9f07 |
+| 9 | T9-R3 | réserve | Critère R1 non exécutable | Corrigé : `docs/tests/verifier_r1.py` ; durci au tour 10 (marque rattachée à son id, T10-R1) | fff9f07, tour 10 |
+| 9 | T9-R4 | réserve | Suites d'environ 8 min | Corrigé : toujours lancées en arrière-plan | — |

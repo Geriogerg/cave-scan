@@ -3,13 +3,11 @@
 Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 
 - Tour : 10
-- Phase : tester
-- Agents lancés : oui (2026-11-02 — bugs, design, vérificateur)
-- Rapport précédent : docs/tests/rapports/tour9.md
-- À tester en priorité : les corrections des lots 41 et 42 (tour 9) ;
-  revérifier id par id chaque point « Corrigé » du tour 9 (journal.md).
-- Dernière mise à jour : 2026-11-02, tour 9 corrigé (lots 41 et 42), `main`
-  avancé, tour 10 lancé.
+- Phase : corriger
+- Agents lancés : rapports reçus (bugs, design, vérificateur)
+- Rapport du tour : docs/tests/rapports/tour10.md
+- À corriger : T10-B1 à B4, T10-D1 à D6, T10-S1 à S3, T10-R3 (T10-R1, R2 faits).
+- Dernière mise à jour : 2026-11-02, rapports du tour 10 reçus, phase corriger.
 
 ## Recommandations (vérifiées par l'agent `verificateur` à chaque tour)
 

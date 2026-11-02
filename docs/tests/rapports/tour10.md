@@ -51,3 +51,17 @@ passer 115 ms ; export 104 ms ; aucun 500, aucune erreur JavaScript ; cibles
 - **T10-B4** mineur — Suivi d'une réanalyse seule : temps écoulé et restant faux.
 - **T10-S3** suggestion — Coupure pendant une correction au téléphone : l'erreur
   n'apparaît qu'en haut, hors de l'écran.
+
+## Vérificateur (Sonnet)
+
+R1 ⚠️ · R2 ✅ · R2b ✅ · R3 ✅ · R4 ✅ · R5 ✅ · R6 ✅ (HEAD ccbbe1b)
+
+- 735 passed (dépôt, copie `config/maisons/` vide, copie avec colonne
+  renommée) ; dry-run OK ; totaux des lots 41 et 42 égaux aux tests collectés ;
+  lignes « 9 | Corrigé » confirmées dans le code ; 0200 et 0201 présentes.
+- `verifier_r1.py` passe pour les tours 6, 7 et 8.
+- **T10-R1** — Le script acceptait une marque ailleurs sur la ligne (faux
+  passage prouvé). Corrigé : la marque doit suivre l'id (ou son groupe « / ») ;
+  un ✅ retiré est désormais détecté ; tour7.md réécrit au même format.
+- **T10-R2** — Journal sans ligne pour T9-R1 à R4. Corrigé.
+- **T10-R3** — T9-D7 (résumé du dépôt) sans test.

@@ -2,8 +2,9 @@
 
 Pour chaque ligne « | N | … | Corrigé … » de docs/tests/journal.md, la colonne Id
 est découpée sur « / » ; chaque id doit apparaître EN ENTIER dans
-docs/tests/rapports/tour<N+1>.md, sur une ligne qui porte une marque (✅, ❌, ou
-« non retestable »).
+docs/tests/rapports/tour<N+1>.md, SUIVI DE SA marque (✅, ❌, ou « non
+retestable ») : « [T8-D4] ✅ », ou un groupe « [T6-B6 / T6-D6] ✅ ». Une marque
+ailleurs sur la ligne ne compte pas (T10-R1).
 
     python docs/tests/verifier_r1.py 7      # ids du tour 7 dans tour8.md
 """
@@ -36,8 +37,12 @@ def manquants(tour: int) -> list[str]:
     lignes = rapport.read_text(encoding="utf-8").splitlines() if rapport.exists() else []
     absents = []
     for identifiant in ids_corriges(tour):
-        motif = re.compile(rf"(?<![\w-]){re.escape(identifiant)}(?![\d])")
-        if not any(motif.search(ligne) and MARQUE.search(ligne) for ligne in lignes):
+        # L'id, d'éventuels autres ids du même groupe (« / »), le crochet, puis la marque.
+        motif = re.compile(
+            rf"(?<![\w-]){re.escape(identifiant)}(?!\d)(?:\s*/\s*T\d+-[A-Z]+\d+)*\]?\s*(?:{MARQUE.pattern})",
+            re.IGNORECASE,
+        )
+        if not any(motif.search(ligne) for ligne in lignes):
             absents.append(identifiant)
     return absents
 
