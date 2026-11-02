@@ -65,3 +65,10 @@ R1 ⚠️ · R2 ✅ · R2b ✅ · R3 ✅ · R4 ✅ · R5 ✅ · R6 ✅ (HEAD ccb
   un ✅ retiré est désormais détecté ; tour7.md réécrit au même format.
 - **T10-R2** — Journal sans ligne pour T9-R1 à R4. Corrigé.
 - **T10-R3** — T9-D7 (résumé du dépôt) sans test.
+
+### Réserves documentaires du tour 9 (marques du vérificateur)
+
+- [T9-R1] ✅ (vérificateur : tour7.md et tour8.md marqués, ids en entier)
+- [T9-R2] ✅ (T8-D1 à D3 ✅ au tour 9)
+- [T9-R3] ✅ (script en place, durci par T10-R1)
+- [T9-R4] ✅ (suites lancées en arrière-plan)
