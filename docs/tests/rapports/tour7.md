@@ -35,7 +35,7 @@ surlignées). P3 et P8 non refaits en entier.
 - [T6-D3] ✅ · [T6-D8] ✅ · [T6-D7] ✅ · [T6-B2] ✅ · [T6-B4] ✅ · [T6-B5] ✅
 - [T6-B7] ✅ · [T6-D4] ✅ · [T6-B6 / T6-D6 / T6-R7] ✅ · [T6-D5 / T6-B10] ✅
 - [T6-R4] ✅ · non retestés : T6-R5, T6-D9, T6-D10, T6-D11, T6-D12, T6-S1 à S4,
-  T6-B9, T6-R1/R2/R3/R6
+  T6-B9, T6-R1, T6-R2, T6-R3, T6-R6
 
 ### Nouveaux points
 

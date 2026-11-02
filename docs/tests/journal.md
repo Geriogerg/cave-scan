@@ -245,3 +245,6 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 8 | T8-D7 | mineur | Dépôt d'un inventaire clos : message en double | Corrigé : le bandeau « clos » seul | lot 40 |
 | 8 | T8-S1 | suggestion | Avertissement de clôture peu visible | Corrigé : encadré | lot 40 |
 | 8 | T8-S2 | suggestion | Source choisie seule pour un champ toujours lu | Écarté : changerait en silence une source choisie par l'expert ; le refus dit quoi choisir | — |
+| 8 | T8-R1 | réserve | Journal sans ligne pour T7-R1, R2, R3, R6 ; ids abrégés dans tour7.md | Corrigé : lignes ajoutées, ids écrits en entier | a3282b2 |
+| 8 | T8-R2 | réserve | Statut R1 périmé | Corrigé ; critère R1 désormais exécutable (`docs/tests/verifier_r1.py`, T9-R3) | a3282b2, tour 9 |
+| 9 | T9-B1 | suggestion | Appui sur « Valider » dans les 500 ms de garde ignoré sans rien dire | Écarté : le rejouer validerait la bouteille suivante sans l'avoir vue (T4-B2, 0176) ; le bouton atténué signale déjà la garde (T5-B13) | — |

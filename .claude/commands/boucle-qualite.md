@@ -31,7 +31,8 @@ SEULE source de vérité : ne rien supposer de la conversation. Après chaque
   « Points du tour précédent » qui reprend CHAQUE id « Corrigé » du journal,
   un par ligne, avec UNE marque consolidée (la pire des testeurs ; un id non
   retesté par les testeurs est marqué par le vérificateur ou dit « non
-  retestable », avec sa raison) (critère R1) ; reporter les
+  retestable », avec sa raison) (critère R1, contrôlé par
+  `python docs/tests/verifier_r1.py <tour précédent>`, qui doit passer) ; reporter les
   verdicts dans la colonne « Statut » des recommandations ; un écart à une
   décision de l'utilisateur (P12) est un point à corriger comme les autres ;
   passer en phase « corriger ».

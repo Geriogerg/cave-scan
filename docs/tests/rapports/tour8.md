@@ -66,3 +66,10 @@ passer 120 à 170 ms ; aucun 500, aucune erreur JavaScript, aucun texte techniqu
 - **T8-S1** suggestion — Clore : l'avertissement des non validées en encadré.
 - **T8-S2** suggestion — Nouvelle colonne nommée comme un champ toujours lu :
   choisir la source seule.
+
+### Réserves documentaires du tour 7 (marques du vérificateur)
+
+- [T7-R1] ✅ (vérifié par le vérificateur : marque consolidée dans tour7.md)
+- [T7-R2] ✅ (vérifié par le vérificateur : 0189 bis, 0194 et 0191 réparées)
+- [T7-R3] ✅ (vérifié par le vérificateur : lignes propres au journal)
+- [T7-R6] ✅ (vérifié par le vérificateur : critère R6 aligné sur 0184)
