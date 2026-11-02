@@ -163,7 +163,7 @@ def depot(request: Request, inventaire_id: int, base: SessionBase):
     """Le dépôt d'un brouillon, ou l'ajout de bouteilles à un inventaire lancé —
     pas à un inventaire clos (lecture seule, 0168)."""
     if charger_inventaire(base, inventaire_id).clos_le is not None:
-        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=deja_clos", status_code=303)
+        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi", status_code=303)  # le bandeau le dit (T8-D7)
     vue = apercu(base, inventaire_id)
     # Clé -> photos déjà reçues (leurs identifiants : la page montre leurs
     # miniatures) et numéro : un autre appareil voit aussi ces bouteilles (T2-D1).
@@ -192,7 +192,7 @@ def verifier(request: Request, inventaire_id: int, base: SessionBase):
     # Déjà lancée (retour arrière après « Lancer ») ou close : rien à vérifier ici,
     # le suivi le dit au lieu d'une page vide (T5-B5).
     if vue.inventaire.clos_le is not None:
-        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=deja_clos", status_code=303)
+        return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi", status_code=303)  # le bandeau le dit (T8-D7)
     if vue.inventaire.statut != "brouillon" and not vue.bouteilles:
         return RedirectResponse(f"/app/inventaires/{inventaire_id}/suivi?fait=deja_lancee", status_code=303)
     return page(request, "verifier.html", vue=vue)

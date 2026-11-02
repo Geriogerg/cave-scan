@@ -1398,6 +1398,14 @@ un renvoi d'une ligne à leur place.
   « dépôt ouvert dans un autre onglet » disparaît quand l'autre onglet se
   ferme. Un renommage refusé garde le volet « Gérer l'inventaire » ouvert.
 
+- 0199 — Messages et configuration (tour 8, lot 40). Un nom trop long renvoie
+  au suivi avec la raison ; une bouteille introuvable est dite avec le nom de
+  la vente ; le dépôt ou Vérifier d'un inventaire clos renvoie au suivi sans
+  second message (le bandeau « clos » suffit) ; l'avertissement de clôture est
+  encadré. Écarté : T8-S2 (donner seul la source « Lue par le modèle » à une
+  colonne nommée comme un champ toujours lu) — l'outil changerait en silence une
+  source que l'expert a choisie ; le refus dit déjà quoi choisir (0187).
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

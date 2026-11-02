@@ -301,7 +301,7 @@ def test_fiche_d_une_bouteille_voisines_et_photos(api, extrait):
 
 def test_inventaire_ou_bouteille_introuvable(api, extrait):
     verifier_erreur(api.get("/inventaires/999"), 404, "introuvable", "Aucun inventaire n°999")
-    verifier_erreur(api.get(f"/inventaires/{extrait}/bouteilles/999"), 404, "introuvable", "Aucune bouteille n°999")
+    verifier_erreur(api.get(f"/inventaires/{extrait}/bouteilles/999"), 404, "introuvable", "n'existe pas (ou plus)")
 
 
 # --- photos : étanchéité entre inventaires, aucune métadonnée -----------------------------------

@@ -4,7 +4,7 @@
 {% block contenu %}
 <h1>{{ titre }}</h1>
 <ul class="explications">
-  {% for e in explications %}<li>{{ e }}</li>{% endfor %}
+  {% for e in explications %}<li{% if e.startswith("Attention") %} class="message attention"{% endif %}>{{ e }}</li>{% endfor %}
 </ul>
 {% if action == "clore" %}<p><a href="/app/inventaires/{{ inventaire.id }}/recapitulatif">Voir le récapitulatif de la relecture</a></p>{% endif %}
 <form method="post" action="/app/inventaires/{{ inventaire.id }}/{{ action }}" id="confirmer"></form>

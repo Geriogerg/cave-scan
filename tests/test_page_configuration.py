@@ -538,4 +538,3 @@ def test_plusieurs_configurations_sans_designation_l_outil_n_en_choisit_aucune(c
 
     monkeypatch.setenv("CAVE_SCAN_MAISON", charger_config(CONFIG_TEST).maison)
     assert client.get("/app/configuration", follow_redirects=False).status_code == 303
-

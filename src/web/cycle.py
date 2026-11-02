@@ -15,6 +15,7 @@ from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import RedirectResponse, Response
 
 from src.api.dependances import AuteurEcran, SessionBase
+from src.services.inventaires import NOM_MAX
 from src.textes import accord
 from src.services.cycle_de_vie import (
     archiver,
@@ -36,6 +37,7 @@ routeur = APIRouter(include_in_schema=False)
 MESSAGES = {
     "renomme": "Inventaire renommé.",
     "nom_vide": "Donnez un nom à la vente : il ne peut pas rester vide. Rien n'a été renommé.",
+    "nom_long": "Nom trop long : 200 caractères au plus. Rien n'a été renommé.",
     "desarchive": "Inventaire sorti des archives.",
     "rouvert": "Inventaire rouvert : il est de nouveau modifiable.",
     "reprise": "Analyse reprise.",
@@ -67,6 +69,8 @@ def renommer_l_inventaire(request: Request, inventaire_id: int, base: SessionBas
                           nom: Annotated[str, Form()] = ""):
     if not (nom or "").strip():  # rester sur l'inventaire, le refus en clair (T4-B20)
         return RedirectResponse(suivi(inventaire_id, "nom_vide"), status_code=303)
+    if len(nom.strip()) > NOM_MAX:  # de même (T8-B3)
+        return RedirectResponse(suivi(inventaire_id, "nom_long"), status_code=303)
     return _geste(request, base, inventaire_id, lambda: renommer(base, inventaire_id, nom, auteur), "renomme")
 
 

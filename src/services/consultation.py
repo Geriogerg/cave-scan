@@ -161,10 +161,11 @@ def parcourir_bouteilles(
 
 def bouteille_de(session: Session, inventaire_id: int, bouteille_id: int) -> FicheBouteille:
     """La bouteille, si et seulement si elle appartient à CET inventaire."""
-    charger_inventaire(session, inventaire_id)
+    inventaire = charger_inventaire(session, inventaire_id)
     bouteille = session.get(FicheBouteille, bouteille_id)
     if bouteille is None or bouteille.inventaire_id != inventaire_id:
-        raise BouteilleIntrouvable(f"Aucune bouteille n°{bouteille_id} dans l'inventaire n°{inventaire_id}.")
+        # Le nom de la vente, pas des numéros internes que l'écran ne montre pas (T8-D6).
+        raise BouteilleIntrouvable(f"Cette bouteille n'existe pas (ou plus) dans « {inventaire.nom} ».")
     return bouteille
 
 

@@ -164,3 +164,9 @@ def test_renommer_vide_garde_le_volet_ouvert(api, extrait):
     retour = api.post(f"/app/inventaires/{extrait}/renommer", data={"nom": "  "}, follow_redirects=True).text
     assert '<details class="gestion" open>' in retour and "autofocus" in retour.split('id="nouveau-nom"')[1].split(">")[0]
 
+
+def test_renommer_trop_long_revient_au_suivi(api, extrait):
+    """T8-B3 : plus de 200 caractères (champ contourné) : le suivi le dit, rien de renommé."""
+    retour = api.post(f"/app/inventaires/{extrait}/renommer", data={"nom": "x" * 300}, follow_redirects=False)
+    assert retour.headers["location"].endswith("fait=nom_long")
+

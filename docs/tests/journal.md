@@ -240,3 +240,8 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 8 | T8-B2 | mineur | Avertissement « autre onglet » qui reste | Corrigé : retiré à la fermeture ; test navigateur | lot 39 |
 | 8 | T8-D5 | mineur | Renommage vide : volet refermé | Corrigé : volet ouvert, curseur dans le champ ; test | lot 39 |
 | 8 | T8-B1 | mineur | Séparer refusé à l'adresse du POST | Écarté : déjà écarté en T4-B20, sans élément nouveau | — |
+| 8 | T8-B3 | suggestion | Renommage trop long : page « Action impossible » | Corrigé : retour au suivi avec la raison, volet ouvert ; test | lot 40 |
+| 8 | T8-D6 | mineur | 404 de relecture avec numéros internes | Corrigé : « Cette bouteille n'existe pas (ou plus) dans « vente » » ; test API adapté | lot 40 |
+| 8 | T8-D7 | mineur | Dépôt d'un inventaire clos : message en double | Corrigé : le bandeau « clos » seul | lot 40 |
+| 8 | T8-S1 | suggestion | Avertissement de clôture peu visible | Corrigé : encadré | lot 40 |
+| 8 | T8-S2 | suggestion | Source choisie seule pour un champ toujours lu | Écarté : changerait en silence une source choisie par l'expert ; le refus dit quoi choisir | — |
