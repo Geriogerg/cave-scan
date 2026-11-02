@@ -46,3 +46,52 @@ surlignées). P3 et P8 non refaits en entier.
   ensuite le champ seul : 409 inutile en console (aucune perte).
 - **T7-B3** mineur — ✕ de Vérifier mesuré 32×32 px au téléphone.
 - **T7-B4** suggestion — Quantité vide : « Quantité invalide («  ») ».
+
+## Testeur design (Opus, relancé après une limite de session)
+
+0 bloquant, 0 majeur, 12 mineurs, 3 suggestions. Écrans ≈ 66 ms (le plus lent :
+relecture au téléphone, 136 ms) ; valider et passer 170 à 234 ms ; aucun 500,
+aucune erreur JavaScript, aucun défilement horizontal.
+
+### Points du tour précédent
+
+- [T6-X1] ❌ (reste : T7-D1) · [T6-D1] ✅ · [T6-D2] ✅ (taille : T7-D5) · [T6-B3] ✅
+- [T6-D3] ✅ · [T5-B12] ✅ · [T6-D4] ❌ (rangée cassée : T7-D2) · [T6-D5] ✅
+- [T6-D6] ❌ (reste : T7-D7) · [T6-D7] ✅ · [T6-D8] ✅ · [T6-D9] ✅ · [T6-D10] ✅
+- [T6-D11] ✅ · [T6-D12] ✅ · [T6-S1] ✅ · [T6-S2] ✅ · [T6-S3] ✅
+- [T6-S4] ❌ (régression : T7-D2) · [T6-B1] ✅ (effet de bord : T7-D9)
+- [T6-B2] ✅ · [T6-B4] ✅ · [T6-B5] ✅ (raison invisible au toucher : T7-S1)
+- [T6-B7] ✅ · [T6-B9] ✅ · [T6-B10] ✅ · [Choix n° 7] ✅ · [Choix n° 8] ✅
+
+### Marque consolidée (pire des deux testeurs)
+
+T6-X1 ❌ · T6-D2/B3 ❌ en partie (taille) · T6-D4 ❌ · T6-D6/B6 ❌ en partie ·
+T6-S4 ❌ · T6-B1 ✅ (effet de bord à corriger) · tous les autres ids vus : ✅.
+Non retestables par l'écran : T6-R1, R2, R3, R5, R6 (vérifiés par le
+vérificateur dans le code et les tests).
+
+### Nouveaux points
+
+- **T7-D1** mineur — « Bouteille n°X validée. » dans une autre vente (= T7-B1).
+- **T7-D2** mineur (régression lot 34) — Dépôt au téléphone : rangée « − champ + »
+  cassée en permanence.
+- **T7-D3** mineur — Dépôt : une quantité refusée n'empêche pas « Bouteille
+  suivante », et le refus reste affiché sur la suivante.
+- **T7-D4** mineur — Relecture au téléphone : « Autres actions » et « Historique »
+  sans ▶ (inline-flex).
+- **T7-D5** mineur — ✕ de Vérifier à 32×32 px au téléphone (= T7-B3).
+- **T7-D6** mineur — Vérifier : bandeau « Connexion interrompue » qui reste après
+  un réessai réussi.
+- **T7-D7** mineur — Suivi : « 1 bouteille ajoutée… : les vérifier et lancer leur
+  analyse ».
+- **T7-D8** mineur — Récapitulatif d'un inventaire clos : « reprendre la
+  relecture » au lieu de « consulter ».
+- **T7-D9** mineur — Au téléphone, champ renvoyé après la validation : 409 (= T7-B2).
+- **T7-D10** mineur — Relecture à l'ordinateur : « Valider » flottant couvre la
+  dernière rangée de champs.
+- **T7-D11** mineur — Configuration : barre « Annuler / Vérifier / Enregistrer »
+  différente des autres barres.
+- **T7-D12** mineur — Séparer : « on peut en séparer 0 au plus ».
+- **T7-S1** suggestion — Raison de « Bouteille suivante » grisée invisible au toucher.
+- **T7-S2** suggestion — Galerie : focus sur « Ajouter ses photos » de la nouvelle carte.
+- **T7-S3** suggestion — Configuration au téléphone : « (1 à 10) » dans le libellé.
