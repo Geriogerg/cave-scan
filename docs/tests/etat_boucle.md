@@ -3,11 +3,13 @@
 Seule source de vérité pour `/boucle-qualite` : mis à jour à chaque étape.
 
 - Tour : 10
-- Phase : corriger
-- Agents lancés : rapports reçus (bugs, design, vérificateur)
+- Phase : en pause (arrêt demandé par l'utilisateur, 2026-11-03)
+- Agents lancés : non
 - Rapport du tour : docs/tests/rapports/tour10.md
-- À corriger : T10-B1 à B4, T10-D1 à D6, T10-S1 à S3, T10-R3 (T10-R1, R2 faits).
-- Dernière mise à jour : 2026-11-02, rapports du tour 10 reçus, phase corriger.
+- Reste à corriger du tour 10 (lot 44 préparé, non appliqué) : T10-B4, T10-D2,
+  T10-D4, T10-D6, T10-S1, T10-S2, T10-S3, T10-R3. Pour reprendre : corriger ces
+  points, puis tour 11.
+- Dernière mise à jour : 2026-11-03, lot 43 commité, boucle mise en pause.
 
 ## Recommandations (vérifiées par l'agent `verificateur` à chaque tour)
 
