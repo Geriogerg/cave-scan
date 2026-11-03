@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 from src.donnees.modeles import EvenementBouteille, EvenementInventaire, FicheBouteille, maintenant
 from src.services.depot import groupes_en_attente
 from src.services.extraction import charger_bouteille
-from src.services.inventaires import actualiser_statut, charger_inventaire, nom_de_vente, verifier_modifiable
+from src.services.inventaires import actualiser_statut, charger_inventaire, motif_valide, nom_de_vente, verifier_modifiable
 from src.services.relecture import auteur_valide
 from src.textes import accord
 
@@ -239,8 +239,8 @@ def retirer_bouteille(session: Session, bouteille_id: int, auteur: str, motif: s
         raise CycleRefuse(
             f"La bouteille n°{bouteille.position} est en cours d'analyse : attendez la fin pour la retirer."
         )
+    motif = motif_valide(motif)  # 300 caractères au plus (T10-B3)
     bouteille.retiree = True
-    motif = (motif or "").strip()
     bouteille.evenements.append(EvenementBouteille(type="retrait", auteur=auteur, detail={"motif": motif} if motif else None))
     session.flush()
     session.expire(inventaire, ["bouteilles"])

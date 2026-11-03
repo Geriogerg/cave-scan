@@ -12,7 +12,7 @@
     {% if not b.paire_signalee %}
     <form method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/signaler" data-action>
       {% include "_filtre_cache.html" %}
-      <input type="text" name="motif" placeholder="Motif (facultatif)" aria-label="Motif du signalement" autocomplete="off">
+      <input type="text" name="motif" placeholder="Motif (facultatif)" aria-label="Motif du signalement" autocomplete="off" maxlength="300">
       <button class="bouton petit danger">Signaler un problème de photos</button>
       <span class="aide">Une photo ne montre pas cette bouteille.</span>
     </form>
@@ -21,7 +21,7 @@
     <form method="post" action="/app/inventaires/{{ i }}/relecture/{{ b.id }}/retirer" data-action
           data-confirmer="Retirer la bouteille n°{{ b.position }} de l'inventaire ? Rien n'est effacé : elle se remet depuis le récapitulatif.">
       {% include "_filtre_cache.html" %}
-      <input type="text" name="motif" placeholder="Motif (facultatif)" aria-label="Motif du retrait" autocomplete="off">
+      <input type="text" name="motif" placeholder="Motif (facultatif)" aria-label="Motif du retrait" autocomplete="off" maxlength="300">
       <button class="bouton petit danger">Retirer cette bouteille</button>
       <span class="aide">Hors de l'Excel ; rien n'est effacé.</span>
     </form>

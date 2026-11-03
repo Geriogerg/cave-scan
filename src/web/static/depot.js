@@ -232,7 +232,7 @@
     });
   });
   champQuantite.addEventListener("change", function () {
-    changerQuantite(etat.enCours, parseInt(champQuantite.value, 10), champQuantite);
+    changerQuantite(etat.enCours, quantiteSaisie(champQuantite.value), champQuantite);
   });
 
   document.getElementById("suivante").addEventListener("click", function () {
@@ -406,7 +406,7 @@
       champ.size = 3;
       champ.value = bouteille.quantite;
       champ.setAttribute("aria-label", "Quantité de la bouteille " + rang(bouteille));
-      champ.addEventListener("change", function () { changerQuantite(bouteille, parseInt(champ.value, 10), champ); });
+      champ.addEventListener("change", function () { changerQuantite(bouteille, quantiteSaisie(champ.value), champ); });
       quantite.appendChild(champ);
       actions.appendChild(quantite);
 
@@ -526,6 +526,9 @@
 
   var QUANTITE_MAX = 100000;
 
+  // « 2.5 », « 1e3 », « 12abc » : refusés, jamais lus à moitié par parseInt (T10-B1).
+  function quantiteSaisie(texte) { return /^\s*\d+\s*$/.test(texte) ? parseInt(texte, 10) : NaN; }
+
   function changerQuantite(bouteille, valeur, champ) {
     // Refusée, la saisie reste dans le champ, à côté de sa raison (T6-D4, comme Vérifier).
     if (valeur > QUANTITE_MAX) {
@@ -601,8 +604,10 @@
     if (nombrePhotos(bouteille) >= maximum) {
       envoi.ligne = creerLigne(envoi);
       file.push(envoi);  // affiché dans la carte et compté dans le résumé (T3-D5)
-      marquer(envoi, "refusee", "« " + envoi.nom + " » : " + maximum
-        + " photos au plus par bouteille. Ajoutez-la à une autre bouteille.");
+      // Le navigateur ne sait pas encore si c'est une image : il dit seulement que la
+      // bouteille est pleine (T10-D1).
+      marquer(envoi, "refusee", "Bouteille pleine (" + maximum + " photos au plus) : « " + envoi.nom
+        + " » n'a pas été envoyée. Si c'est une photo d'une autre bouteille, ajoutez-la à celle-ci.");
       rafraichir();
       return;
     }

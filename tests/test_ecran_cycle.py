@@ -170,3 +170,9 @@ def test_renommer_trop_long_revient_au_suivi(api, extrait):
     retour = api.post(f"/app/inventaires/{extrait}/renommer", data={"nom": "x" * 300}, follow_redirects=False)
     assert retour.headers["location"].endswith("fait=nom_long")
 
+
+def test_le_bouton_principal_du_recapitulatif_est_a_droite(api, extrait):
+    """T10-D3 : « Télécharger l'Excel » (principal) après les actions secondaires."""
+    barre = api.get(f"/app/inventaires/{extrait}/recapitulatif").text.split('class="barre-actions"')[1]
+    assert barre.index("Reprendre la relecture") < barre.index("bouton principal")
+

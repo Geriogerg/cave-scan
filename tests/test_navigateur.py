@@ -443,6 +443,10 @@ def test_depot_quantite_refusee_gardee_et_suivante_grisee_sans_photo(application
     champ.press("Tab")
     page.wait_for_selector(".refus-quantite", timeout=5_000)
     assert champ.input_value() == "0"
+    champ.fill("2.5")  # jamais lue à moitié (T10-B1)
+    champ.press("Tab")
+    page.wait_for_function("document.querySelector('.refus-quantite').textContent.length > 0", timeout=5_000)
+    assert champ.input_value() == "2.5"
     assert page.locator(".quantite-depot .refus-quantite").count() == 0  # sous la rangée, pas dedans
 
 

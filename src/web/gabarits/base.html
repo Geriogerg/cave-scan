@@ -56,6 +56,18 @@
         }
       });
     });
+    /* « Vérifier » : la liste vient d'être remplacée ; un second clic dans la demi-seconde
+       tomberait sur le bouton arrivé au même endroit (deux « Couper », T10-B2). */
+    var remplaceLe = 0;
+    document.addEventListener("htmx:afterSwap", function (e) {
+      if (e.detail.target && e.detail.target.id === "en-attente") remplaceLe = Date.now();
+    });
+    document.addEventListener("htmx:beforeRequest", function (e) {
+      var chemin = (e.detail.requestConfig && e.detail.requestConfig.path) || "";
+      if (/\/verifier\/(couper|rattacher|retirer-photo|supprimer)\//.test(chemin) && Date.now() - remplaceLe < 500) {
+        e.preventDefault();
+      }
+    });
     /* Le réseau revenu (une réponse arrive) : le bandeau de coupure n'a plus lieu d'être (T7-D6). */
     document.addEventListener("htmx:afterRequest", function (e) {
       var zone = document.getElementById("erreur-serveur");

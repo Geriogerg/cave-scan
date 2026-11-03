@@ -459,3 +459,15 @@ def test_separer_une_bouteille_unique_le_dit_simplement(session, nom_maison, dos
         separer(session, premiere.id, 1, "Expert test")
     assert "0 au plus" not in str(refus.value)
 
+
+def test_un_motif_demesure_est_refuse_en_clair():
+    """T10-B3 : un motif de 20 000 caractères : refus « 300 caractères au plus »."""
+    import pytest
+
+    from src.services.inventaires import motif_valide
+    from src.services.relecture import CorrectionRefusee
+
+    assert motif_valide("  contre-étiquette d'un autre vin ") == "contre-étiquette d'un autre vin"
+    with pytest.raises(CorrectionRefusee, match="300 caractères au plus"):
+        motif_valide("x" * 20_000)
+

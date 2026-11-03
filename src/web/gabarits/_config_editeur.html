@@ -50,7 +50,7 @@
             <button class="bouton petit" type="submit" name="action" value="descendre-{{ i }}" {% if loop.last %}disabled{% endif %} aria-label="Descendre la colonne {{ d.nom }}">↓</button>
             <button class="bouton petit danger" type="submit" name="action" value="supprimer-{{ i }}"
                     hx-post="{{ adresse }}" hx-target="#editeur" hx-swap="outerHTML"
-                    hx-confirm="Retirer la colonne « {{ d.nom or 'nouvelle' }} » de l'Excel ? (Rien n'est enregistré avant « Enregistrer ».)">Retirer</button>
+                    hx-confirm="{{ ('Retirer la colonne « ' ~ d.nom ~ ' » de l\'Excel ?') if d.nom else 'Retirer cette nouvelle colonne ?' }} (Rien n'est enregistré avant « Enregistrer ».)">Retirer</button>
           </span>
         </div>
 

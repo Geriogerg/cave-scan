@@ -20,6 +20,7 @@ from src.config.maison import COLONNE_QUANTITE
 from src.donnees.modeles import Correction, EvenementBouteille, FicheBouteille
 from src.services.extraction import charger_bouteille
 from src.services.inventaires import actualiser_statut, config_figee, verifier_modifiable
+from src.services.inventaires import motif_valide
 from src.textes import accord
 from src.services.relecture import (
     auteur_valide,
@@ -107,7 +108,7 @@ def signaler_paire(session: Session, bouteille_id: int, auteur: str, motif: str 
         return False
     bouteille.paire_signalee = True
     remettre_a_relire(bouteille, auteur)
-    motif = (motif or "").strip()
+    motif = motif_valide(motif)
     _tracer(bouteille, "signalement_paire", auteur, {"motif": motif} if motif else None)
     actualiser_statut(bouteille.inventaire)
     session.commit()

@@ -1419,6 +1419,14 @@ un renvoi d'une ligne à leur place.
   rechargement ; le motif d'un signalement s'affiche dans son bandeau ;
   « Créer la configuration » crée en un clic depuis Nouvel inventaire.
 
+- 0202 — Saisies et doubles clics (tour 10, lot 43). Au dépôt, une quantité
+  n'est lue que si elle n'est faite que de chiffres (« 2.5 », « 1e3 » refusés) ;
+  une bouteille pleine dit seulement qu'elle est pleine (le navigateur ne sait
+  pas encore si le fichier est une image) ; sur Vérifier, un second clic dans
+  la demi-seconde qui suit une action ne la refait pas ; un motif de
+  signalement ou de retrait fait 300 caractères au plus. Le bouton principal
+  du récapitulatif est à droite, comme partout.
+
 ---
 
 ## Questions ouvertes (trancher avec l'expert)

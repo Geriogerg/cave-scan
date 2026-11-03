@@ -279,6 +279,18 @@ def _version_de_config(
 
 
 NOM_MAX = 200  # caractères, comme le champ de l'écran
+MOTIF_MAX = 300  # un motif de signalement ou de retrait (T10-B3)
+
+
+def motif_valide(motif: str | None) -> str:
+    """Un motif facultatif : caractères de contrôle remplacés, 300 caractères au plus,
+    sinon un refus en clair (jamais un bandeau qui remplit l'écran, T10-B3)."""
+    from src.services.relecture import CorrectionRefusee
+
+    motif = "".join(c if c.isprintable() else " " for c in (motif or "")).strip()
+    if len(motif) > MOTIF_MAX:
+        raise CorrectionRefusee(f"Motif trop long : {MOTIF_MAX} caractères au plus.")
+    return motif
 
 
 def nom_de_vente(nom: str | None, refus: type[Exception]) -> str:

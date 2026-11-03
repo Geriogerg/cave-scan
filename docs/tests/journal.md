@@ -264,3 +264,9 @@ Tenu par Claude à chaque tour ; lu par le testeur avant de commencer.
 | 9 | T9-R2 | réserve | T7-D4, D10, D11 « Corrigé » mais ❌ au tour 8 | Corrigé : rouverts en T8-D1 à D3, ✅ au tour 9 | fff9f07 |
 | 9 | T9-R3 | réserve | Critère R1 non exécutable | Corrigé : `docs/tests/verifier_r1.py` ; durci au tour 10 (marque rattachée à son id, T10-R1) | fff9f07, tour 10 |
 | 9 | T9-R4 | réserve | Suites d'environ 8 min | Corrigé : toujours lancées en arrière-plan | — |
+| 10 | T10-B1 | mineur | Dépôt : « 2.5 », « 1e3 » acceptés en silence | Corrigé : seuls les chiffres sont lus ; test navigateur | lot 43 |
+| 10 | T10-B2 | mineur | Vérifier : double clic sur « Couper » : deux coupes | Corrigé : second clic ignoré dans la demi-seconde qui suit le remplacement | lot 43 |
+| 10 | T10-B3 | mineur | Motif de signalement ou de retrait sans limite | Corrigé : 300 caractères, écran et serveur ; test | lot 43 |
+| 10 | T10-D1 | mineur | Bouteille pleine : un fichier non-image refusé pour le plafond | Corrigé : « Bouteille pleine… n'a pas été envoyée », sans rien affirmer sur le fichier | lot 43 |
+| 10 | T10-D3 | mineur | Récapitulatif : bouton principal à gauche | Corrigé : à droite ; test | lot 43 |
+| 10 | T10-D5 | mineur | « Retirer la colonne « nouvelle » » | Corrigé : « Retirer cette nouvelle colonne ? » | lot 43 |
